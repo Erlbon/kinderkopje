@@ -27,6 +27,16 @@ link, and a button that shows the first rows or asks an example question; *Copy 
 to paste elsewhere. The views `v_team_points` and `v_results` are the easy way in. The overview is written in
 `src/db/dictionary.ts`, and a test fails if it ever differs from the real schema (`src/db/schema.ts`).
 
+## Public dataset
+
+The Data page can **Save a public copy** of your database: the ranking and result tables with names, nations, places,
+points, team names, race names and race facts, and nothing else (saved texts, the capture queue, contributor names,
+capture times and rider ages are removed, and the file is rewritten so they do not linger inside it). Put that file
+at `data/public/pelotonic-public.sqlite` and commit it; the build then serves it as `pelotonic-public.sqlite`, and
+**Search the public dataset** on the Data page loads it and runs the SQL box against it. It is one static file read in
+the visitor's own browser, so there is no server to overload. The file carries the UCI and Wikipedia credits and a
+takedown contact (a GitHub issue).
+
 ## Running it
 
 - **Online:** the GitHub Pages site (enabled from the repo settings: Pages, source GitHub Actions).

@@ -31,9 +31,21 @@
   <div id="dict" style="margin-top:8px"></div>
 </fieldset>
 
+<h2>Public dataset</h2>
+<fieldset>
+  <legend class="mut">A copy of the rankings and point-scoring results that anyone can search, without capturing anything. It holds names, nations, places, points, team names, race names and race facts: no layout, no photos, no rider ages. It is a static file; the questions run in your own browser.</legend>
+  <div class="row">
+    <button id="pubload">Search the public dataset</button>
+    <button id="pubsave" title="Strips saved texts, the queue, contributor names and rider ages">Save a public copy of my database (.sqlite)</button>
+    <a href="pelotonic-public.sqlite">Download the public file</a>
+  </div>
+  <div id="pubmsg" class="mut" style="margin-top:6px"></div>
+</fieldset>
+
 <h2>Ask the data (SQL, read only)</h2>
 <fieldset>
   <legend class="mut">Write a SELECT, or use a button above or one of these. Nothing here can change the data.</legend>
+  <div id="sqltarget" class="mut" style="margin-bottom:6px">Asking: <strong id="sqlwhich">my database</strong></div>
   <div id="sqlexamples"></div>
   <textarea id="sqlbox" spellcheck="false" style="min-height:90px" placeholder="SELECT ..."></textarea>
   <div class="row" style="margin-top:6px"><button id="sqlrun">Run</button></div>

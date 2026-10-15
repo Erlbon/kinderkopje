@@ -1,4 +1,6 @@
-import { DICTIONARY, dictionaryMarkdown, querySql, SCHEMA_VERSION, schemaVersion } from "../../db";
+import type { Database } from "sql.js";
+import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
+import { DICTIONARY, dictionaryMarkdown, makePublicCopy, openDatabase, publicCredits, querySql, SCHEMA_VERSION, schemaVersion } from "../../db";
 import { $, copy, download, el } from "../dom";
 import type { Store } from "../store";
 
@@ -21,13 +23,15 @@ const EXAMPLES: [string, string][] = [
 
 export function initData(store: Store): void {
   const box = $<HTMLTextAreaElement>("sqlbox");
+  /** the public dataset, once loaded: the SQL box then asks it instead of the visitor's own database */
+  let publicDb: Database | undefined;
 
   function runSql(sql?: string): void {
     if (sql !== undefined) box.value = sql;
     const out = $("sqlout");
     out.replaceChildren();
     try {
-      const r = querySql(store.db, box.value);
+      const r = querySql(publicDb ?? store.db, box.value);
       if (!r.columns.length) {
         out.append(el("div", { class: "mut", textContent: "No rows." }));
         return;
@@ -145,6 +149,31 @@ export function initData(store: Store): void {
     ex.append(b);
   }
   $("sqlrun").onclick = () => runSql();
+
+  // the public dataset
+  $("pubsave").onclick = async () => {
+    const SQL = await initSqlJs();
+    download("pelotonic-public.sqlite", makePublicCopy(SQL, store.db), "application/vnd.sqlite3");
+    $("pubmsg").textContent = "Saved. Names, nations, places, points, team and race names and race facts only; saved texts, the queue, contributor names and rider ages are left out.";
+  };
+  const which = $("sqlwhich");
+  $("pubload").onclick = async () => {
+    const msg = $("pubmsg");
+    msg.textContent = "Loading the public dataset ...";
+    try {
+      const res = await fetch("pelotonic-public.sqlite");
+      if (!res.ok) throw new Error(res.status === 404 ? "no public dataset has been published on this site yet" : "HTTP " + res.status);
+      const SQL = await initSqlJs();
+      publicDb = openDatabase(SQL, new Uint8Array(await res.arrayBuffer()));
+      const n = Number(publicDb.exec("SELECT COUNT(*) FROM result_row")[0]!.values[0]![0]);
+      msg.textContent = "Loaded: " + n + " result rows. The SQL box below now asks the public dataset. " + (publicCredits(publicDb) ?? "");
+      which.textContent = "the public dataset (reload the page to go back to my database)";
+      $("sqlbox").scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (err) {
+      publicDb = undefined;
+      msg.textContent = "Could not load it: " + (err instanceof Error ? err.message : String(err));
+    }
+  };
 
   store.onChange(info);
   info();

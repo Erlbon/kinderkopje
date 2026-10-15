@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
+import { addQueue, emptyCube } from "../src/core";
+import { PUBLIC_CREDITS, makePublicCopy, openDatabase, publicCredits, saveCube, setKv } from "../src/db";
+
+const SQL = await initSqlJs();
+
+function privateDb() {
+  const db = openDatabase(SQL);
+  const cube = emptyCube();
+  cube.teamSnapshots.push({ season: 2025, date: "2025-12-31", momentId: 1, complete: true, teams: [{ teamId: 595, code: "TVL", name: "Team Visma | Lease a Bike", nation: "NED", rank: 1, points: 1000 }] });
+  cube.raceResults = [
+    {
+      uciId: 78462,
+      year: 2025,
+      name: "Paris - Tours Elite",
+      country: "FRA",
+      capturedAt: "2026-10-01T10:00:00Z",
+      contributor: "Secret Helper Name",
+      classifications: [{ label: "Final Classification", title: "GC", totalRows: 1, rows: [{ rank: 1, rider: "Per Strand HAGENES", team: "TEAM VISMA", age: 23, nation: "NOR", result: "4:31:46", points: 250 }] }],
+    },
+  ];
+  addQueue(cube, "hub", 2026, [{ uciId: 5, name: "Queued Race", start: "2026-03-01", end: "2026-03-01", country: "BEL" }]);
+  saveCube(db, cube);
+  setKv(db, "season-yaml", "private season text");
+  return db;
+}
+
+describe("public copy", () => {
+  it("keeps names, nations, points and race facts, and drops the private parts", () => {
+    const db = privateDb();
+    const bytes = makePublicCopy(SQL, db);
+    const pub = openDatabase(SQL, bytes);
+    const one = (sql: string) => pub.exec(sql)[0]?.values[0]?.[0];
+    expect(one("SELECT COUNT(*) FROM team_rank")).toBe(1);
+    expect(one("SELECT nation FROM team_rank")).toBe("NED");
+    expect(one("SELECT nation FROM result_row")).toBe("NOR");
+    expect(one("SELECT country FROM race_result")).toBe("FRA");
+    expect(one("SELECT points FROM result_row")).toBe(250);
+    expect(one("SELECT COUNT(*) FROM kv")).toBe(0);
+    expect(one("SELECT COUNT(*) FROM queue_race")).toBe(0);
+    expect(one("SELECT age FROM result_row")).toBeNull();
+    expect(one("SELECT contributor FROM race_result")).toBeNull();
+    expect(one("SELECT captured_at FROM race_result")).toBeNull();
+    expect(publicCredits(pub)).toBe(PUBLIC_CREDITS);
+    // the private text is gone from the file itself, not only from the tables
+    const text = new TextDecoder("latin1").decode(bytes);
+    for (const secret of ["Secret Helper Name", "private season text", "Queued Race", "2026-10-01T10"]) expect(text.includes(secret), secret).toBe(false);
+  });
+  it("leaves the original untouched", () => {
+    const db = privateDb();
+    makePublicCopy(SQL, db);
+    expect(db.exec("SELECT COUNT(*) FROM kv")[0]!.values[0]![0]).toBe(1);
+    expect(db.exec("SELECT contributor FROM race_result")[0]!.values[0]![0]).toBe("Secret Helper Name");
+  });
+});

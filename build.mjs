@@ -1,7 +1,7 @@
 // Builds the site into dist/: four pages that share app.js (with SQLite inside) and app.css.
 import { build, buildSync } from "esbuild";
 import { execSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 let sha = "dev";
@@ -55,6 +55,9 @@ const overview = await import("data:text/javascript;base64," + Buffer.from(dict.
 writeFileSync("dist/pelotonic-data-overview.html", overview.dictionaryHtml(overview.DICTIONARY, version));
 writeFileSync("dist/pelotonic-data-overview.md", overview.dictionaryMarkdown(overview.DICTIONARY));
 writeFileSync("dist/pelotonic-data-overview.json", overview.dictionaryJson(overview.DICTIONARY, version));
+
+// the public dataset, when one has been saved into the repository (Data page: Save a public copy)
+if (existsSync("data/public/pelotonic-public.sqlite")) copyFileSync("data/public/pelotonic-public.sqlite", "dist/pelotonic-public.sqlite");
 
 // to run the site from a folder: node serve.mjs (or start.cmd on Windows)
 copyFileSync("tools/serve.mjs", "dist/serve.mjs");
