@@ -11,7 +11,7 @@
  *
  * Reading the pages is done by src/core/dataride.ts, the same code the tests cover; the build bundles it here.
  */
-import { pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
+import { mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
 
 (function () {
   // The names below keep the tool's earlier name: collections already saved in your browser, and
@@ -119,12 +119,13 @@ import { pageKind, readCompetitionEvents, readCompetitionList, readEventResults 
       overlay("No events found on this page yet. Wait for it to load, then press again.", c);
       return;
     }
-    c.competitionEvents = c.competitionEvents.filter(function (y) {
-      return y.competitionId !== ce.competitionId;
-    });
-    c.competitionEvents.push(ce);
+    var prev = null;
+    for (var j = 0; j < c.competitionEvents.length; j++) if (c.competitionEvents[j].competitionId === ce.competitionId) prev = c.competitionEvents[j];
+    if (prev) prev.events = mergeEvents(prev.events, ce.events);
+    else c.competitionEvents.push(ce);
     save(c);
-    overlay("Captured " + ce.events.length + " event" + (ce.events.length === 1 ? "" : "s") + " of this competition. NEXT: open the General Classification (and each stage) and press again on each.", c);
+    var total = (prev || ce).events.length;
+    overlay("Read " + ce.events.length + " event link" + (ce.events.length === 1 ? "" : "s") + " on screen; " + total + " known for this competition. A stage race shows links only for the rows you have opened: open every stage and the Final Classification, then press again. NEXT: open the General Classification (and each stage) and press again on each.", c);
     return;
   }
 

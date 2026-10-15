@@ -86,7 +86,11 @@ export function readCompetitionList(doc: Document, filterText = ""): DrCompetiti
   return out;
 }
 
-/** The events a competition page links to. */
+/**
+ * The events a competition page links to. A stage race lists its stages as rows that open to show their classifications,
+ * and only the rows that are open have links in the page, so each event is named after the row it sits under
+ * ("Stage 5: Stage Classification", "Final Classification: General Classification"). A one-day race links directly.
+ */
 export function readCompetitionEvents(doc: Document, pathname: string): DrCompetitionEvents | undefined {
   const competitionId = Number(/CompetitionResults\/(\d+)/i.exec(pathname)?.[1]);
   if (!competitionId) return undefined;
@@ -94,9 +98,21 @@ export function readCompetitionEvents(doc: Document, pathname: string): DrCompet
   for (const a of Array.from(doc.querySelectorAll("a[href*='/EventResults/']"))) {
     const id = Number(/EventResults\/(\d+)/i.exec(a.getAttribute("href") ?? "")?.[1]);
     if (!id || events.some((e) => e.id === id)) continue;
-    events.push({ id, name: clean(a.textContent) });
+    const text = clean(a.textContent);
+    // the row this link's detail row belongs to: the stage, or the final classification
+    const master = a.closest("tr.k-detail-row")?.previousElementSibling;
+    const cells = master ? Array.from(master.querySelectorAll("td")).map((c) => clean(c.textContent)) : [];
+    const parent = cells.find((c) => c !== "");
+    events.push({ id, name: parent && parent !== text ? parent + ": " + text : text });
   }
   return { competitionId, events };
+}
+
+/** Add events to a list, keeping the ones already there (a competition page is captured a few open rows at a time). */
+export function mergeEvents(have: DrEvent[], more: DrEvent[]): DrEvent[] {
+  const byId = new Map(have.map((e) => [e.id, e]));
+  for (const e of more) byId.set(e.id, e);
+  return [...byId.values()].sort((a, b) => a.id - b.id);
 }
 
 /** The result table of an event, restricted to the rows that score points. */

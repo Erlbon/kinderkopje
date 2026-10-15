@@ -1,5 +1,5 @@
 import { parse as parseYaml } from "yaml";
-import { cleanHeading, isComplete, isScoringEvent } from "./dataride";
+import { cleanHeading, isComplete, isScoringEvent, mergeEvents } from "./dataride";
 import type { DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
 import { normRaceName } from "./uci-hub";
 
@@ -150,7 +150,7 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   }
   for (const e of file.competitionEvents ?? []) {
     const q = queueRace(cube, e.competitionId);
-    q.events = e.events;
+    q.events = mergeEvents(q.events ?? [], e.events);
     report.events = (report.events ?? 0) + 1;
   }
   for (const e of file.eventResults ?? []) {

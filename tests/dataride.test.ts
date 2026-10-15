@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, cleanHeading, emptyCube, isComplete, isScoringEvent, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, cleanHeading, emptyCube, isComplete, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -48,12 +48,37 @@ describe("the competition list", () => {
 });
 
 describe("a competition page", () => {
-  it("lists its events once each", () => {
-    const html = `<a href="/iframe/EventResults/374263?competitionId=77536&disciplineId=10">General Classification</a><a href="/iframe/EventResults/374263?competitionId=77536&disciplineId=10">General Classification</a><a href="/iframe/EventResults/374264?competitionId=77536&disciplineId=10">Stage 1</a>`;
-    expect(readCompetitionEvents(doc(html), "/iframe/CompetitionResults/77536")).toEqual({
-      competitionId: 77536,
-      events: [{ id: 374263, name: "General Classification" }, { id: 374264, name: "Stage 1" }],
-    });
+  const link = (id: number, name: string) => `<tr class="k-master-row"><td><a href="/iframe/EventResults/${id}?competitionId=77382&disciplineId=10">${name}</a></td><td>CHRISTEN Jan</td></tr>`;
+  const stage = (name: string, links: string) =>
+    `<tr class="k-master-row"><td class="k-hierarchy-cell"></td><td>${name}</td><td>31 Jan 2026</td><td>Men Elite</td></tr><tr class="k-detail-row"><td colspan="4"><table><tbody>${links}</tbody></table></td></tr>`;
+  const page = (rows: string) => `<table><tbody>${rows}</tbody></table>`;
+
+  it("names each event after the stage row it sits under, so the stages do not look alike", () => {
+    const html = page(
+      stage("Stage 5", link(371486, "Stage Points Classification") + link(372678, "Stage Classification") + link(372786, "Stage Youth Classification")) +
+        stage("Stage 4", link(369277, "Stage Classification")),
+    );
+    const r = readCompetitionEvents(doc(html), "/iframe/CompetitionResults/77382")!;
+    expect(r.events.map((e) => e.name)).toEqual([
+      "Stage 5: Stage Points Classification",
+      "Stage 5: Stage Classification",
+      "Stage 5: Stage Youth Classification",
+      "Stage 4: Stage Classification",
+    ]);
+    expect(r.events.filter((e) => isScoringEvent(e.name)).map((e) => e.id)).toEqual([372678, 369277]);
+  });
+  it("a one-day race links to its event directly", () => {
+    const html = `<a href="/iframe/EventResults/374263?competitionId=77536&disciplineId=10">General Classification</a><a href="/iframe/EventResults/374263?competitionId=77536&disciplineId=10">General Classification</a>`;
+    expect(readCompetitionEvents(doc(html), "/iframe/CompetitionResults/77536")!.events).toEqual([{ id: 374263, name: "General Classification" }]);
+  });
+  it("events seen in several presses add up", () => {
+    const one = [{ id: 2, name: "Stage 2: Stage Classification" }];
+    const two = [{ id: 1, name: "Stage 1: Stage Classification" }, { id: 2, name: "Stage 2: Stage Classification" }];
+    expect(mergeEvents(one, two).map((e) => e.id)).toEqual([1, 2]);
+    const cube = emptyCube();
+    addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 5, events: one }] });
+    addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 5, events: [{ id: 3, name: "Final Classification: General Classification" }] }] });
+    expect(cube.queue!.find((q) => q.uciId === 5)!.events!.map((e) => e.id)).toEqual([2, 3]);
   });
 });
 
