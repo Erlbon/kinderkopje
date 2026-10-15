@@ -138,7 +138,23 @@ input[type=number]{width:80px}
   <div id="cubeout"></div>
 </fieldset>
 
-<h2>7. Threads</h2>
+<h2>7. Race results (UCI points)</h2>
+<fieldset>
+  <legend class="mut">Capture the point-scoring results of each race from UCI, and keep a queue of the races still to do. Every capture keeps only the rows that score points.</legend>
+  <p class="mut" style="margin:4px 0">
+    <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarkletrace" class="btn" href="__BOOKMARKLET_RACE_HREF__" style="background:var(--acc);color:#fff;padding:4px 8px;border-radius:6px;text-decoration:none">Capture UCI race</a>
+    <b>2.</b> Open the races from the queue below (the link opens the race page on UCI). On the race page open <em>Final Classification</em> (and any stage you want), then press the bookmark. It copies only what is on screen and makes no requests.
+    <b>3.</b> Press <em>Download collection</em> in its box, and open the file with <em>Open captured file(s)</em> above.
+  </p>
+  <div class="row">
+    <label class="btn">Add races from a UCI hub page (.html)<input id="hubfile" type="file" accept=".html,.htm,text/html" multiple hidden></label>
+    <label><input id="queuemissing" type="checkbox" checked> Only races not captured yet</label>
+  </div>
+  <div id="queuemsg" class="mut" style="margin:6px 0"></div>
+  <div id="queueout"></div>
+</fieldset>
+
+<h2>8. Threads</h2>
 <div id="out"></div>
 </main>
 <script>__SCRIPT__</script>

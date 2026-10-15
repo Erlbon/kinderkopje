@@ -55,6 +55,21 @@ saved in the cube. With "Only WorldTeams and ProTeams" ticked the tables show ju
 lists every WT/PT team that a lower-level team finished above. Wikipedia is a secondary source: check the
 unmatched list.
 
+## Race results (UCI points) and the capture queue
+
+Per-race results come from the UCI race pages (`uci.org/competition-details/<year>/ROA/<id>`):
+
+1. Drag the **Capture UCI race** link (source `tools/capture-uci-race.js`) to your bookmarks bar.
+2. Add the races to the queue: save a UCI hub page (for example "2027 UCI WorldTour", tab Races & Results) from your
+   browser and open it with *Add races from a UCI hub page*. The queue lists each race with a link to its UCI page
+   and ticks it off when its results have been captured.
+3. On a race page open *Final Classification* (and any stage you want) and press the bookmark. It copies only the
+   rows that score points (rank, rider, team, age, nation, result, points) and sends no requests of its own.
+4. Download the collection from its box and open the file with *Open captured file(s)*.
+
+Every result row keeps the team the rider rode for at the time, which is what the monthly team comparison needs.
+Nothing here crawls UCI: every page is opened and every capture started by a person.
+
 ## Stage tables
 
 Paste the table from your internal work thread into "Import a stage table". Columns are found by their

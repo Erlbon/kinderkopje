@@ -4,6 +4,7 @@ import {
   CaptureFile,
   Cube,
   addCapture,
+  addQueue,
   beatenByLowerLevel,
   beatenMarkdown,
   combineMerged,
@@ -20,6 +21,8 @@ import {
   parseLineage,
   parseOpenSeasons,
   parseTeamList,
+  parseUciHub,
+  queueStatus,
   seasonTable,
   seasonTableMarkdown,
   setLevels,
@@ -79,13 +82,53 @@ export function initTeams(): void {
 
   function summary(): string {
     const n = cube.teamSnapshots.length;
-    if (!n) return "No rankings yet. Capture them on UCI DataRide and open the file here.";
+    const races = cube.raceResults?.length ?? 0;
+    if (!n) return races ? races + " race results, no team rankings yet." : "No rankings yet. Capture them on UCI DataRide and open the file here.";
     const bySeason = seasons().map((y) => y + ": " + cube.teamSnapshots.filter((s) => s.season === y).length);
     const partial = cube.teamSnapshots.filter((s) => !s.complete).length;
     return n + " team rankings (" + bySeason.join(", ") + ")" + (partial ? "; " + partial + " not complete (not every page was captured)" : "");
   }
 
+  function drawQueue(): void {
+    const all = queueStatus(cube);
+    const out = $("queueout");
+    out.replaceChildren();
+    const done = all.filter((q) => q.captured).length;
+    $("queuemsg").textContent = all.length ? done + " of " + all.length + " races captured" : "No races in the queue yet: add a UCI hub page (for example the 2027 UCI WorldTour page, saved from your browser).";
+    const lines = $<HTMLInputElement>("queuemissing").checked ? all.filter((q) => !q.captured) : all;
+    if (!lines.length) return;
+    const table = document.createElement("table");
+    table.style.cssText = "border-collapse:collapse;width:100%;font-size:13px";
+    const head = document.createElement("tr");
+    for (const h of ["Date", "Race", "Hub", "UCI page", "Captured"]) {
+      const th = document.createElement("th");
+      th.textContent = h;
+      th.style.cssText = "text-align:left;padding:2px 6px;border-bottom:1px solid var(--line)";
+      head.append(th);
+    }
+    table.append(head);
+    for (const q of lines) {
+      const tr = document.createElement("tr");
+      const a = document.createElement("a");
+      a.href = "https://www.uci.org/competition-details/" + q.year + "/ROA/" + q.uciId;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = "open";
+      const cells: (string | HTMLElement)[] = [q.start === q.end ? q.start : q.start + " to " + q.end, q.name, q.hub, a, q.captured ? "yes, " + q.rows + " rows" : "-"];
+      for (const c of cells) {
+        const td = document.createElement("td");
+        td.style.cssText = "padding:2px 6px;border-bottom:1px solid var(--line)";
+        if (typeof c === "string") td.textContent = c;
+        else td.append(c);
+        tr.append(td);
+      }
+      table.append(tr);
+    }
+    out.append(table);
+  }
+
   function refresh(): void {
+    drawQueue();
     $("cubemsg").textContent = summary();
     const showOpen = $<HTMLInputElement>("cubeopen").checked;
     const ys = seasons().filter((y) => showOpen || !openSeasons.includes(y));
@@ -148,7 +191,7 @@ export function initTeams(): void {
     for (const f of files) {
       try {
         const r = addCapture(cube, JSON.parse(await f.text()) as CaptureFile);
-        lines.push(f.name + ": " + r.added + " added, " + r.replaced + " replaced" + (r.skipped.length ? ", skipped: " + r.skipped.join("; ") : ""));
+        lines.push(f.name + ": " + r.added + " rankings added, " + r.replaced + " replaced" + (r.races ? ", " + r.races + " race results" : "") + (r.skipped.length ? ", skipped: " + r.skipped.join("; ") : ""));
       } catch {
         lines.push(f.name + ": could not read this file");
       }
@@ -170,6 +213,23 @@ export function initTeams(): void {
       $("cubemsg").textContent = "That is not a cube file.";
     }
   };
+  $<HTMLInputElement>("hubfile").onchange = async (e) => {
+    const files = [...((e.target as HTMLInputElement).files ?? [])];
+    const lines: string[] = [];
+    for (const f of files) {
+      try {
+        const hub = parseUciHub(await f.text());
+        const n = addQueue(cube, hub.title || f.name, hub.year, hub.races);
+        lines.push(f.name + ": " + n + " new races of " + hub.races.length + " (" + hub.title + ")");
+      } catch (err) {
+        lines.push(f.name + ": " + (err instanceof Error ? err.message : "could not read this file"));
+      }
+    }
+    store(cube);
+    refresh();
+    $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
+  };
+  $("queuemissing").onchange = refresh;
   $("cubesave").onclick = () => download("racethreads-cube.json", JSON.stringify(cube));
   $("cubeclear").onclick = () => {
     if (!confirm("Delete all captured rankings from this browser?")) return;

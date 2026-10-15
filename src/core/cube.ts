@@ -31,7 +31,49 @@ export interface CaptureSnapshot {
 
 export interface CaptureFile {
   format: "racethreads-capture/1";
-  snapshots: CaptureSnapshot[];
+  snapshots?: CaptureSnapshot[]; // DataRide team ranking pages
+  raceResults?: RaceResult[]; // UCI race pages
+}
+
+/** One row of a UCI race result that scored points. */
+export interface ResultRow {
+  rank: number | null;
+  rider: string;
+  team: string;
+  age: number | null;
+  nation: string;
+  result: string;
+  points: number;
+}
+
+export interface ResultClassification {
+  label: string; // the section opened on the page ("Final Classification", a stage ...)
+  title: string; // "General Classification"
+  totalRows: number; // rows in the table, only the point-scoring ones are kept in `rows`
+  rows: ResultRow[];
+}
+
+export interface RaceResult {
+  uciId: number;
+  year: number;
+  name: string;
+  class?: string;
+  classText?: string;
+  dates?: string;
+  country?: string;
+  capturedAt?: string;
+  classifications: ResultClassification[];
+}
+
+/** A race that should be captured (from a UCI hub page). */
+export interface QueueRace {
+  uciId: number;
+  year: number;
+  name: string;
+  start: string; // ISO
+  end: string;
+  country: string;
+  hub: string; // "2027 UCI WorldTour"
 }
 
 export interface TeamPoint {
@@ -55,6 +97,8 @@ export interface Cube {
   teamSnapshots: TeamSnapshot[];
   /** WorldTeam and ProTeam ids per season (key = season), see team-levels.ts */
   levels?: Record<string, { WT: number[]; PT: number[] }>;
+  raceResults?: RaceResult[];
+  queue?: QueueRace[];
 }
 
 export function emptyCube(): Cube {
@@ -64,6 +108,7 @@ export function emptyCube(): Cube {
 export interface ImportReport {
   added: number;
   replaced: number;
+  races: number; // race results added or updated
   skipped: string[];
 }
 
@@ -71,12 +116,20 @@ const TEAM_RANKING = 2;
 
 /** Merge a capture file into the cube. Same date again = replaced (newer capture wins). */
 export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
-  const report: ImportReport = { added: 0, replaced: 0, skipped: [] };
-  if (!file || file.format !== "racethreads-capture/1" || !Array.isArray(file.snapshots)) {
+  const report: ImportReport = { added: 0, replaced: 0, races: 0, skipped: [] };
+  if (!file || file.format !== "racethreads-capture/1" || (!Array.isArray(file.snapshots) && !Array.isArray(file.raceResults))) {
     report.skipped.push("not a racethreads capture file");
     return report;
   }
-  for (const s of file.snapshots) {
+  for (const r of file.raceResults ?? []) {
+    if (typeof r.uciId !== "number" || !Array.isArray(r.classifications)) {
+      report.skipped.push("a race result without a UCI id or classifications");
+      continue;
+    }
+    mergeRaceResult(cube, r);
+    report.races++;
+  }
+  for (const s of file.snapshots ?? []) {
     if (s.rankingTypeId !== TEAM_RANKING) {
       report.skipped.push((s.season || "?") + " " + (s.date || "?") + ": not a team ranking");
       continue;
@@ -108,6 +161,51 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   }
   cube.teamSnapshots.sort((a, b) => a.date.localeCompare(b.date));
   return report;
+}
+
+/** Add or update one race's results; classifications with the same label and title are replaced. */
+export function mergeRaceResult(cube: Cube, r: RaceResult): void {
+  const list = (cube.raceResults ??= []);
+  const have = list.find((x) => x.uciId === r.uciId);
+  if (!have) {
+    list.push({ ...r, classifications: [...r.classifications] });
+    return;
+  }
+  Object.assign(have, { ...r, classifications: have.classifications });
+  for (const c of r.classifications) {
+    const i = have.classifications.findIndex((x) => x.label === c.label && x.title === c.title);
+    if (i >= 0) have.classifications[i] = c;
+    else have.classifications.push(c);
+  }
+}
+
+/** Put a hub page's races into the capture queue (races already there are kept as they are). */
+export function addQueue(cube: Cube, hubTitle: string, year: number, races: { uciId: number; name: string; start: string; end: string; country: string }[]): number {
+  const q = (cube.queue ??= []);
+  let added = 0;
+  for (const r of races) {
+    if (q.some((x) => x.uciId === r.uciId)) continue;
+    q.push({ uciId: r.uciId, year, name: r.name, start: r.start, end: r.end, country: r.country, hub: hubTitle });
+    added++;
+  }
+  q.sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
+  return added;
+}
+
+export interface QueueLine extends QueueRace {
+  captured: boolean;
+  rows: number; // point-scoring rows captured so far
+  classifications: number;
+}
+
+/** The queue with what has been captured for each race. */
+export function queueStatus(cube: Cube): QueueLine[] {
+  const byId = new Map((cube.raceResults ?? []).map((r) => [r.uciId, r]));
+  return (cube.queue ?? []).map((q) => {
+    const r = byId.get(q.uciId);
+    const rows = r ? r.classifications.reduce((n, c) => n + c.rows.length, 0) : 0;
+    return { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0 };
+  });
 }
 
 /** Seasons that are still being raced (data/cube/seasons.yaml). */

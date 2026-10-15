@@ -33,7 +33,7 @@ describe("importing a capture file (real sample values)", () => {
   const report = addCapture(cube, JSON.parse(read("tests/fixtures/dataride-capture-sample.json")) as CaptureFile);
 
   it("adds the two team-ranking snapshots in date order", () => {
-    expect(report).toEqual({ added: 2, replaced: 0, skipped: [] });
+    expect(report).toEqual({ added: 2, replaced: 0, races: 0, skipped: [] });
     expect(cube.teamSnapshots.map((s) => s.date)).toEqual(["2025-10-19", "2026-10-13"]);
   });
   it("keeps the same team across a code change (UAD in 2025, UEX in 2026)", () => {
@@ -142,7 +142,7 @@ describe("importing the same date twice", () => {
   it("refuses files that are not captures, and snapshots without a date", () => {
     expect(addCapture(emptyCube(), {} as CaptureFile).skipped[0]).toContain("not a racethreads capture file");
     const f = JSON.parse(read("tests/fixtures/dataride-capture-sample.json")) as CaptureFile;
-    f.snapshots[0]!.date = "";
+    f.snapshots![0]!.date = "";
     expect(addCapture(emptyCube(), f).skipped[0]).toContain("no date");
   });
 });
