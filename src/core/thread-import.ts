@@ -1,5 +1,5 @@
 import { slugify } from "./ical";
-import { InfoLink, InfoValue, RegistryRace } from "./types";
+import { InfoLink, InfoValue, Profile, RegistryRace } from "./types";
 
 /** What was read from an old thread. */
 export interface ParsedThread {
@@ -11,6 +11,8 @@ export interface ParsedThread {
   kind: "race" | "stage" | "rest" | "unknown";
   stage?: number;
   rows: Record<string, InfoValue>; // by info-row id
+  labels: Record<string, string>; // the label each row had in this thread ("Overall Previews")
+  tableHeader: string[]; // column headers of the first table
   unknownLabels: string[];
 }
 
@@ -20,6 +22,10 @@ const LABELS: Record<string, string> = {
   info: "information",
   previews: "previews",
   preview: "previews",
+  "overall previews": "previews",
+  "overall preview": "previews",
+  "stage previews": "stagepreviews",
+  "stage preview": "stagepreviews",
   "social media": "social",
   social: "social",
   "live tracker": "tracker",
@@ -91,7 +97,14 @@ export function parseOldThread(markdown: string): ParsedThread {
   const lines = markdown.split(/\r?\n/);
   const titleIdx = lines.findIndex((l) => /^\s*(#+\s*)?\[Race Thread\]/i.test(l) || /^\s*#+\s*\d{4}\s/.test(l));
   const head = titleIdx >= 0 ? parseTitle(lines[titleIdx]!) : { kind: "unknown" as const };
-  const result: ParsedThread = { kind: head.kind ?? "unknown", rows: {}, unknownLabels: [], ...head };
+  const result: ParsedThread = {
+    kind: head.kind ?? "unknown",
+    rows: {},
+    labels: {},
+    tableHeader: [],
+    unknownLabels: [],
+    ...head,
+  };
 
   for (const raw of lines) {
     const l = raw.trim();
@@ -101,7 +114,13 @@ export function parseOldThread(markdown: string): ParsedThread {
     if (parts.length < 2) continue;
     const label = cleanText(parts[0]!);
     if (!label || /^[:\-\s_]+$/.test(label)) continue;
+    // The first wide row is the header of the route/stage table.
+    if (result.tableHeader.length === 0 && parts.length >= 4) {
+      result.tableHeader = parts.map((c) => cleanText(c));
+      continue;
+    }
     const key = LABELS[label.toLowerCase()];
+    if (key) result.labels[key] = label;
     if (!key) {
       if (!/^(date|from|stage|route)/i.test(label) && !/^\d/.test(label) && !/^(mon|tue|wed|thu|fri|sat|sun)/i.test(label)) {
         result.unknownLabels.push(label);
@@ -129,7 +148,7 @@ const isLinks = (v: InfoValue | undefined): v is InfoLink[] => Array.isArray(v);
  * social accounts, FirstCycling id and PCS slug carry over every year; everything
  * that changes each year is returned separately.
  */
-export function toRegistryEntry(p: ParsedThread, existing?: RegistryRace): ImportResult {
+export function toRegistryEntry(p: ParsedThread, existing?: RegistryRace, profile?: Profile): ImportResult {
   const notes: string[] = [];
   const name = p.name ?? existing?.name ?? "";
   const category = p.category ?? existing?.category ?? "ME";
@@ -137,7 +156,28 @@ export function toRegistryEntry(p: ParsedThread, existing?: RegistryRace): Impor
   // Only a tag actually present in the old title is recorded; older titles often had none.
   if (p.tag) entry.titleTag = category;
   const yearOnly: Record<string, InfoValue> = {};
-  const carryInfo: InfoLink[] = [];
+
+  if (profile) {
+    // Row labels this race uses when they differ from the profile's ("Overall Previews").
+    const defaults = new Map(profile.infoRows.map((r) => [r.id, r.label.toLowerCase()]));
+    for (const [id, label] of Object.entries(p.labels)) {
+      if (defaults.has(id) && defaults.get(id) !== label.toLowerCase()) {
+        entry.labels = { ...(entry.labels ?? {}), [id]: label };
+      }
+    }
+    // The table layout this race used, if it matches one of the profile's named variants.
+    const kind = p.kind === "stage" ? "stage" : "oneday";
+    const same = (cols: { header: string }[] | undefined) =>
+      !!cols &&
+      cols.length === p.tableHeader.length &&
+      cols.every((c, i) => c.header.toLowerCase() === (p.tableHeader[i] ?? "").toLowerCase());
+    const variants = profile.tables.variants ?? {};
+    const hit = Object.entries(variants).find(([, v]) => same(v[kind]));
+    if (hit && !same(profile.tables[kind])) entry.table = hit[0];
+    else if (!hit && p.tableHeader.length && !same(profile.tables[kind])) {
+      notes.push("Table layout (" + p.tableHeader.join(" | ") + ") matches no known layout; set one up in the layout editor");
+    }
+  }
 
   const info = p.rows.information;
   const yearInfo: InfoLink[] = [];
@@ -154,10 +194,10 @@ export function toRegistryEntry(p: ParsedThread, existing?: RegistryRace): Impor
         entry.wikipedia = u;
       } else if (/^official( site)?$/.test(t)) {
         entry.officialSite = u;
-      } else if (/roadbook|start ?list/.test(t)) {
-        yearInfo.push(l);
       } else {
-        carryInfo.push(l);
+        // Roadbook, start list, stage info, route pages ...: some are tied to one edition, and a
+        // link cannot tell us which. Keep them out of the registry and show them to the moderator.
+        yearInfo.push(l);
       }
     }
   } else if (info) {
@@ -165,7 +205,6 @@ export function toRegistryEntry(p: ParsedThread, existing?: RegistryRace): Impor
     yearOnly.information = info;
   }
   if (yearInfo.length) yearOnly.information = yearInfo;
-  if (carryInfo.length) entry.info = { ...(entry.info ?? {}), information: carryInfo };
 
   if (isLinks(p.rows.social)) entry.social = p.rows.social;
   else if (p.rows.social) notes.push("Social Media row has free text; not imported");
@@ -181,7 +220,7 @@ export function toRegistryEntry(p: ParsedThread, existing?: RegistryRace): Impor
     if (rest.length) yearOnly.tracker = rest;
   } else if (trackers) yearOnly.tracker = trackers;
 
-  for (const k of ["previews", "content", "coverage", "watch"]) {
+  for (const k of ["previews", "stagepreviews", "content", "coverage", "watch"]) {
     if (p.rows[k]) yearOnly[k] = p.rows[k]!;
   }
   const id = slugify(name) + "-" + category.toLowerCase();

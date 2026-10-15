@@ -7,6 +7,7 @@ import {
   lookupRace,
   parseClasses,
   parseIcs,
+  parseMarkdownStages,
   parseOldThread,
   parseProfile,
   parseRegistry,
@@ -15,6 +16,7 @@ import {
   renderSeason,
   seasonToYaml,
   toRegistryEntry,
+  typeFromAltitude,
 } from "../src/core";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -285,11 +287,193 @@ describe("learning from old threads", () => {
     expect(toRegistryEntry(women).entry.titleTag).toBeUndefined();
     expect(toRegistryEntry(men).entry.titleTag).toBe("ME");
   });
-  it("Tour de France: wikipedia and extra links carry over", () => {
-    const r = toRegistryEntry(tdf);
+  it("Tour de France: only clearly stable links carry over; the rest is shown as year-specific", () => {
+    const r = toRegistryEntry(tdf, undefined, profile);
     expect(r.entry).toMatchObject({ wikipedia: "https://en.wikipedia.org/wiki/Tour_de_France", firstcycling: 17 });
-    const carried = r.entry.info?.information as { text: string }[];
-    expect(carried.map((l) => l.text)).toEqual(["TourView"]);
+    expect(r.entry.info).toBeUndefined();
+    const yearInfo = r.yearOnly.information as { text: string }[];
+    expect(yearInfo.map((l) => l.text)).toEqual(["Startlist", "TourView"]);
     expect(r.entry.social).toHaveLength(6);
+  });
+  it("Vuelta: remembers its own row label and its stage-first table layout", () => {
+    const vuelta = parseOldThread(read("tests/fixtures/old-vuelta-2026-stage21.md"));
+    expect(vuelta).toMatchObject({ kind: "stage", stage: 21, name: "Vuelta a España" });
+    expect(vuelta.tableHeader.slice(0, 3)).toEqual(["Stage", "Date", "Route"]);
+    const r = toRegistryEntry(vuelta, undefined, profile);
+    expect(r.entry).toMatchObject({ firstcycling: 23, table: "stage-first", labels: { previews: "Overall Previews" } });
+    expect(r.entry.social?.map((x) => x.text)).toContain("Twitch");
+    expect(toRegistryEntry(tdf, undefined, profile).entry.table).toBeUndefined(); // TdF uses the default layout
+  });
+});
+
+describe("table features", () => {
+  const mk = (extra: string[]) =>
+    parseSeason(["season: 2026", "races:", ...extra].join(String.fromCharCode(10)), registry);
+  const stageRace = mk([
+    "  - race: tour-de-france-me",
+    "    class: 2.UWT",
+    "    stages:",
+    "      - { n: 21, date: 2026-09-13, from: Granada, to: Granada, length: 99.4, type: Easy, typeUrl: 'https://img.example/t.jpg', altitude: 1311, finish: Flat, finishUrl: 'https://img.example/f.jpg', start: '16:23', end: '19:07' }",
+  ]);
+
+  it("links Type and Finish to their profile images", () => {
+    const t = renderSeason(profile, registry, stageRace)[0]!;
+    expect(t.body).toContain("|[Easy](https://img.example/t.jpg)|1311m|[Flat](https://img.example/f.jpg)|");
+  });
+  it("named layout: stage first, comma length without unit, month-name date", () => {
+    const t = renderSeason(profile, registry, stageRace, undefined, { table: "stage-first" })[0]!;
+    expect(t.body).toContain("|Stage|Date|Route|Length|Type|Altitude|Finish|Time|");
+    expect(t.body).toContain("|21|Sun. 13.Sep|Granada > Granada|99,4|");
+  });
+  it("a race can choose its own layout over the default", () => {
+    const r = mk([
+      "  - race: tour-de-france-me",
+      "    class: 2.UWT",
+      "    table: stage-first",
+      "    stages:",
+      "      - { n: 1, date: 2026-07-04 }",
+    ]);
+    expect(renderSeason(profile, registry, r)[0]!.body).toContain("|Stage|Date|Route|");
+  });
+  it("one-day altitude column appears only when there is an altitude", () => {
+    const without = renderSeason(profile, registry, season)[0]!.body;
+    expect(without).not.toContain("Altitude");
+    const withAlt = mk(["  - race: strade-bianche-me", "    class: 1.UWT", "    date: 2026-03-07", "    altitude: 2800"]);
+    const b = renderSeason(profile, registry, withAlt)[0]!.body;
+    expect(b).toContain("|Date|From > To|Length|Altitude|Type|Finish|Time|");
+    expect(b).toContain("2800m");
+  });
+  it("custom columns passed as options override the default layout", () => {
+    const t = renderSeason(profile, registry, stageRace, undefined, {
+      columns: { stage: [{ header: "Day", field: "date", format: "dd MMM" }, { header: "Km", field: "length", format: "{n}" }] },
+    })[0]!;
+    expect(t.body).toContain("|Day|Km|");
+    expect(t.body).toContain("|13 Sep|99.4|");
+  });
+  it("row labels can be overridden per race", () => {
+    const r = mk([
+      "  - race: strade-bianche-me",
+      "    class: 1.UWT",
+      "    date: 2026-03-07",
+      "    labels: { previews: Overall Previews }",
+    ]);
+    expect(renderSeason(profile, registry, r)[0]!.body).toContain("|Overall Previews|TBC|");
+  });
+});
+
+describe("type from altitude (thresholds come from the profile; the numbers here are test values only)", () => {
+  const p = { ...profile, typeByAltitude: [{ to: 1000, type: "Easy" }, { from: 1001, to: 2000, type: "Medium" }, { from: 2001, type: "Hard" }] };
+  const mkRace = (alt: string) =>
+    parseSeason(
+      ["season: 2026", "races:", "  - race: tour-de-france-me", "    class: 2.UWT", "    stages:",
+        "      - { n: 1, date: 2026-07-04, altitude: " + alt + " }"].join(String.fromCharCode(10)),
+      registry,
+    );
+  it("fills Easy, Medium and Hard by the rules", () => {
+    expect(typeFromAltitude(500, p)).toBe("Easy");
+    expect(typeFromAltitude(1500, p)).toBe("Medium");
+    expect(typeFromAltitude(4000, p)).toBe("Hard");
+    expect(renderSeason(p, registry, mkRace("4000"))[0]!.body).toContain("|4000m|");
+    expect(renderSeason(p, registry, mkRace("4000"))[0]!.body).toContain("|Hard|");
+  });
+  it("makes no guess without rules, and an explicit type always wins", () => {
+    expect(typeFromAltitude(4000, { ...profile, typeByAltitude: undefined })).toBeUndefined();
+    const r = parseSeason(
+      ["season: 2026", "races:", "  - race: tour-de-france-me", "    class: 2.UWT", "    stages:",
+        "      - { n: 1, date: 2026-07-04, altitude: 4000, type: Easy }"].join(String.fromCharCode(10)),
+      registry,
+    );
+    expect(renderSeason(p, registry, r)[0]!.body).toContain("|Easy|");
+  });
+});
+
+describe("stage table import (the hand-built Grand Tour table)", () => {
+  const r = parseMarkdownStages(read("tests/fixtures/internal-tdf-2026.md"), 2026);
+  it("reads all 21 stages with every link", () => {
+    expect(r.stages).toHaveLength(21);
+    expect(r.notes).toEqual([]);
+    expect(r.stages[5]).toEqual({
+      n: 6,
+      date: "2026-07-09",
+      stageUrl: "https://www.letour.fr/en/stage-6",
+      from: "Pau",
+      to: "Gavarnie-Gèdre",
+      routeUrl: "https://i.imgur.com/0uWgEFb.jpeg",
+      length: 186,
+      altitude: 3978,
+      type: "Hard",
+      typeUrl: "https://i.imgur.com/z4xgbd7.jpeg",
+      finish: "Uphill",
+      finishUrl: "https://i.imgur.com/U7E8aaG.jpeg",
+      start: "12:25",
+      end: "17:46",
+    });
+  });
+  it("cleans route notes, keeps '-' as the finish of a team time trial, and finds the time zone", () => {
+    expect(r.stages[0]).toMatchObject({ from: "Barcelona", to: "Barcelona", type: "TTT", altitude: 231, finish: "-" });
+    expect(r.tz).toBe("CET");
+  });
+  it("finds the rest days from the gaps between stage dates", () => {
+    expect(r.restDays).toEqual(["2026-07-13", "2026-07-20"]);
+  });
+  it("understands other column orders and date styles (the Vuelta table)", () => {
+    const v = parseMarkdownStages(
+      [
+        "|Stage|Date|Route|Length|Type|Altitude|Finish|Time |",
+        "|---:|---|---|---:|---:|---:|---|---|",
+        "|[21](https://www.lavuelta.es/en/stage-21)|Sun. 13.Sep|[Granada > Granada](https://www.komoot.com/tour/3035277977)|99,4|Easy|1311m|[Flat](https://files.catbox.moe/k01e5r.jpg)|16:23-19:07 CEST|",
+      ].join(String.fromCharCode(10)),
+      2026,
+    );
+    expect(v.stages[0]).toMatchObject({ n: 21, date: "2026-09-13", length: 99.4, altitude: 1311, type: "Easy", finish: "Flat" });
+    expect(v.tz).toBe("CEST");
+  });
+  it("the imported stages render as the full Tour de France thread, like the hand-built one", () => {
+    const season = { season: 2026, races: [{ race: "tour-de-france-me", class: "2.UWT", tz: r.tz, stages: r.stages, restDays: r.restDays }] };
+    const ts = renderSeason(profile, registry, season);
+    expect(ts.filter((t) => t.kind === "stage")).toHaveLength(21);
+    expect(ts.filter((t) => t.kind === "rest")).toHaveLength(2);
+    const s6 = ts.find((t) => t.id === "tour-de-france-me-stage-6")!;
+    expect(s6.body).toContain(
+      "|Thu. 09/07|[6](https://www.letour.fr/en/stage-6)|[Pau > Gavarnie-Gèdre](https://i.imgur.com/0uWgEFb.jpeg)|186km|[Hard](https://i.imgur.com/z4xgbd7.jpeg)|3978m|[Uphill](https://i.imgur.com/U7E8aaG.jpeg)|12:25-17:46 CET|",
+    );
+    const s1 = ts.find((t) => t.id === "tour-de-france-me-stage-1")!;
+    expect(s1.body).toContain("|19km|[TTT](https://i.imgur.com/qW5xMfO.jpeg)|231m|-|17:05-19:15 CET|");
+  });
+});
+
+describe("Easy / Medium / Hard rule of the peloton profile", () => {
+  it("classifies by the community's thresholds (Easy to 2000, Medium 2001-3499, Hard 3500+)", () => {
+    expect(typeFromAltitude(1883, profile)).toBe("Easy");
+    expect(typeFromAltitude(2000, profile)).toBe("Easy");
+    expect(typeFromAltitude(2001, profile)).toBe("Medium");
+    expect(typeFromAltitude(3259, profile)).toBe("Medium");
+    expect(typeFromAltitude(3499, profile)).toBe("Medium");
+    expect(typeFromAltitude(3500, profile)).toBe("Hard");
+    expect(typeFromAltitude(5601, profile)).toBe("Hard");
+  });
+  it("flags types in a table that disagree with the rule", () => {
+    const r = parseMarkdownStages(read("tests/fixtures/internal-tdf-2026.md"), 2026);
+    const season = { season: 2026, races: [{ race: "tour-de-france-me", class: "2.UWT", tz: r.tz, stages: r.stages }] };
+    const ts = renderSeason(profile, registry, season);
+    const warn = (n: number) => ts.find((t) => t.id === "tour-de-france-me-stage-" + n)!.warnings.join(" | ");
+    expect(warn(18)).toContain("type Medium but 3950 m is Hard");
+    expect(warn(7)).toContain("type Easy but 2053 m is Medium");
+    expect(warn(4)).not.toContain("altitude rule"); // Medium, 3259 m: agrees
+    expect(warn(6)).not.toContain("altitude rule"); // Hard, 3978 m: agrees
+    expect(warn(1)).not.toContain("altitude rule"); // TTT is not checked
+  });
+});
+
+describe("rules with a gap (a community may leave a band undecided)", () => {
+  it("asks for a type when none is given and the altitude is in the gap", () => {
+    const gapProfile = { ...profile, typeByAltitude: [{ to: 2000, type: "Easy" }, { from: 3500, type: "Hard" }] };
+    const season = {
+      season: 2026,
+      races: [{ race: "tour-de-france-me", class: "2.UWT", stages: [{ n: 4, date: "2026-07-07", altitude: 3259 }] }],
+    };
+    const t = renderSeason(gapProfile, registry, season)[0]!;
+    expect(t.warnings.join(" | ")).toContain("3259 m falls between the Easy/Medium/Hard rules; choose the type");
+    expect(t.body).toContain("|3259m|TBC|");
   });
 });

@@ -17,6 +17,29 @@ fetched from other sites.
 3. Press **Generate threads**. Each thread has Copy title / Copy body buttons and lists what is
    still `TBC`. Paste into Reddit's scheduled posts (Markdown mode).
 
+## Stage tables
+
+Paste the table from your internal work thread into "Import a stage table". Columns are found by their
+header names, so any order works (Date first, Stage first ...). It reads the stage link, route (and its
+map/profile image link), length in km, type and finish (with their image links), altitude in metres and
+the times. Days without a stage between two stages become rest days. What you paste wins over data already
+in the season.
+
+## Table layout
+
+Moderators build their tables differently. The "Table layout" section lets you drag the column headers into
+your own order, switch columns on and off, rename them, set alignment, and choose how dates (for example
+`09/07`, `Thu. 09/07`, `13.Sep`, `13 Sep`), lengths (`186km`, `186 km`, `186,2`) and times are written.
+Your layout is saved in your browser and can be shared as YAML. Named layouts (such as the Vuelta's
+stage-first table) live in `data/profiles/peloton.yaml`; a race can ask for one with `table:` in the registry.
+
+## Easy / Medium / Hard
+
+`typeByAltitude` in the profile gives the Type from the metres climbed: Easy up to 2000, Medium 2001-3499,
+Hard 3500 and up. It fills in a missing Type, and warns when a Type you wrote disagrees with the rule
+(for example a stage of 3950 m marked Medium). TTT and ITT are not checked. Length is stored in km and
+altitude in metres.
+
 ## Learning from old threads
 
 Paste old race threads (markdown) into "Learn from old threads". The tool reads the title (year, name,

@@ -24,6 +24,12 @@ details pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background
 .warn{color:var(--warn);font-size:13px;margin-top:4px}
 #msg.err{color:var(--err);white-space:pre-wrap}
 fieldset{border:1px solid var(--line);border-radius:6px;margin:8px 0}
+#layoutlist li{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:4px 8px;margin:4px 0}
+#layoutlist li.off{opacity:.55}
+#layoutlist li.over{border-color:var(--acc)}
+.handle{cursor:grab;user-select:none;color:var(--mut)}
+#layoutlist input[type=text]{width:110px}
+#layoutlist .fld{color:var(--mut);font-size:12px;min-width:56px}
 input[type=number]{width:80px}
 </style>
 </head>
@@ -64,7 +70,34 @@ input[type=number]{width:80px}
   <div id="learnmsg" class="mut" style="white-space:pre-wrap"></div>
 </fieldset>
 
-<h2>4. Season (edit freely)</h2>
+<fieldset>
+  <legend class="mut">Import a stage table: paste the table from your internal work thread (any column order). Fills the race selected under "Wikipedia helpers". Rest days are the days without a stage.</legend>
+  <textarea id="stagetable" spellcheck="false" style="min-height:100px" placeholder="| Date | Stage | Route | Length | Type |Altitude|Finish|Time |"></textarea>
+  <div class="row"><button id="stageimport">Import stages into the selected race</button></div>
+  <div id="stagemsg" class="mut" style="white-space:pre-wrap"></div>
+</fieldset>
+
+<h2>4. Table layout</h2>
+<fieldset>
+  <legend class="mut">Drag the column headers to reorder them. Moderators build the tables differently; pick yours.</legend>
+  <div class="row">
+    <label>Layout <select id="layoutname"></select></label>
+    <label>Table <select id="layoutkind"><option value="stage">Stage table</option><option value="oneday">One-day table</option></select></label>
+    <label>Date display <select id="datefmt"></select></label>
+    <span id="dateexample" class="mut"></span>
+  </div>
+  <ul id="layoutlist" style="list-style:none;padding:0;margin:8px 0"></ul>
+  <div class="row">
+    <button id="layoutreset">Reset to standard</button>
+    <button id="layoutcopy">Copy my layout (YAML)</button>
+    <button id="layoutload">Load layout from YAML below</button>
+  </div>
+  <details><summary class="mut">Layout as YAML (share it with other moderators)</summary>
+    <textarea id="layoutyaml" spellcheck="false" style="min-height:90px"></textarea>
+  </details>
+</fieldset>
+
+<h2>5. Season (edit freely)</h2>
 <textarea id="season" spellcheck="false"></textarea>
 <details>
   <summary class="mut">Race registry: official sites, social links, FirstCycling ids, PCS slugs (kept between years)</summary>
@@ -78,7 +111,7 @@ input[type=number]{width:80px}
 </div>
 <p id="msg" class="mut"></p>
 
-<h2>5. Threads</h2>
+<h2>6. Threads</h2>
 <div id="out"></div>
 </main>
 <script>__SCRIPT__</script>

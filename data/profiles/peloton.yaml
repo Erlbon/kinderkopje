@@ -5,6 +5,13 @@ id: peloton
 name: r/peloton
 placeholder: TBC
 
+# Easy / Medium / Hard from the metres climbed. Used when a stage has no Type of its own, and to
+# warn when a given type disagrees. Whole metres: Easy up to 2000, Medium 2001-3499, Hard 3500+.
+typeByAltitude:
+  - { to: 2000, type: Easy }
+  - { from: 2001, to: 3499, type: Medium }
+  - { from: 3500, type: Hard }
+
 titles:
   oneday: "[Race Thread] {year} {name} {tag} ({class})"
   stage: "[Race Thread] {year} {name} – Stage {stage} ({class})"
@@ -16,9 +23,24 @@ tables:
     - { header: Date, field: date, format: "dd.mm" }
     - { header: From > To, field: route }
     - { header: Length, field: length }
+    - { header: Altitude, field: altitude, optional: true }
     - { header: Type, field: type }
     - { header: Finish, field: finish }
     - { header: Time, field: time, format: " – " }
+  # Moderators lay tables out differently. A variant replaces the one-day and/or
+  # stage table; pick the default on the page, or per race with `table:` in the registry/season.
+  variants:
+    stage-first:
+      label: Stage first (as in the 2026 Vuelta threads)
+      stage:
+        - { header: Stage, field: stage, align: r }
+        - { header: Date, field: date, format: "ddd. dd.MMM" }
+        - { header: Route, field: route }
+        - { header: Length, field: length, align: r, format: "{n,}" }
+        - { header: Type, field: type, align: r }
+        - { header: Altitude, field: altitude, align: r }
+        - { header: Finish, field: finish }
+        - { header: Time, field: time, format: "-" }
   stage:
     - { header: Date, field: date, format: "ddd. dd/mm", align: r }
     - { header: Stage, field: stage }
@@ -32,11 +54,19 @@ tables:
 infoRows:
   - { id: information, label: Information, auto: [official, startlistFc, wikipedia] }
   - { id: previews, label: Previews }
+  - { id: stagepreviews, label: Stage Previews, optional: true, kinds: [stage] }
   - { id: content, label: "/r/Peloton Content", optional: true }
   - { id: social, label: Social Media, auto: [social] }
   - { id: tracker, label: Live Trackers, auto: [pcsLive] }
   - { id: coverage, label: Coverage, optional: true }
   - { id: watch, label: Where to watch }
+
+# Closing markdown per thread type, e.g. the Discord invite under stage threads:
+#   footers:
+#     stage: |-
+#       ---
+#       * *For a live chat way to discuss/follow the race we [have a discord too](<full invite link>)*
+footers: {}
 
 restIntro: >-
   [//]: # (Write the rest-day recap here: how the race has gone, what the coming

@@ -2,12 +2,14 @@ import profileYaml from "../../data/profiles/peloton.yaml";
 import registryYaml from "../../data/peloton/races.yaml";
 import fixturesYaml from "../../data/peloton/2026-fixtures.yaml";
 import classesYaml from "../../data/classes.yaml";
+import { initLayout, LayoutControl } from "./layout";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import {
   RegistryRace,
   slugify,
   fetchWikitext,
   lookupRace,
+  parseMarkdownStages,
   parseOldThread,
   toRegistryEntry,
   parseStageTable,
@@ -84,6 +86,7 @@ function download(name: string, text: string, type = "text/plain"): void {
 
 const profile = parseProfile(profileYaml);
 const classes = parseClasses(classesYaml);
+let layout: LayoutControl | undefined;
 let threads: Thread[] = [];
 
 function render(): void {
@@ -106,7 +109,7 @@ function render(): void {
     showError(e);
     return;
   }
-  threads = renderSeason(profile, registry, season, classes);
+  threads = renderSeason(profile, registry, season, classes, layout?.options() ?? {});
   store("rt-season", $<HTMLTextAreaElement>("season").value);
   store("rt-registry", $<HTMLTextAreaElement>("registry").value);
   const todo = threads.reduce((n, t) => n + t.warnings.length, 0);
@@ -260,6 +263,38 @@ async function lookupWebsite(): Promise<void> {
   }
 }
 
+function importStageTable(): void {
+  const msg = $("stagemsg");
+  try {
+    const id = $<HTMLSelectElement>("wprace").value;
+    const s = seasonObj();
+    const race = (s.races as Obj[] | undefined)?.find((r) => r.race === id);
+    if (!race) {
+      msg.textContent = "Pick the race under 'Wikipedia helpers' first (add it to the season if it is not listed).";
+      return;
+    }
+    const year = Number(s.season) || new Date().getFullYear();
+    const parsed = parseMarkdownStages($<HTMLTextAreaElement>("stagetable").value, year);
+    if (!parsed.stages.length) {
+      msg.textContent = parsed.notes.join(NL) || "No stages found.";
+      return;
+    }
+    // The pasted table is what the moderator typed: it wins over what is already there, field by field.
+    const have = new Map(((race.stages ?? []) as Obj[]).map((x) => [x.n, x]));
+    race.stages = parsed.stages.map((p) => ({ ...have.get(p.n), ...p }));
+    delete race.date;
+    if (parsed.restDays.length) race.restDays = parsed.restDays;
+    if (parsed.tz && !race.tz) race.tz = parsed.tz;
+    $<HTMLTextAreaElement>("season").value = yamlStringify(s, { lineWidth: 0 });
+    msg.textContent =
+      parsed.stages.length + " stages and " + parsed.restDays.length + " rest days imported" +
+      (parsed.tz ? " (time zone " + parsed.tz + ")" : "") + (parsed.notes.length ? NL + parsed.notes.join(NL) : "");
+    render();
+  } catch (e) {
+    msg.textContent = String(e instanceof Error ? e.message : e);
+  }
+}
+
 /** Split a paste of several old threads at each "[Race Thread]" title line. */
 function splitThreads(text: string): string[] {
   const parts: string[] = [];
@@ -313,10 +348,12 @@ function initClassBoxes(): void {
 
 function init(): void {
   initClassBoxes();
+  layout = initLayout(profile, render);
   $<HTMLTextAreaElement>("registry").value = store("rt-registry") ?? registryYaml;
   $<HTMLTextAreaElement>("season").value = store("rt-season") ?? fixturesYaml;
   $("render").onclick = render;
   $("learn").onclick = learn;
+  $("stageimport").onclick = importStageTable;
   $("wpstages").onclick = () => void fillStages();
   $("wplookup").onclick = () => void lookupWebsite();
   $("reset").onclick = () => {
