@@ -24,9 +24,16 @@
   <div id="dbmsg" class="mut" style="margin-top:6px"></div>
 </fieldset>
 
+<h2>Tables and fields</h2>
+<fieldset>
+  <legend class="mut">What is in the database. The two views (v_team_points, v_results) are the easy way in. Open a table to see its fields and what they mean; the buttons ask a first question of it below.</legend>
+  <div class="row"><button id="dictmd">Copy this overview as Markdown</button></div>
+  <div id="dict" style="margin-top:8px"></div>
+</fieldset>
+
 <h2>Ask the data (SQL, read only)</h2>
 <fieldset>
-  <legend class="mut">Tables: team_snapshot, team_rank, team_level, race_result, classification, result_row, queue_race. Views: v_team_points, v_results.</legend>
+  <legend class="mut">Write a SELECT, or use a button above or one of these. Nothing here can change the data.</legend>
   <div id="sqlexamples"></div>
   <textarea id="sqlbox" spellcheck="false" style="min-height:90px" placeholder="SELECT ..."></textarea>
   <div class="row" style="margin-top:6px"><button id="sqlrun">Run</button></div>

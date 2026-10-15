@@ -1,5 +1,5 @@
-import { querySql, SCHEMA_VERSION, schemaVersion } from "../../db";
-import { $, download, el } from "../dom";
+import { DICTIONARY, dictionaryMarkdown, querySql, SCHEMA_VERSION, schemaVersion } from "../../db";
+import { $, copy, download, el } from "../dom";
 import type { Store } from "../store";
 
 const EXAMPLES: [string, string][] = [
@@ -20,6 +20,74 @@ const EXAMPLES: [string, string][] = [
 ];
 
 export function initData(store: Store): void {
+  const box = $<HTMLTextAreaElement>("sqlbox");
+
+  function runSql(sql?: string): void {
+    if (sql !== undefined) box.value = sql;
+    const out = $("sqlout");
+    out.replaceChildren();
+    try {
+      const r = querySql(store.db, box.value);
+      if (!r.columns.length) {
+        out.append(el("div", { class: "mut", textContent: "No rows." }));
+        return;
+      }
+      const table = el("table", { class: "queue" });
+      table.append(el("tr", {}, ...r.columns.map((c) => el("th", { textContent: c }))));
+      for (const row of r.rows.slice(0, 500)) table.append(el("tr", {}, ...row.map((v) => el("td", { textContent: v === null ? "" : String(v) }))));
+      out.append(table, el("div", { class: "mut", textContent: r.rows.length + " rows" + (r.rows.length > 500 ? " (first 500 shown)" : "") }));
+    } catch (err) {
+      out.append(el("div", { class: "err", textContent: err instanceof Error ? err.message : String(err) }));
+    }
+  }
+
+  /** The overview of tables and fields: what each means, how they link, with a first question for each. */
+  function drawDictionary(): void {
+    const root = $("dict");
+    root.replaceChildren();
+    // views first: they are the easy way in
+    const docs = [...DICTIONARY].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "view" ? -1 : 1));
+    for (const d of docs) {
+      let n = 0;
+      try {
+        n = Number(store.db.exec("SELECT COUNT(*) FROM " + d.name)[0]!.values[0]![0]);
+      } catch {
+        /* the overview is still useful when a count fails */
+      }
+      const info = store.db.exec("PRAGMA table_info(" + d.name + ")")[0]?.values ?? [];
+      const type = new Map(info.map((r) => [r[1] as string, String(r[2] ?? "").toLowerCase()]));
+      const isKey = new Map(info.map((r) => [r[1] as string, Number(r[5]) > 0]));
+
+      const table = el("table", { class: "queue" });
+      table.append(el("tr", {}, el("th", { textContent: "Field" }), el("th", { textContent: "Type" }), el("th", { textContent: "Meaning" })));
+      for (const c of d.columns) {
+        table.append(
+          el("tr", {}, el("td", {}, el("code", { textContent: c.name + (isKey.get(c.name) ? " (key)" : "") })), el("td", { textContent: type.get(c.name) ?? "" }), el("td", { textContent: c.meaning })),
+        );
+      }
+      const first = el("button", { textContent: "Show the first 20 rows" });
+      first.onclick = () => {
+        runSql("SELECT * FROM " + d.name + " LIMIT 20");
+        $("sqlbox").scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+      const example = el("button", { textContent: d.example.title, title: d.example.sql });
+      example.onclick = () => {
+        runSql(d.example.sql);
+        $("sqlbox").scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+      const details = el(
+        "details",
+        {},
+        el("summary", {}, el("strong", { textContent: d.name }), el("span", { class: "mut", textContent: "  " + d.kind + ", " + n + " rows: " + d.summary })),
+        table,
+      );
+      if (d.links) details.append(el("p", { class: "mut", textContent: "Links: " + d.links }));
+      details.append(el("div", { class: "row" }, first, el("span", { class: "mut", textContent: "or ask:" }), example));
+      details.open = d.kind === "view";
+      root.append(details);
+    }
+  }
+
   function info(): void {
     const count = (t: string) => Number(store.db.exec("SELECT COUNT(*) FROM " + t)[0]!.values[0]![0]);
     const rows = [
@@ -30,10 +98,10 @@ export function initData(store: Store): void {
       ["Races in the queue", count("queue_race")],
       ["Saved texts (season, registry, layout ...)", count("kv")],
     ];
-    const box = $("dbinfo");
-    box.replaceChildren();
-    for (const [label, n] of rows) box.append(el("div", { textContent: label + ": " + n }));
-    box.append(
+    const boxInfo = $("dbinfo");
+    boxInfo.replaceChildren();
+    for (const [label, n] of rows) boxInfo.append(el("div", { textContent: label + ": " + n }));
+    boxInfo.append(
       el("div", { textContent: "Schema version " + schemaVersion(store.db) + " (this tool: " + SCHEMA_VERSION + "). File size about " + Math.round(store.exportBytes().length / 1024) + " KB." }),
       el("div", {
         class: store.persistent ? "mut" : "warn",
@@ -42,6 +110,7 @@ export function initData(store: Store): void {
           : "This browser does not allow saving: the data lasts for this visit only. Use Save database before you close the page.",
       }),
     );
+    drawDictionary();
   }
 
   $("dbexport").onclick = () => download("pelotonic.sqlite", store.exportBytes(), "application/vnd.sqlite3");
@@ -63,9 +132,10 @@ export function initData(store: Store): void {
     $("dbmsg").textContent = "Everything was deleted.";
     info();
   };
+  const mdButton = $<HTMLButtonElement>("dictmd");
+  mdButton.onclick = () => copy(dictionaryMarkdown(), mdButton);
 
   // the SQL box (read-only)
-  const box = $<HTMLTextAreaElement>("sqlbox");
   const ex = $("sqlexamples");
   for (const [label, sql] of EXAMPLES) {
     const b = el("button", { textContent: label });
@@ -74,23 +144,7 @@ export function initData(store: Store): void {
     };
     ex.append(b);
   }
-  $("sqlrun").onclick = () => {
-    const out = $("sqlout");
-    out.replaceChildren();
-    try {
-      const r = querySql(store.db, box.value);
-      if (!r.columns.length) {
-        out.append(el("div", { class: "mut", textContent: "No rows." }));
-        return;
-      }
-      const table = el("table", { class: "queue" });
-      table.append(el("tr", {}, ...r.columns.map((c) => el("th", { textContent: c }))));
-      for (const row of r.rows.slice(0, 500)) table.append(el("tr", {}, ...row.map((v) => el("td", { textContent: v === null ? "" : String(v) }))));
-      out.append(table, el("div", { class: "mut", textContent: r.rows.length + " rows" + (r.rows.length > 500 ? " (first 500 shown)" : "") }));
-    } catch (err) {
-      out.append(el("div", { class: "err", textContent: err instanceof Error ? err.message : String(err) }));
-    }
-  };
+  $("sqlrun").onclick = () => runSql();
 
   store.onChange(info);
   info();

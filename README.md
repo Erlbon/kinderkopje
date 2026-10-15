@@ -22,8 +22,10 @@ a file. The file records its schema version; a file from a newer version of the 
 (season YAML, race registry, table layout) are in the same file. Data from the earlier one-page version, kept in the
 browser's own storage, moves into the database the first time a page opens.
 
-Tables: `team_snapshot`, `team_rank`, `team_level`, `race_result`, `classification`, `result_row`, `queue_race`,
-`kv`, with the views `v_team_points` and `v_results`. The schema is in `src/db/schema.ts`.
+The Data page has a **Tables and fields** overview: every table and view with the meaning of each field, how they
+link, and a button that shows the first rows or asks an example question; *Copy this overview as Markdown* gives it
+to paste elsewhere. The views `v_team_points` and `v_results` are the easy way in. The overview is written in
+`src/db/dictionary.ts`, and a test fails if it ever differs from the real schema (`src/db/schema.ts`).
 
 ## Running it
 
