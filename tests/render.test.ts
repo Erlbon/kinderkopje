@@ -477,3 +477,13 @@ describe("rules with a gap (a community may leave a band undecided)", () => {
     expect(t.body).toContain("|3259m|TBC|");
   });
 });
+
+describe("footers", () => {
+  it("stage threads end with the Discord invite; one-day and rest-day threads do not get it", () => {
+    const stageBody = byId("tour-de-france-me-stage-6").body;
+    expect(stageBody.trimEnd().endsWith("[have a discord too](https://discord.gg/RgBftaX)!*")).toBe(true);
+    expect(stageBody).toContain(String.fromCharCode(10) + "---" + String.fromCharCode(10));
+    expect(byId("strade-bianche-me").body).not.toContain("discord");
+    expect(byId("tour-de-france-me-rest-1").body).not.toContain("discord");
+  });
+});

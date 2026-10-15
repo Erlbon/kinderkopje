@@ -61,12 +61,11 @@ infoRows:
   - { id: coverage, label: Coverage, optional: true }
   - { id: watch, label: Where to watch }
 
-# Closing markdown per thread type, e.g. the Discord invite under stage threads:
-#   footers:
-#     stage: |-
-#       ---
-#       * *For a live chat way to discuss/follow the race we [have a discord too](<full invite link>)*
-footers: {}
+# Closing markdown per thread type (oneday, stage, rest). The Vuelta stage threads end with the Discord invite.
+footers:
+  stage: |-
+    ---
+    * *For a live chat way to discuss/follow the race we [have a discord too](https://discord.gg/RgBftaX)!*
 
 restIntro: >-
   [//]: # (Write the rest-day recap here: how the race has gone, what the coming
