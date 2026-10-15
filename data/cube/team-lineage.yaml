@@ -1,0 +1,9 @@
+# Teams that merged. UCI team ids come from DataRide (the id stays with a licence through renames).
+# From the `effective` season on, the `from` team no longer starts; the merged team keeps the `into` id.
+# For earlier seasons the page can add the `from` team's points to the `into` line so that the seasons
+# compare like with like. Add a line here when two teams merge.
+merges:
+  - into: 929 # Lotto (Lotto Soudal, Lotto Dstny, Lotto), continues as Lotto Intermarché
+    from: 1372 # Intermarché-Wanty
+    effective: 2026
+    note: Lotto and Intermarché-Wanty merged into Lotto Intermarché for 2026

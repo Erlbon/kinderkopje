@@ -1,17 +1,21 @@
+import lineageYaml from "../../data/cube/team-lineage.yaml";
 import {
   CaptureFile,
   Cube,
   addCapture,
+  combineMerged,
   compareToLastYear,
   comparisonMarkdown,
   emptyCube,
   monthlyMarkdown,
   monthlyOverview,
+  parseLineage,
   seasonTable,
   seasonTableMarkdown,
 } from "../core";
 
 const KEY = "rt-cube";
+const lineage = parseLineage(lineageYaml);
 
 function $<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -83,10 +87,17 @@ export function initTeams(): void {
     if (!cutoffInput.value || cutoffInput.value.slice(0, 4) !== String(year)) cutoffInput.value = dates[dates.length - 1] ?? year + "-12-31";
     const top = Number($<HTMLInputElement>("cubetop").value) || 20;
 
-    const cmp = compareToLastYear(cube, year, cutoffInput.value, { top });
-    const monthly = monthlyOverview(cube, year, { top });
+    // Merged teams (Lotto + Intermarché-Wanty before 2026) are added together when the box is ticked.
+    const view = $<HTMLInputElement>("cubecombine").checked ? combineMerged(cube, lineage) : cube;
+    const cmp = compareToLastYear(view, year, cutoffInput.value, { top });
+    const monthly = monthlyOverview(view, year, { top });
+    const nl = String.fromCharCode(10);
+    const mergeNote = $<HTMLInputElement>("cubecombine").checked && lineage.merges.length
+      ? nl + nl + "Merged teams: " + lineage.merges.map((m) => (m.note ?? "team " + m.from + " merged into team " + m.into) + " (" + m.effective + ")").join("; ") +
+        ". Earlier seasons add the two teams' points together; a rank in those seasons is where the combined total would stand among the captured teams."
+      : "";
     const blocks: [string, string][] = [
-      ["Seasons side by side (latest ranking of each season)", seasonTableMarkdown(seasonTable(cube, { top }))],
+      ["Seasons side by side (latest ranking of each season)", seasonTableMarkdown(seasonTable(view, { top })) + mergeNote],
       ["Season to date against the same date last year", comparisonMarkdown(cmp, year, cutoffInput.value)],
       ["Points earned per month against last year", monthlyMarkdown(monthly, year)],
     ];
@@ -145,7 +156,7 @@ export function initTeams(): void {
     store(cube);
     refresh();
   };
-  for (const id of ["cubeyear", "cubecutoff", "cubetop"]) $(id).onchange = refresh;
+  for (const id of ["cubeyear", "cubecutoff", "cubetop", "cubecombine"]) $(id).onchange = refresh;
 
   // the install link for the capture bookmark is filled in by the build
   refresh();

@@ -1,3 +1,5 @@
+import { parse as parseYaml } from "yaml";
+
 /**
  * Team points cube, slice 1: UCI World Ranking, team ranking snapshots by date.
  * Input: files made by tools/capture-dataride.js ("racethreads-capture/1").
@@ -104,6 +106,62 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   }
   cube.teamSnapshots.sort((a, b) => a.date.localeCompare(b.date));
   return report;
+}
+
+export interface Merge {
+  into: number; // UCI team id that continues
+  from: number; // UCI team id that stops at `effective`
+  effective: number; // first season of the merged team
+  note?: string;
+}
+
+export interface Lineage {
+  merges: Merge[];
+}
+
+export function parseLineage(text: string): Lineage {
+  const v = parseYaml(text) as { merges?: unknown } | null;
+  const merges = Array.isArray(v?.merges) ? (v!.merges as Merge[]) : [];
+  for (const m of merges) {
+    if (typeof m.into !== "number" || typeof m.from !== "number" || typeof m.effective !== "number") {
+      throw new Error("team lineage: each merge needs numeric into, from and effective");
+    }
+  }
+  return { merges };
+}
+
+/**
+ * Seasons before a merge: add the stopping team's points to the continuing team, so the merged team's
+ * history compares like with like (Lotto + Intermarché-Wanty before 2026). Returns a new cube.
+ * Ranks are recomputed among the captured teams; they are left out (0) where the combined total
+ * is lower than the lowest captured team, because then the true rank is unknown.
+ */
+export function combineMerged(cube: Cube, lineage: Lineage): Cube {
+  const out: Cube = { teamSnapshots: [] };
+  for (const s of cube.teamSnapshots) {
+    let teams = s.teams.map((t) => ({ ...t }));
+    let changed = false;
+    for (const m of lineage.merges) {
+      if (s.season >= m.effective) continue;
+      const from = teams.find((t) => t.teamId === m.from);
+      if (!from) continue;
+      const into = teams.find((t) => t.teamId === m.into);
+      if (into) {
+        into.points = round(into.points + from.points);
+      } else {
+        teams.push({ ...from, teamId: m.into }); // the continuing team was outside the captured part
+      }
+      teams = teams.filter((t) => t !== from);
+      changed = true;
+    }
+    if (changed) {
+      const lowest = Math.min(...s.teams.map((t) => t.points));
+      teams.sort((a, b) => b.points - a.points);
+      teams = teams.map((t, i) => ({ ...t, rank: t.points >= lowest ? i + 1 : 0 }));
+    }
+    out.teamSnapshots.push({ ...s, teams });
+  }
+  return out;
 }
 
 /** The latest snapshot of `season` that is on or before `cutoff` (ISO date). */
@@ -243,7 +301,7 @@ export function seasonTableMarkdown(t: ReturnType<typeof seasonTable>): string {
   const rows = t.lines.map(
     (l) =>
       "|" + l.name + " (" + l.code + ")|" +
-      l.points.map((p, i) => (p === undefined ? "-" : num(p) + " (#" + l.ranks[i] + ")")).join("|") + "|",
+      l.points.map((p, i) => (p === undefined ? "-" : num(p) + (l.ranks[i] ? " (#" + l.ranks[i] + ")" : ""))).join("|") + "|",
   );
   const note = "UCI World Ranking points of each season's latest ranking (date in brackets); rank in brackets after the points. A dash means the team is not in the captured part of that ranking.";
   return [head, sep, ...rows].join(nl) + nl + nl + note;

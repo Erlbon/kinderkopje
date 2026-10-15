@@ -4,11 +4,13 @@ import {
   CaptureFile,
   Cube,
   addCapture,
+  combineMerged,
   compareToLastYear,
   comparisonMarkdown,
   emptyCube,
   monthlyMarkdown,
   monthlyOverview,
+  parseLineage,
   sameDayInYear,
   seasonTable,
   seasonTableMarkdown,
@@ -162,5 +164,40 @@ describe("seasons side by side (synthetic teams)", () => {
     expect(md).toContain("|Team|2024 (20 Oct)|2025 (19 Oct)|");
     expect(md).toContain("|New Name (NEW)|500 (#1)|700 (#2)|");
     expect(md).toContain("|Team C (CCC)|100 (#3)|-|");
+  });
+});
+
+// Synthetic teams: made-up numbers for the merge arithmetic (the real ids 929 and 1372 appear in data/cube/team-lineage.yaml).
+describe("merged teams (lineage)", () => {
+  const team = (id: number, name: string, rank: number, points: number) => ({ teamId: id, code: "X" + id, name, nation: "XXX", rank, points });
+  const lineage = parseLineage("merges:\n  - { into: 1, from: 2, effective: 2026 }\n");
+  const cube: Cube = {
+    teamSnapshots: [
+      { date: "2025-10-19", season: 2025, momentId: null, complete: false, teams: [team(3, "Big", 1, 500), team(1, "Continues", 2, 200), team(2, "Stops", 3, 150), team(4, "Small", 4, 100)] },
+      { date: "2026-10-13", season: 2026, momentId: null, complete: false, teams: [team(3, "Big", 1, 450), team(1, "Merged", 2, 380), team(4, "Small", 3, 90)] },
+    ],
+  };
+  it("adds the stopping team to the continuing one before the merge, and not from the merge season on", () => {
+    const c = combineMerged(cube, lineage);
+    const s25 = c.teamSnapshots[0]!.teams;
+    expect(s25.find((t) => t.teamId === 1)!.points).toBe(350);
+    expect(s25.find((t) => t.teamId === 2)).toBeUndefined();
+    expect(c.teamSnapshots[1]!.teams).toEqual(cube.teamSnapshots[1]!.teams); // 2026 untouched
+  });
+  it("recomputes ranks among the captured teams", () => {
+    const c = combineMerged(cube, lineage);
+    expect(c.teamSnapshots[0]!.teams.map((t) => [t.teamId, t.rank])).toEqual([[3, 1], [1, 2], [4, 3]]);
+  });
+  it("does not change the original cube", () => {
+    combineMerged(cube, lineage);
+    expect(cube.teamSnapshots[0]!.teams.find((t) => t.teamId === 2)!.points).toBe(150);
+  });
+  it("the real lineage file parses and names the Lotto and Intermarché-Wanty ids", () => {
+    const real = parseLineage(read("data/cube/team-lineage.yaml"));
+    expect(real.merges).toEqual([expect.objectContaining({ into: 929, from: 1372, effective: 2026 })]);
+  });
+  it("a team outside the captured part of the continuing side takes the stopping team's place", () => {
+    const only: Cube = { teamSnapshots: [{ date: "2025-10-19", season: 2025, momentId: null, complete: false, teams: [team(2, "Stops", 1, 150)] }] };
+    expect(combineMerged(only, lineage).teamSnapshots[0]!.teams[0]).toMatchObject({ teamId: 1, points: 150 });
   });
 });

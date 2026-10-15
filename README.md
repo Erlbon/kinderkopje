@@ -33,6 +33,10 @@ one; a month's points need the previous month-end ranking, otherwise the month s
 UCI's team id (the same team keeps its id when its name or code changes, as with UAD in 2025 and UEX in 2026).
 The id follows UCI's licence, so it can join teams that are different organisations (the Qhubeka licence became
 Q36.5): check a line that jumps oddly.
+
+Merged teams are listed in `data/cube/team-lineage.yaml` (Lotto and Intermarché-Wanty merged for 2026, UCI ids 929
+and 1372). With "Combine merged teams" ticked, earlier seasons add the two teams' points together so that the
+merged team compares like with like; ranks in those seasons are where the combined total would stand.
 Capture the month-end rankings (and the latest ranking) for each season you want to compare.
 
 ## Stage tables
