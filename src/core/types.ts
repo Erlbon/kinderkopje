@@ -19,6 +19,8 @@ export interface RegistryRace {
   table?: string; // name of a table layout in the profile (tables.variants); the default layout otherwise
   labels?: Record<string, string>; // info-row labels this race uses ("previews": "Overall Previews")
   officialSite?: string;
+  /** Organiser contact from UCI (personal data: kept only if the moderator asked for it, never put in a thread). */
+  contactEmail?: string;
   wikipedia?: string;
   pcs?: string; // procyclingstats slug, e.g. strade-bianche-donne
   firstcycling?: number | string; // firstcycling race.php?r=
@@ -65,6 +67,7 @@ export interface SeasonRace extends Partial<Leg> {
   mega?: boolean; // also a thread for the whole race
   tz?: string;
   roadbook?: string;
+  uciId?: number; // UCI competition id (uci.org/competition-details/<year>/ROA/<id>)
   table?: string; // overrides the registry's stage-table layout for this season
   labels?: Record<string, string>; // overrides row labels for this season
   info?: Record<string, InfoValue>; // extra/override per info row
