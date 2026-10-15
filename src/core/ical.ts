@@ -9,7 +9,6 @@ export interface IcsEvent {
   end: string; // ISO, last day (DTEND is exclusive in iCal; converted here)
 }
 
-const NL = String.fromCharCode(10);
 const BACKSLASH = String.fromCharCode(92);
 
 function unescapeIcs(s: string): string {
@@ -67,10 +66,13 @@ export function parseIcs(text: string): IcsEvent[] {
 
 const WOMEN = /women|donne|femmes|femenina|féminin|feminin|ladies|dames/i;
 
+// Unicode combining marks U+0300..U+036F (built from char codes so no escape can be mangled by an editor).
+const COMBINING_MARKS = new RegExp("[" + String.fromCharCode(0x300) + "-" + String.fromCharCode(0x36f) + "]", "g");
+
 export function slugify(s: string): string {
   return s
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(COMBINING_MARKS, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
@@ -133,5 +135,3 @@ export function draftSeason(events: IcsEvent[], opts: DraftOptions): Season {
 export function seasonToYaml(season: Season): string {
   return stringify(season, { lineWidth: 0 });
 }
-
-export { NL as _NL };

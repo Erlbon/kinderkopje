@@ -22,6 +22,8 @@ export interface RegistryRace {
   firstcycling?: number | string; // firstcycling race.php?r=
   firstcyclingClass?: number | string; // firstcycling race.php?k= (default 8)
   social?: InfoLink[];
+  /** Info-row items that carry over every year, per row id (information, previews, ...). */
+  info?: Record<string, InfoValue>;
   tz?: string; // default time zone label, e.g. CET
 }
 

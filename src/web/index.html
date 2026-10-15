@@ -56,7 +56,15 @@ input[type=number]{width:80px}
   <div id="wpresults"></div>
 </fieldset>
 
-<h2>3. Season (edit freely)</h2>
+<h2>3. Learn from old threads</h2>
+<fieldset>
+  <legend class="mut">Paste one or more old race threads (markdown). Homepage, Wikipedia, socials, FirstCycling id and PCS slug go into the race registry; year-specific rows (roadbook, previews, where to watch) are left out.</legend>
+  <textarea id="oldthreads" spellcheck="false" style="min-height:100px" placeholder="[Race Thread] 2026 Strade Bianche ME (1.UWT) ..."></textarea>
+  <div class="row"><button id="learn">Learn from these threads</button></div>
+  <div id="learnmsg" class="mut" style="white-space:pre-wrap"></div>
+</fieldset>
+
+<h2>4. Season (edit freely)</h2>
 <textarea id="season" spellcheck="false"></textarea>
 <details>
   <summary class="mut">Race registry: official sites, social links, FirstCycling ids, PCS slugs (kept between years)</summary>
@@ -70,7 +78,7 @@ input[type=number]{width:80px}
 </div>
 <p id="msg" class="mut"></p>
 
-<h2>4. Threads</h2>
+<h2>5. Threads</h2>
 <div id="out"></div>
 </main>
 <script>__SCRIPT__</script>

@@ -5,3 +5,4 @@ export * from "./render";
 export * from "./ical";
 export * from "./classes";
 export * from "./wikipedia";
+export * from "./thread-import";

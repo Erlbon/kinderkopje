@@ -4,8 +4,12 @@ import fixturesYaml from "../../data/peloton/2026-fixtures.yaml";
 import classesYaml from "../../data/classes.yaml";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import {
+  RegistryRace,
+  slugify,
   fetchWikitext,
   lookupRace,
+  parseOldThread,
+  toRegistryEntry,
   parseStageTable,
   parseClasses,
   SeasonError,
@@ -256,6 +260,49 @@ async function lookupWebsite(): Promise<void> {
   }
 }
 
+/** Split a paste of several old threads at each "[Race Thread]" title line. */
+function splitThreads(text: string): string[] {
+  const parts: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (/^\s*(#+\s*)?\[Race Thread\]/i.test(line) || parts.length === 0) parts.push(line);
+    else parts[parts.length - 1] += NL + line;
+  }
+  return parts.filter((p) => p.trim() !== "");
+}
+
+function learn(): void {
+  const msg = $("learnmsg");
+  try {
+    const reg = registryObj();
+    const lines: string[] = [];
+    for (const md of splitThreads($<HTMLTextAreaElement>("oldthreads").value)) {
+      const parsed = parseOldThread(md);
+      if (!parsed.name) {
+        lines.push("Skipped a block: no [Race Thread] title found.");
+        continue;
+      }
+      const r = toRegistryEntry(parsed, reg[slugifyId(parsed)] as RegistryRace | undefined);
+      const had = reg[r.id] !== undefined;
+      reg[r.id] = r.entry;
+      const left = Object.keys(r.yearOnly);
+      lines.push(
+        (had ? "Updated " : "Added ") + r.id + " from the " + (parsed.year ?? "?") + " thread" +
+          (left.length ? " (year-specific rows left out: " + left.join(", ") + ")" : "") +
+          (r.notes.length ? ". " + r.notes.join(". ") : ""),
+      );
+    }
+    $<HTMLTextAreaElement>("registry").value = yamlStringify(reg, { lineWidth: 0 });
+    msg.textContent = lines.join(NL) + (lines.length ? NL + "Open the race registry below to review." : "");
+    render();
+  } catch (e) {
+    msg.textContent = String(e instanceof Error ? e.message : e);
+  }
+}
+
+function slugifyId(p: { name?: string; category?: string }): string {
+  return slugify(p.name ?? "") + "-" + (p.category ?? "me").toLowerCase();
+}
+
 function initClassBoxes(): void {
   const box = $("clsboxes");
   for (const c of classes) {
@@ -269,6 +316,7 @@ function init(): void {
   $<HTMLTextAreaElement>("registry").value = store("rt-registry") ?? registryYaml;
   $<HTMLTextAreaElement>("season").value = store("rt-season") ?? fixturesYaml;
   $("render").onclick = render;
+  $("learn").onclick = learn;
   $("wpstages").onclick = () => void fillStages();
   $("wplookup").onclick = () => void lookupWebsite();
   $("reset").onclick = () => {

@@ -7,12 +7,14 @@ import {
   lookupRace,
   parseClasses,
   parseIcs,
+  parseOldThread,
   parseProfile,
   parseRegistry,
   parseSeason,
   parseStageTable,
   renderSeason,
   seasonToYaml,
+  toRegistryEntry,
 } from "../src/core";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -237,5 +239,57 @@ describe("Wikipedia stage table", () => {
     }) as unknown as typeof fetch;
     const r = await lookupRace("Strade Bianche", fake);
     expect(r[0]).toMatchObject({ officialSite: "https://www.strade-bianche.it/", wikipedia: "https://en.wikipedia.org/wiki/Strade_Bianche" });
+  });
+});
+
+describe("learning from old threads", () => {
+  const men = parseOldThread(read("tests/fixtures/old-strade-2026-me.md"));
+  const tdf = parseOldThread(read("tests/fixtures/old-tdf-2026-stage6.md"));
+  const women = parseOldThread(read("tests/fixtures/old-strade-2024-we.md"));
+
+  it("reads title parts", () => {
+    expect(men).toMatchObject({ year: 2026, name: "Strade Bianche", category: "ME", tag: "ME", klass: "1.UWT", kind: "race" });
+    expect(tdf).toMatchObject({ year: 2026, name: "Tour de France", tag: "", klass: "2.UWT", kind: "stage", stage: 6 });
+    expect(women).toMatchObject({ year: 2024, name: "Strade Bianche", category: "WE", klass: "1.WWT" });
+  });
+  it("maps the row labels of different years", () => {
+    expect(Object.keys(men.rows).sort()).toEqual(["information", "previews", "social", "tracker", "watch"]);
+    expect(Object.keys(tdf.rows).sort()).toEqual(["content", "information", "previews", "social", "tracker", "watch"]);
+    expect(Object.keys(women.rows)).toEqual(expect.arrayContaining(["coverage", "watch", "tracker"]));
+  });
+  it("keeps mixed cells (links plus words) as raw markdown", () => {
+    expect(men.rows.watch).toHaveProperty("md");
+    expect((men.rows.watch as { md: string }).md).toContain("HBO Max");
+  });
+  it("men's race: registry entry from the carry-over parts", () => {
+    const r = toRegistryEntry(men);
+    expect(r.id).toBe("strade-bianche-me");
+    expect(r.entry).toMatchObject({
+      name: "Strade Bianche",
+      category: "ME",
+      officialSite: "https://www.strade-bianche.it/en/",
+      firstcycling: 54,
+      pcs: "strade-bianche",
+    });
+    expect(r.entry.social?.map((s) => s.text)).toEqual(["Instagram", "Facebook", "Twitter"]);
+    // the roadbook is year-specific and stays out of the registry
+    expect((r.yearOnly.information as { text: string }[]).map((l) => l.text)).toEqual(["Roadbook (pdf)"]);
+    expect(Object.keys(r.yearOnly).sort()).toEqual(["information", "previews", "watch"]);
+  });
+  it("women's race gets its own ids (different FirstCycling id and PCS slug)", () => {
+    const r = toRegistryEntry(women);
+    expect(r.id).toBe("strade-bianche-we");
+    expect(r.entry).toMatchObject({ firstcycling: 9044, pcs: "strade-bianche-donne", category: "WE" });
+  });
+  it("a missing tag in an old title is not recorded as 'no tag'", () => {
+    expect(toRegistryEntry(women).entry.titleTag).toBeUndefined();
+    expect(toRegistryEntry(men).entry.titleTag).toBe("ME");
+  });
+  it("Tour de France: wikipedia and extra links carry over", () => {
+    const r = toRegistryEntry(tdf);
+    expect(r.entry).toMatchObject({ wikipedia: "https://en.wikipedia.org/wiki/Tour_de_France", firstcycling: 17 });
+    const carried = r.entry.info?.information as { text: string }[];
+    expect(carried.map((l) => l.text)).toEqual(["TourView"]);
+    expect(r.entry.social).toHaveLength(6);
   });
 });

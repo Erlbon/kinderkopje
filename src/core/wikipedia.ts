@@ -124,7 +124,17 @@ export interface WikidataRace {
   description: string;
   officialSite?: string;
   wikipedia?: string;
+  social: { text: string; url: string }[]; // accounts Wikidata knows about
 }
+
+// Wikidata property -> social platform. Values are account names/ids, turned into URLs below.
+const SOCIAL: { prop: string; text: string; url: (v: string) => string }[] = [
+  { prop: "P2003", text: "Instagram", url: (v) => "https://www.instagram.com/" + v + "/" },
+  { prop: "P2013", text: "Facebook", url: (v) => "https://www.facebook.com/" + v },
+  { prop: "P2002", text: "X", url: (v) => "https://x.com/" + v },
+  { prop: "P2397", text: "YouTube", url: (v) => "https://www.youtube.com/channel/" + v },
+  { prop: "P7085", text: "TikTok", url: (v) => "https://www.tiktok.com/@" + v },
+];
 
 const API = "https://en.wikipedia.org/w/api.php";
 const WD = "https://www.wikidata.org/w/api.php";
@@ -157,7 +167,13 @@ export async function lookupRace(name: string, f: typeof fetch = fetch): Promise
   return found.map((x) => {
     const ent = ents[x.id];
     const site = ent?.claims?.P856?.[0]?.mainsnak?.datavalue?.value;
+    const social: WikidataRace["social"] = [];
+    for (const s of SOCIAL) {
+      const v = ent?.claims?.[s.prop]?.[0]?.mainsnak?.datavalue?.value;
+      if (typeof v === "string" && v) social.push({ text: s.text, url: s.url(v) });
+    }
     return {
+      social,
       id: x.id,
       label: x.label ?? "",
       description: x.description ?? "",

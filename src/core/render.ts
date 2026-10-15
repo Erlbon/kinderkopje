@@ -118,7 +118,12 @@ function infoTable(kind: "oneday" | "stage", leg: Leg, ctx: Ctx): string {
   const lines = ["|||", "|-|-|"];
   for (const row of ctx.profile.infoRows) {
     if (row.kinds && !row.kinds.includes(kind)) continue;
-    const layers: (InfoValue | undefined)[] = [ctx.race.info?.[row.id], leg.info?.[row.id]];
+    // Order: built from ids, then what carries over every year, then this year's race, then this leg.
+    const layers: (InfoValue | undefined)[] = [
+      ctx.reg?.info?.[row.id],
+      ctx.race.info?.[row.id],
+      leg.info?.[row.id],
+    ];
     let md: string | undefined;
     const links: InfoLink[] = autoItems(row, ctx);
     for (const v of layers) {
