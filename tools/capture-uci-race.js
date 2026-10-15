@@ -107,7 +107,7 @@ import { pageKind, readCompetitionEvents, readCompetitionList, readEventResults 
     save(c);
     overlay(
       "Captured " + list.length + " competitions from this page" + (filter ? " (" + filter + ")" : " (no Category filter found: women's races are told by their names)") +
-        ". Go to the next page of the list and press again.",
+        ". NEXT: go to the next page of the list and press again. When the list is done, download the collection and open a race from the queue.",
       c,
     );
     return;
@@ -124,7 +124,7 @@ import { pageKind, readCompetitionEvents, readCompetitionList, readEventResults 
     });
     c.competitionEvents.push(ce);
     save(c);
-    overlay("Captured " + ce.events.length + " event" + (ce.events.length === 1 ? "" : "s") + " of this competition. Open an event and press again to capture its results.", c);
+    overlay("Captured " + ce.events.length + " event" + (ce.events.length === 1 ? "" : "s") + " of this competition. NEXT: open the General Classification (and each stage) and press again on each.", c);
     return;
   }
 
@@ -163,9 +163,12 @@ import { pageKind, readCompetitionEvents, readCompetitionList, readEventResults 
       if (ev.date) have.date = ev.date;
     }
     save(c);
+    var more = ev.rows.length === ev.totalRows;
     overlay(
-      "Captured " + ev.rows.length + " point-scoring rows of " + ev.totalRows + " on screen" +
-        (ev.rows.length === ev.totalRows && ev.totalRows >= 40 ? " (all 40 scored: page on to the next 40 and press again)" : "") + ".",
+      "Captured " + ev.rows.length + " point-scoring rows of " + ev.totalRows + " on screen. " +
+        (more
+          ? "NEXT: every row on this page scored, so go to the next page of the table and press again."
+          : "This event is complete. NEXT: go back to the competition page, open the next event and press again, or download the collection."),
       c,
     );
     return;
