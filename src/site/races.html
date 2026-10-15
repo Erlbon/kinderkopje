@@ -12,17 +12,17 @@
 <nav><a href="index.html">Threads</a><a href="teams.html">Teams and points</a><a class="active" href="races.html">Race results</a><a href="data.html">Data</a></nav>
 <div id="appstatus" class="warn"></div>
 <fieldset>
-  <legend class="mut">Capture the point-scoring results of each race from UCI, one race at a time across the years. Every capture keeps only the rows that score points.</legend>
+  <legend class="mut">Capture the point-scoring results of each race from DataRide (UCI's results site), one race at a time across the years. Every capture keeps only the rows that score points.</legend>
   <p class="mut" style="margin:4px 0">
     <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarkletrace" class="btn" href="__BOOKMARKLET_RACE_HREF__">Capture UCI race</a>
-    <b>2.</b> Add each year's UCI hub page (for example "2025 UCI WorldTour", saved from your browser) to the queue. UCI gives every edition of a race its own number, so each year needs its own hub page; the queue lines the editions up by race name.
-    <b>3.</b> Open an edition from the queue. On the race page open <em>Final Classification</em> (and any stage you want), then press the bookmark. It copies only what is on screen and makes no requests.
-    <b>4.</b> Press <em>Download collection</em> in its box, and open the file here.
+    <b>2.</b> Open <a href="https://dataride.uci.ch/iframe/Results/10/" target="_blank" rel="noopener">the DataRide competition list</a>, pick a season and a category (Men Elite, Women Elite) and press the bookmark on each page of the list. That fills the queue with every race, its class and its dates; the editions of a race are lined up by name across the years.
+    <b>3.</b> Open a race from the queue (it opens the competition page) and press the bookmark there: it notes the race's events (General Classification, each stage). Then open each event and press the bookmark again. On an event page the table shows 40 rows at a time: if all 40 score points, go to the next page of the table and press it again.
+    <b>4.</b> Press <em>Download collection</em> in the bookmark's box, and open the file here. The bookmark copies only what is on screen and makes no requests.
   </p>
   <div class="row">
-    <label class="btn">Add races from a UCI hub page (.html)<input id="hubfile" type="file" accept=".html,.htm,text/html" multiple hidden></label>
     <label class="btn">Open captured files<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
-    <label><input id="queuemissing" type="checkbox" checked> Only races with editions still to capture</label>
+    <label><input id="queuemissing" type="checkbox" checked> Only races with events still to capture</label>
+    <label><input id="queuetop" type="checkbox" checked> Only WorldTour, ProSeries and championships</label>
   </div>
   <div id="queuemsg" class="mut" style="margin:6px 0"></div>
   <div id="queueout"></div>

@@ -1,5 +1,5 @@
 import type { Database } from "sql.js";
-import type { Cube, QueueRace, RaceResult, TeamSnapshot } from "../core/cube";
+import type { Cube, QueueRace, RaceResult, ResultClassification, TeamSnapshot } from "../core/cube";
 import { migrate } from "./schema";
 
 /** Open a database from file bytes (or an empty one) and bring it to the current schema. */
@@ -21,7 +21,7 @@ function all(db: Database, sql: string, params: (string | number | null)[] = [])
 export function saveCube(db: Database, cube: Cube): void {
   db.exec("BEGIN");
   try {
-    db.exec("DELETE FROM result_row; DELETE FROM classification; DELETE FROM race_result; DELETE FROM queue_race; DELETE FROM team_level; DELETE FROM team_rank; DELETE FROM team_snapshot;");
+    db.exec("DELETE FROM result_row; DELETE FROM classification; DELETE FROM race_result; DELETE FROM queue_event; DELETE FROM queue_race; DELETE FROM team_level; DELETE FROM team_rank; DELETE FROM team_snapshot;");
 
     const snap = db.prepare("INSERT INTO team_snapshot(season, date, moment_id, complete) VALUES (?,?,?,?)");
     const rank = db.prepare("INSERT INTO team_rank(snapshot_id, team_id, code, name, nation, rank, points) VALUES (?,?,?,?,?,?,?)");
@@ -41,12 +41,12 @@ export function saveCube(db: Database, cube: Cube): void {
     lvl.free();
 
     const race = db.prepare("INSERT INTO race_result(uci_id, year, name, class, class_text, dates, country, captured_at, contributor) VALUES (?,?,?,?,?,?,?,?,?)");
-    const cls = db.prepare("INSERT INTO classification(uci_id, label, title, total_rows) VALUES (?,?,?,?)");
+    const cls = db.prepare("INSERT INTO classification(uci_id, label, title, total_rows, event_id) VALUES (?,?,?,?,?)");
     const row = db.prepare("INSERT INTO result_row(classification_id, rank, rider, team, age, nation, result, points) VALUES (?,?,?,?,?,?,?,?)");
     for (const r of cube.raceResults ?? []) {
       race.run([r.uciId, r.year, r.name, r.class ?? null, r.classText ?? null, r.dates ?? null, r.country ?? null, r.capturedAt ?? null, r.contributor ?? null]);
       for (const c of r.classifications) {
-        cls.run([r.uciId, c.label, c.title, c.totalRows]);
+        cls.run([r.uciId, c.label, c.title, c.totalRows, c.eventId ?? null]);
         const cid = Number(db.exec("SELECT last_insert_rowid()")[0]!.values[0]![0]);
         for (const w of c.rows) row.run([cid, w.rank, w.rider, w.team, w.age, w.nation, w.result, w.points]);
       }
@@ -55,9 +55,14 @@ export function saveCube(db: Database, cube: Cube): void {
     cls.free();
     row.free();
 
-    const q = db.prepare("INSERT INTO queue_race(uci_id, year, name, start, end, country, hub) VALUES (?,?,?,?,?,?,?)");
-    for (const x of cube.queue ?? []) q.run([x.uciId, x.year, x.name, x.start, x.end, x.country, x.hub]);
+    const q = db.prepare("INSERT INTO queue_race(uci_id, year, name, start, end, country, hub, class, category) VALUES (?,?,?,?,?,?,?,?,?)");
+    const qe = db.prepare("INSERT INTO queue_event(uci_id, event_id, name) VALUES (?,?,?)");
+    for (const x of cube.queue ?? []) {
+      q.run([x.uciId, x.year, x.name, x.start, x.end, x.country, x.hub, x.class ?? null, x.category ?? null]);
+      for (const e of x.events ?? []) qe.run([x.uciId, e.id, e.name]);
+    }
     q.free();
+    qe.free();
     db.exec("COMMIT");
   } catch (e) {
     db.exec("ROLLBACK");
@@ -101,9 +106,10 @@ export function loadCube(db: Database): Cube {
   const races = all(db, "SELECT uci_id, year, name, class, class_text, dates, country, captured_at, contributor FROM race_result ORDER BY year, uci_id");
   if (races.length) {
     cube.raceResults = races.map((r): RaceResult => {
-      const classifications = all(db, "SELECT id, label, title, total_rows FROM classification WHERE uci_id = ? ORDER BY id", [r.uci_id as number]).map((c) => ({
+      const classifications = all(db, "SELECT id, label, title, total_rows, event_id FROM classification WHERE uci_id = ? ORDER BY id", [r.uci_id as number]).map((c): ResultClassification => ({
         label: c.label as string,
         title: c.title as string,
+        ...(c.event_id !== null ? { eventId: c.event_id as number } : {}),
         totalRows: c.total_rows as number,
         rows: all(db, "SELECT rank, rider, team, age, nation, result, points FROM result_row WHERE classification_id = ? ORDER BY COALESCE(rank, 1000000), rowid", [c.id as number]).map((w) => ({
           rank: (w.rank as number | null) ?? null,
@@ -126,17 +132,25 @@ export function loadCube(db: Database): Cube {
     });
   }
 
-  const queue = all(db, "SELECT uci_id, year, name, start, end, country, hub FROM queue_race ORDER BY start, name");
+  const queue = all(db, "SELECT uci_id, year, name, start, end, country, hub, class, category FROM queue_race ORDER BY start, name");
   if (queue.length) {
-    cube.queue = queue.map((x): QueueRace => ({
-      uciId: x.uci_id as number,
-      year: x.year as number,
-      name: x.name as string,
-      start: x.start as string,
-      end: x.end as string,
-      country: x.country as string,
-      hub: x.hub as string,
-    }));
+    const events = all(db, "SELECT uci_id, event_id, name FROM queue_event ORDER BY event_id");
+    cube.queue = queue.map((x): QueueRace => {
+      const out: QueueRace = {
+        uciId: x.uci_id as number,
+        year: x.year as number,
+        name: x.name as string,
+        start: x.start as string,
+        end: x.end as string,
+        country: x.country as string,
+        hub: x.hub as string,
+      };
+      if (x.class !== null) out.class = x.class as string;
+      if (x.category !== null) out.category = x.category as "ME" | "WE";
+      const mine = events.filter((e) => e.uci_id === x.uci_id);
+      if (mine.length) out.events = mine.map((e) => ({ id: e.event_id as number, name: e.name as string }));
+      return out;
+    });
   }
   return cube;
 }

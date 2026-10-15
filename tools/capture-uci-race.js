@@ -1,16 +1,17 @@
 /*
- * Pelotonic: capture helper for UCI race pages (runs as a bookmarklet in YOUR browser).
+ * Pelotonic: capture helper for UCI DataRide road results (runs as a bookmarklet in YOUR browser).
  *
- * Use it on https://www.uci.org/competition-details/<year>/ROA/<id>, after you have opened the
- * "Final Classification" section (and any stage sections you want). It copies the rows that are on
- * screen and score UCI points (rank, rider, team, age, nation, result, points) into a collection kept
- * in your browser. It sends no requests of its own. Then download the collection and open the file in
- * Pelotonic.
+ * Press it on one of three DataRide pages that you have opened yourself:
+ *   1. the list of competitions  (dataride.uci.ch/iframe/Results/10/, pick the season and category with the page's own filters)
+ *   2. one competition           (a link in that list: .../CompetitionResults/<id>)
+ *   3. one event                 (a link on the competition page: .../EventResults/<id>?competitionId=...)
+ * It copies what is already on screen into a collection kept in your browser and sends no requests of its own.
+ * On an event page it keeps only the rows that score points. The table shows 40 rows at a time: press it again
+ * after paging to the next 40 and the rows are added. Then download the collection and open the file in Pelotonic.
  *
- * Reading the page is done by src/core/race-page.ts, the same code the tests cover;
- * the build bundles it into this bookmarklet.
+ * Reading the pages is done by src/core/dataride.ts, the same code the tests cover; the build bundles it here.
  */
-import { raceIdFromUrl, readOpenResults, readRaceFacts } from "../src/core/race-page";
+import { pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
 
 (function () {
   // The names below keep the tool's earlier name: collections already saved in your browser, and
@@ -19,31 +20,35 @@ import { raceIdFromUrl, readOpenResults, readRaceFacts } from "../src/core/race-
   var FORMAT = "racethreads-capture/1";
 
   function load() {
+    var v = null;
     try {
-      var v = JSON.parse(localStorage.getItem(STORE) || "null");
-      if (v && v.format === FORMAT && Array.isArray(v.raceResults)) return v;
+      v = JSON.parse(localStorage.getItem(STORE) || "null");
     } catch (e) {}
-    return { format: FORMAT, source: "uci.org", raceResults: [] };
+    if (!v || v.format !== FORMAT) v = { format: FORMAT, source: "dataride.uci.ch" };
+    v.competitions = v.competitions || [];
+    v.competitionEvents = v.competitionEvents || [];
+    v.eventResults = v.eventResults || [];
+    return v;
   }
   function save(c) {
     localStorage.setItem(STORE, JSON.stringify(c));
   }
 
-  function overlay(msg, collection) {
+  function overlay(msg, c) {
     var old = document.getElementById("pelotonic-overlay");
     if (old) old.remove();
     var box = document.createElement("div");
     box.id = "pelotonic-overlay";
     box.style.cssText =
       "position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;color:#111;border:2px solid #0b57d0;" +
-      "border-radius:8px;padding:10px 12px;font:13px system-ui,sans-serif;max-width:360px;box-shadow:0 2px 10px rgba(0,0,0,.3)";
+      "border-radius:8px;padding:10px 12px;font:13px system-ui,sans-serif;max-width:380px;box-shadow:0 2px 10px rgba(0,0,0,.3)";
     var p = document.createElement("div");
     p.textContent = msg;
     box.appendChild(p);
-    var n = collection ? collection.raceResults.length : 0;
     var info = document.createElement("div");
     info.style.cssText = "margin-top:4px;color:#555";
-    info.textContent = "Collection: " + n + " race" + (n === 1 ? "" : "s");
+    info.textContent =
+      "Collection: " + c.competitions.length + " competitions, " + c.competitionEvents.length + " event lists, " + c.eventResults.length + " event results";
     box.appendChild(info);
     function btn(label, fn) {
       var b = document.createElement("button");
@@ -73,48 +78,98 @@ import { raceIdFromUrl, readOpenResults, readRaceFacts } from "../src/core/race-
     document.body.appendChild(box);
   }
 
-  var id = raceIdFromUrl(location.pathname);
-  if (!id) {
-    overlay("This is not a UCI race page (competition-details). Open a race page first.", load());
-    return;
+  // the text of the page's filters, to find "Men Elite" / "Women Elite" in the Category box
+  function categoryFilterText() {
+    var inputs = document.querySelectorAll(".k-dropdown .k-input, .k-dropdown-wrap .k-input, .k-input");
+    for (var i = 0; i < inputs.length; i++) {
+      var t = (inputs[i].textContent || "").replace(/\s+/g, " ").trim();
+      if (/^(Men|Women)/i.test(t)) return t;
+    }
+    return "";
   }
-
-  var found = readOpenResults(document);
-  if (!found.classifications.length) {
-    overlay("No open results found. On the race page open Final Classification (the button) first, then press again.", load());
-    return;
-  }
-  var facts = readRaceFacts(document);
-  var race = { uciId: id.uciId, year: id.year, name: facts.name };
-  if (facts["class"]) race["class"] = facts["class"];
-  if (facts.classText) race.classText = facts.classText;
-  if (facts.dates) race.dates = facts.dates;
 
   var c = load();
-  var existing = null;
-  for (var r = 0; r < c.raceResults.length; r++) if (c.raceResults[r].uciId === id.uciId) existing = c.raceResults[r];
-  if (!existing) {
-    existing = Object.assign({ classifications: [] }, race);
-    c.raceResults.push(existing);
-  } else {
-    Object.assign(existing, race);
-  }
-  existing.capturedAt = new Date().toISOString();
-  for (var k = 0; k < found.classifications.length; k++) {
-    var cl = found.classifications[k];
-    var replaced = false;
-    for (var e2 = 0; e2 < existing.classifications.length; e2++) {
-      if (existing.classifications[e2].label === cl.label && existing.classifications[e2].title === cl.title) {
-        existing.classifications[e2] = cl;
-        replaced = true;
-      }
+  var kind = pageKind(location.pathname);
+
+  if (kind === "list") {
+    var filter = categoryFilterText();
+    var list = readCompetitionList(document, filter);
+    if (!list.length) {
+      overlay("No competitions found on this page. Wait for the list to load, then press again.", c);
+      return;
     }
-    if (!replaced) existing.classifications.push(cl);
+    list.forEach(function (x) {
+      c.competitions = c.competitions.filter(function (y) {
+        return y.id !== x.id;
+      });
+      c.competitions.push(x);
+    });
+    save(c);
+    overlay(
+      "Captured " + list.length + " competitions from this page" + (filter ? " (" + filter + ")" : " (no Category filter found: women's races are told by their names)") +
+        ". Go to the next page of the list and press again.",
+      c,
+    );
+    return;
   }
-  save(c);
-  overlay(
-    "Captured " + found.kept + " point-scoring rows from " + found.classifications.length + " classification" + (found.classifications.length === 1 ? "" : "s") +
-      " of " + race.name + " (" + race.year + ").",
-    c,
-  );
+
+  if (kind === "competition") {
+    var ce = readCompetitionEvents(document, location.pathname);
+    if (!ce || !ce.events.length) {
+      overlay("No events found on this page yet. Wait for it to load, then press again.", c);
+      return;
+    }
+    c.competitionEvents = c.competitionEvents.filter(function (y) {
+      return y.competitionId !== ce.competitionId;
+    });
+    c.competitionEvents.push(ce);
+    save(c);
+    overlay("Captured " + ce.events.length + " event" + (ce.events.length === 1 ? "" : "s") + " of this competition. Open an event and press again to capture its results.", c);
+    return;
+  }
+
+  if (kind === "event") {
+    var ev = readEventResults(document, location.pathname, location.search);
+    if (!ev) {
+      overlay("No result table found. Wait for the results to load, then press again.", c);
+      return;
+    }
+    if (!ev.totalRows) {
+      overlay("The table is empty so far. Wait for the results to load, then press again.", c);
+      return;
+    }
+    var have = null;
+    for (var i = 0; i < c.eventResults.length; i++) if (c.eventResults[i].eventId === ev.eventId) have = c.eventResults[i];
+    if (!have) {
+      c.eventResults.push(ev);
+    } else {
+      // another page of the same table: add its rows
+      var seen = {};
+      have.rows.forEach(function (r) {
+        seen[r.rank + "|" + r.rider] = r;
+      });
+      ev.rows.forEach(function (r) {
+        seen[r.rank + "|" + r.rider] = r;
+      });
+      have.rows = Object.keys(seen)
+        .map(function (k) {
+          return seen[k];
+        })
+        .sort(function (a, b) {
+          return (a.rank || 1e9) - (b.rank || 1e9);
+        });
+      have.totalRows = Math.max(have.totalRows, ev.totalRows);
+      if (ev.heading) have.heading = ev.heading;
+      if (ev.date) have.date = ev.date;
+    }
+    save(c);
+    overlay(
+      "Captured " + ev.rows.length + " point-scoring rows of " + ev.totalRows + " on screen" +
+        (ev.rows.length === ev.totalRows && ev.totalRows >= 40 ? " (all 40 scored: page on to the next 40 and press again)" : "") + ".",
+      c,
+    );
+    return;
+  }
+
+  overlay("This is not a DataRide results page. Open the competition list (dataride.uci.ch/iframe/Results/10/), a competition or an event first.", c);
 })();

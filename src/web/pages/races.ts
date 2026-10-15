@@ -1,4 +1,4 @@
-import { addQueue, parseUciHub, queueByRace } from "../../core";
+import { queueByRace } from "../../core";
 import { importCaptureFiles } from "../capture-import";
 import { $, el } from "../dom";
 import type { Store } from "../store";
@@ -6,18 +6,26 @@ import type { Store } from "../store";
 export function initRaces(store: Store): void {
   const cube = () => store.cube;
 
+  /** WorldTour, ProSeries and championships: the classes the main interest is in. */
+  const isTop = (cls?: string) => /UWT|WWT|Pro|WC|CM/i.test(cls ?? "");
+  /** An edition is finished when every event on its competition page has a result; without the event list, when anything is captured. */
+  const finished = (e: { captured: boolean; eventsKnown: number; eventsCaptured: number }) => (e.eventsKnown ? e.eventsCaptured >= e.eventsKnown : e.captured);
+
   function draw(): void {
-    const { years, races } = queueByRace(cube());
+    const all = queueByRace(cube());
+    const years = all.years.filter((y) => y > 0);
+    const onlyTop = $<HTMLInputElement>("queuetop").checked;
+    const races = onlyTop ? all.races.filter((r) => Object.values(r.editions).some((e) => isTop(e.class))) : all.races;
     const out = $("queueout");
     out.replaceChildren();
     const editions = races.flatMap((r) => Object.values(r.editions));
-    const done = editions.filter((e) => e.captured).length;
+    const done = editions.filter(finished).length;
     const results = cube().raceResults?.length ?? 0;
     $("queuemsg").textContent = editions.length
-      ? done + " of " + editions.length + " editions captured, " + races.length + " races, " + results + " race results in the database."
-      : "No races in the queue yet: add a UCI hub page for each year (for example the 2025, 2026 and 2027 UCI WorldTour pages, saved from your browser).";
+      ? done + " of " + editions.length + " editions finished, " + races.length + " races, " + results + " races with results in the database."
+      : "No races in the queue yet: capture the DataRide competition list (step 2 above), one page at a time, for each year.";
     const onlyMissing = $<HTMLInputElement>("queuemissing").checked;
-    const rows = onlyMissing ? races.filter((r) => Object.values(r.editions).some((e) => !e.captured)) : races;
+    const rows = onlyMissing ? races.filter((r) => Object.values(r.editions).some((e) => !finished(e))) : races;
     if (!rows.length) return;
 
     const table = el("table", { class: "queue" });
@@ -26,7 +34,7 @@ export function initRaces(store: Store): void {
     table.append(head);
     for (const r of rows) {
       const eds = Object.values(r.editions);
-      const tr = el("tr", {}, el("td", { textContent: r.name + (r.category === "WE" ? " (women)" : "") }), el("td", { textContent: eds.filter((e) => e.captured).length + "/" + eds.length }));
+      const tr = el("tr", {}, el("td", { textContent: r.name + (r.category === "WE" ? " (women)" : "") }), el("td", { textContent: eds.filter(finished).length + "/" + eds.length }));
       for (const y of years) {
         const e = r.editions[y];
         const td = el("td");
@@ -34,13 +42,13 @@ export function initRaces(store: Store): void {
           td.textContent = "-";
         } else {
           const a = el("a", {
-            href: "https://www.uci.org/competition-details/" + e.year + "/ROA/" + e.uciId,
+            href: "https://dataride.uci.ch/iframe/CompetitionResults/" + e.uciId + "?disciplineId=10",
             target: "_blank",
             rel: "noopener",
-            textContent: e.captured ? "done (" + e.rows + ")" : "open",
-            title: e.name + ", " + e.start + (e.start === e.end ? "" : " to " + e.end),
+            textContent: e.eventsKnown ? e.eventsCaptured + "/" + e.eventsKnown + " events" : e.captured ? "done (" + e.rows + ")" : "open",
+            title: (e.class ? e.class + ", " : "") + e.name + ", " + e.start + (e.start === e.end ? "" : " to " + e.end),
           });
-          if (e.captured) a.style.opacity = "0.6";
+          if (finished(e)) a.style.opacity = "0.6";
           td.append(a);
         }
         tr.append(td);
@@ -55,22 +63,8 @@ export function initRaces(store: Store): void {
     draw();
     $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
   };
-  $<HTMLInputElement>("hubfile").onchange = async (e) => {
-    const lines: string[] = [];
-    for (const f of [...((e.target as HTMLInputElement).files ?? [])]) {
-      try {
-        const hub = parseUciHub(await f.text());
-        const n = addQueue(cube(), hub.title || f.name, hub.year, hub.races);
-        lines.push(f.name + ": " + n + " new races of " + hub.races.length + " (" + hub.title + ")");
-      } catch (err) {
-        lines.push(f.name + ": " + (err instanceof Error ? err.message : "could not read this file"));
-      }
-    }
-    await store.saveCube();
-    draw();
-    $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
-  };
   $("queuemissing").onchange = draw;
+  $("queuetop").onchange = draw;
   store.onChange(draw);
   draw();
 }

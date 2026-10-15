@@ -125,7 +125,7 @@ describe("the SQL box", () => {
 });
 
 describe("upgrading an older database", () => {
-  it("a version 1 file opens, keeps its data and gains the contributor column", async () => {
+  it("a version 1 file opens, keeps its data and is brought to the current version", async () => {
     const { MIGRATIONS } = await import("../src/db");
     const old = new SQL.Database();
     old.exec(MIGRATIONS[1]!);
@@ -135,7 +135,8 @@ describe("upgrading an older database", () => {
     expect(schemaVersion(old)).toBe(1);
 
     const upgraded = openDatabase(SQL, old.export());
-    expect(schemaVersion(upgraded)).toBe(2);
+    expect(schemaVersion(upgraded)).toBe(SCHEMA_VERSION);
+    expect(upgraded.exec("SELECT COUNT(*) FROM queue_event")[0]!.values[0]![0]).toBe(0);
     expect(getKv(upgraded, "season")).toBe("season: 2026");
     const cube = loadCube(upgraded);
     expect(cube.raceResults![0]).toMatchObject({ uciId: 78462, name: "Paris - Tours Elite" });

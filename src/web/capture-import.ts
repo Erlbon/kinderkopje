@@ -10,11 +10,11 @@ export async function importCaptureFiles(store: Store, files: File[]): Promise<s
       try {
         parsed = JSON.parse(await f.text()) as CaptureFile;
       } catch {
-        throw new Error("not a capture file (a page saved from uci.org does not contain the results; use the bookmark)");
+        throw new Error("not a capture file (use the bookmark to make one)");
       }
       const r = addCapture(store.cube, parsed);
       lines.push(
-        f.name + ": " + r.added + " rankings added, " + r.replaced + " replaced" + (r.races ? ", " + r.races + " race results" : "") +
+        f.name + ": " + r.added + " rankings added, " + r.replaced + " replaced" + (r.competitions ? ", " + r.competitions + " competitions" : "") + (r.events ? ", " + r.events + " event lists" : "") + (r.races ? ", " + r.races + " event results" : "") +
           (r.skipped.length ? ", skipped: " + r.skipped.join("; ") : ""),
       );
     } catch (e) {

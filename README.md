@@ -93,22 +93,27 @@ unmatched list.
 
 ## Race results (UCI points) and the capture queue
 
-Per-race results come from the UCI race pages (`uci.org/competition-details/<year>/ROA/<id>`):
+Per-race results come from DataRide, UCI's results site (`dataride.uci.ch`). One bookmark, *Capture UCI race*
+(source `tools/capture-uci-race.js`), reads three kinds of DataRide road pages that you open yourself:
 
-1. Drag the **Capture UCI race** link (source `tools/capture-uci-race.js`) to your bookmarks bar.
-2. Add the races to the queue: save a UCI hub page (for example "2025 UCI WorldTour", tab Races & Results) from your
-   browser and open it with *Add races from a UCI hub page*. UCI gives every edition of a race its own number (the
-   year in the address is ignored), so each year needs its own hub page. The queue lines the editions up by race
-   name: one row per race, one column per year, each with a link to that edition's UCI page. That makes it easy to
-   collect one race at a time across five years.
-3. On a race page open *Final Classification* (and any stage you want) and press the bookmark. It copies only the
-   rows that score points (rank, rider, team, age, nation, result, points) and sends no requests of its own.
-4. Download the collection from its box and open the file with *Open captured files*.
+1. **The competition list** (`/iframe/Results/10/`). Pick a season and a category (Men Elite, Women Elite) with the
+   page's own filters and press the bookmark on each page of the list (40 rows). The queue gets every race with its
+   class (`2.UWT`, `1.Pro`, `1.1` ...), dates and country, and lines the editions of a race up by name across the years.
+2. **A competition** (a link in that list, opened from the queue). The bookmark notes the race's events: the
+   General Classification and each stage.
+3. **An event** (a link on the competition page). The bookmark copies the rows that score points (rank, rider, team,
+   age, nation, result, points). The table shows 40 rows at a time: when all 40 score points, page on and press it
+   again, and the rows are added to the same event.
 
-A page saved with *Save as* does not work: UCI loads the results when the accordion opens, and they never reach the saved file. Use the bookmark.
+Then press *Download collection* in the bookmark's box and open the file on the Race results page. The queue shows
+per race and year how many events are captured, and can be limited to WorldTour, ProSeries and championships.
+The bookmark copies only what is on screen and sends no requests of its own. Every result row keeps the team the rider
+rode for at the time, which is what the monthly team comparison needs.
 
-Every result row keeps the team the rider rode for at the time, which is what the monthly team comparison needs.
-Nothing here crawls UCI: every page is opened and every capture started by a person.
+DataRide numbers the races itself: the number in `CompetitionResults/<id>` is the race edition's id in this tool
+(`race_result.uci_id`), and the number in `EventResults/<id>` identifies one event (`classification.event_id`).
+A page saved with *Save as* does not work, and uci.org race pages are not used: UCI loads the results when a section
+is opened and they never reach a saved file. UCI has not agreed to any automated collection, so nothing here crawls.
 
 ## Stage tables
 

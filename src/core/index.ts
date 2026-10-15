@@ -11,3 +11,4 @@ export * from "./cube";
 export * from "./team-levels";
 export * from "./uci-hub";
 export * from "./race-page";
+export * from "./dataride";

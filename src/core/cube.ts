@@ -1,4 +1,5 @@
 import { parse as parseYaml } from "yaml";
+import type { DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
 import { normRaceName } from "./uci-hub";
 
 /**
@@ -34,7 +35,10 @@ export interface CaptureFile {
   // The format id keeps the tool's earlier name so that files saved before the rename still open.
   format: "racethreads-capture/1";
   snapshots?: CaptureSnapshot[]; // DataRide team ranking pages
-  raceResults?: RaceResult[]; // UCI race pages
+  raceResults?: RaceResult[]; // UCI race pages (older captures)
+  competitions?: DrCompetition[]; // the DataRide competition list
+  competitionEvents?: DrCompetitionEvents[]; // the events of competition pages
+  eventResults?: DrEventResult[]; // DataRide event pages
 }
 
 /** One row of a UCI race result that scored points. */
@@ -51,12 +55,13 @@ export interface ResultRow {
 export interface ResultClassification {
   label: string; // the section opened on the page ("Final Classification", a stage ...)
   title: string; // "General Classification"
+  eventId?: number; // DataRide's number for the event, when the rows came from a DataRide event page
   totalRows: number; // rows in the table, only the point-scoring ones are kept in `rows`
   rows: ResultRow[];
 }
 
 export interface RaceResult {
-  uciId: number;
+  uciId: number; // DataRide's competition id for this edition (older captures: the uci.org race number)
   year: number;
   name: string;
   class?: string;
@@ -77,6 +82,9 @@ export interface QueueRace {
   end: string;
   country: string;
   hub: string; // "2027 UCI WorldTour"
+  class?: string; // "1.Pro", "2.UWT" ... (from the DataRide list)
+  category?: "ME" | "WE";
+  events?: { id: number; name: string }[]; // from the competition page
 }
 
 export interface TeamPoint {
@@ -112,6 +120,8 @@ export interface ImportReport {
   added: number;
   replaced: number;
   races: number; // race results added or updated
+  competitions?: number; // competitions added to or updated in the queue
+  events?: number; // event lists read from competition pages
   skipped: string[];
 }
 
@@ -120,7 +130,8 @@ const TEAM_RANKING = 2;
 /** Merge a capture file into the cube. Same date again = replaced (newer capture wins). */
 export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   const report: ImportReport = { added: 0, replaced: 0, races: 0, skipped: [] };
-  if (!file || file.format !== "racethreads-capture/1" || (!Array.isArray(file.snapshots) && !Array.isArray(file.raceResults))) {
+  const hasData = (a: unknown) => Array.isArray(a);
+  if (!file || file.format !== "racethreads-capture/1" || !(hasData(file.snapshots) || hasData(file.raceResults) || hasData(file.competitions) || hasData(file.competitionEvents) || hasData(file.eventResults))) {
     report.skipped.push("not a Pelotonic capture file");
     return report;
   }
@@ -130,6 +141,23 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
       continue;
     }
     mergeRaceResult(cube, r);
+    report.races++;
+  }
+  for (const c of file.competitions ?? []) {
+    upsertCompetition(cube, c);
+    report.competitions = (report.competitions ?? 0) + 1;
+  }
+  for (const e of file.competitionEvents ?? []) {
+    const q = queueRace(cube, e.competitionId);
+    q.events = e.events;
+    report.events = (report.events ?? 0) + 1;
+  }
+  for (const e of file.eventResults ?? []) {
+    if (!e.rows.length && !e.totalRows) {
+      report.skipped.push("event " + e.eventId + ": no rows on the page (let it finish loading, then capture again)");
+      continue;
+    }
+    mergeEventResult(cube, e);
     report.races++;
   }
   for (const s of file.snapshots ?? []) {
@@ -166,6 +194,54 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   return report;
 }
 
+/** The queue entry for a competition, made as a stub when only its events (or results) have been seen. */
+function queueRace(cube: Cube, id: number): QueueRace {
+  const q = (cube.queue ??= []);
+  let r = q.find((x) => x.uciId === id);
+  if (!r) {
+    r = { uciId: id, year: 0, name: "Competition " + id, start: "", end: "", country: "", hub: "DataRide" };
+    q.push(r);
+  }
+  return r;
+}
+
+/** One line of the DataRide competition list into the queue (what a later capture knows better replaces what is there). */
+function upsertCompetition(cube: Cube, c: DrCompetition): void {
+  const r = queueRace(cube, c.id);
+  Object.assign(r, { year: c.year, name: c.name, start: c.start, end: c.end, country: c.country, class: c.class || undefined, category: c.category, hub: "DataRide" });
+  cube.queue!.sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
+}
+
+/**
+ * Rows from one DataRide event page. The page shows 40 rows at a time, so a second capture of the same event
+ * (the next page of the table) adds to the rows already kept.
+ */
+export function mergeEventResult(cube: Cube, e: DrEventResult): void {
+  const q = (cube.queue ?? []).find((x) => x.uciId === e.competitionId);
+  const list = (cube.raceResults ??= []);
+  let race = list.find((x) => x.uciId === e.competitionId);
+  if (!race) {
+    const year = q?.year || Number((e.date ?? "").slice(0, 4)) || new Date().getFullYear();
+    race = { uciId: e.competitionId, year, name: q?.name ?? (e.heading || "Competition " + e.competitionId), classifications: [] };
+    if (q?.class) race.class = q.class;
+    if (q?.country) race.country = q.country;
+    list.push(race);
+  }
+  race.capturedAt = new Date().toISOString();
+  const label = q?.events?.find((x) => x.id === e.eventId)?.name || e.heading || "Event " + e.eventId;
+  const have = race.classifications.find((c) => c.eventId === e.eventId);
+  if (!have) {
+    race.classifications.push({ label, title: e.heading || label, eventId: e.eventId, totalRows: e.totalRows, rows: e.rows });
+    return;
+  }
+  const key = (r: { rank: number | null; rider: string }) => r.rank + "|" + r.rider;
+  const rows = new Map(have.rows.map((r) => [key(r), r]));
+  for (const r of e.rows) rows.set(key(r), r);
+  have.rows = [...rows.values()].sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9));
+  have.totalRows = Math.max(have.totalRows, e.totalRows);
+  have.label = label;
+}
+
 /** Add or update one race's results; classifications with the same label and title are replaced. */
 export function mergeRaceResult(cube: Cube, r: RaceResult): void {
   const list = (cube.raceResults ??= []);
@@ -176,7 +252,7 @@ export function mergeRaceResult(cube: Cube, r: RaceResult): void {
   }
   Object.assign(have, { ...r, classifications: have.classifications });
   for (const c of r.classifications) {
-    const i = have.classifications.findIndex((x) => x.label === c.label && x.title === c.title);
+    const i = have.classifications.findIndex((x) => (c.eventId !== undefined ? x.eventId === c.eventId : x.label === c.label && x.title === c.title));
     if (i >= 0) have.classifications[i] = c;
     else have.classifications.push(c);
   }
@@ -199,6 +275,8 @@ export interface QueueLine extends QueueRace {
   captured: boolean;
   rows: number; // point-scoring rows captured so far
   classifications: number;
+  eventsKnown: number; // events listed on the competition page
+  eventsCaptured: number; // of those, events with a result captured
 }
 
 /** The queue with what has been captured for each race. */
@@ -207,7 +285,9 @@ export function queueStatus(cube: Cube): QueueLine[] {
   return (cube.queue ?? []).map((q) => {
     const r = byId.get(q.uciId);
     const rows = r ? r.classifications.reduce((n, c) => n + c.rows.length, 0) : 0;
-    return { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0 };
+    const got = new Set((r?.classifications ?? []).map((c) => c.eventId));
+    const eventsKnown = q.events?.length ?? 0;
+    return { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown, eventsCaptured: (q.events ?? []).filter((e) => got.has(e.id)).length };
   });
 }
 
@@ -371,7 +451,7 @@ export interface RaceEditions {
 export function queueByRace(cube: Cube): { years: number[]; races: RaceEditions[] } {
   const map = new Map<string, RaceEditions>();
   for (const l of queueStatus(cube)) {
-    const category = /women/i.test(l.hub) ? "WE" : "ME";
+    const category = l.category ?? (/women/i.test(l.hub) ? "WE" : "ME");
     const key = normRaceName(l.name) + "|" + category;
     let r = map.get(key);
     if (!r) {
