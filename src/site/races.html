@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Threads: Race results</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+<h1>Race results</h1>
+<nav><a href="index.html">Threads</a><a href="teams.html">Teams and points</a><a class="active" href="races.html">Race results</a><a href="data.html">Data</a></nav>
+<div id="appstatus" class="warn"></div>
+<fieldset>
+  <legend class="mut">Capture the point-scoring results of each race from UCI, one race at a time across the years. Every capture keeps only the rows that score points.</legend>
+  <p class="mut" style="margin:4px 0">
+    <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarkletrace" class="btn" href="__BOOKMARKLET_RACE_HREF__">Capture UCI race</a>
+    <b>2.</b> Add each year's UCI hub page (for example "2025 UCI WorldTour", saved from your browser) to the queue. UCI gives every edition of a race its own number, so each year needs its own hub page; the queue lines the editions up by race name.
+    <b>3.</b> Open an edition from the queue. On the race page open <em>Final Classification</em> (and any stage you want), then press the bookmark. It copies only what is on screen and makes no requests.
+    <b>4.</b> Press <em>Download collection</em> in its box, and open the file here with <em>Open captured file(s)</em>.
+  </p>
+  <div class="row">
+    <label class="btn">Add races from a UCI hub page (.html)<input id="hubfile" type="file" accept=".html,.htm,text/html" multiple hidden></label>
+    <label class="btn">Open captured file(s)<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
+    <label><input id="queuemissing" type="checkbox" checked> Only races with editions still to capture</label>
+  </div>
+  <div id="queuemsg" class="mut" style="margin:6px 0"></div>
+  <div id="queueout"></div>
+</fieldset>
+<p class="mut">Everything is kept in the shared database (see the Data page). <span>__VERSION__</span></p>
+</main>
+<script src="app.js"></script>
+<script>RT.start("races")</script>
+</body>
+</html>

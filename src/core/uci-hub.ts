@@ -98,7 +98,8 @@ export function parseUciHub(html: string): UciHub {
   return { title, year, races: [...races.values()].sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name)) };
 }
 
-function normName(s: string): string {
+/** A race name reduced for matching: no accents, punctuation or filler words (Men, Elite, La ...). */
+export function normRaceName(s: string): string {
   return s
     .normalize("NFD")
     .replace(new RegExp("[" + String.fromCharCode(0x300) + "-" + String.fromCharCode(0x36f) + "]", "g"), "")
@@ -125,7 +126,7 @@ export function uciHubToSeason(hub: UciHub, registry: Record<string, RegistryRac
     const category = women || nameWomen ? "WE" : "ME";
     const display = r.name.replace(/\s*-\s*(Men|Women)\s*$/i, "").trim();
     const known = Object.entries(registry).find(
-      ([, g]) => g.category === category && normName(g.name) === normName(display),
+      ([, g]) => g.category === category && normRaceName(g.name) === normRaceName(display),
     )?.[0];
     let id = known ?? slugify(display) + "-" + category.toLowerCase();
     for (let n = 2; used.has(id); n++) id = (known ?? slugify(display) + "-" + category.toLowerCase()) + "-" + n;

@@ -1,4 +1,5 @@
 import { parse as parseYaml } from "yaml";
+import { normRaceName } from "./uci-hub";
 
 /**
  * Team points cube, slice 1: UCI World Ranking, team ranking snapshots by date.
@@ -348,6 +349,40 @@ function round(n: number): number {
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Mapei Cadel Evans Great Ocean Road Race - Men" -> without the men/women suffix UCI adds. */
+export function cleanRaceName(name: string): string {
+  return name.replace(/\s*-\s*(Men|Women)\s*$/i, "").trim();
+}
+
+export interface RaceEditions {
+  key: string;
+  name: string;
+  category: "ME" | "WE";
+  editions: Record<number, QueueLine>; // by year
+}
+
+/**
+ * The queue grouped by race: one row per race, one edition per year. The ids differ from year to year, so
+ * the editions are matched by race name, and men's and women's hubs stay apart.
+ */
+export function queueByRace(cube: Cube): { years: number[]; races: RaceEditions[] } {
+  const map = new Map<string, RaceEditions>();
+  for (const l of queueStatus(cube)) {
+    const category = /women/i.test(l.hub) ? "WE" : "ME";
+    const key = normRaceName(l.name) + "|" + category;
+    let r = map.get(key);
+    if (!r) {
+      r = { key, name: cleanRaceName(l.name), category, editions: {} };
+      map.set(key, r);
+    }
+    const newest = Math.max(l.year, ...Object.keys(r.editions).map(Number));
+    if (l.year >= newest) r.name = cleanRaceName(l.name); // the newest name wins
+    r.editions[l.year] = l;
+  }
+  const years = [...new Set([...map.values()].flatMap((r) => Object.keys(r.editions).map(Number)))].sort((a, b) => b - a);
+  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)) };
+}
 
 export interface SeasonColumn {
   season: number;

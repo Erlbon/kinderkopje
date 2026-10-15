@@ -23,8 +23,8 @@ jobs:
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
-          name: racethreads-html
-          path: dist/index.html
+          name: racethreads-site
+          path: dist
 
   pages:
     if: github.ref == 'refs/heads/main'
@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: racethreads-html
+          name: racethreads-site
           path: site
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -54,8 +54,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: racethreads-html
-      - run: mv index.html racethreads.html
+          name: racethreads-site
+          path: racethreads
+      - run: zip -r racethreads.zip racethreads
       - uses: softprops/action-gh-release@v2
         with:
-          files: racethreads.html
+          files: racethreads.zip

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Threads</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+<h1>Race Threads</h1>
+<nav><a class="active" href="index.html">Threads</a><a href="teams.html">Teams and points</a><a href="races.html">Race results</a><a href="data.html">Data</a></nav>
+<p class="mut">Season YAML in, Reddit-ready threads out. Everything runs in your browser and is kept in a SQLite database there; nothing is uploaded. <span>__VERSION__</span></p>
+<div id="appstatus" class="warn"></div>
+
+<h2>1. Calendar</h2>
+<fieldset>
+  <legend class="mut">Draft a season from an iCal calendar (e.g. the INRNG feed saved as .ics)</legend>
+  <div class="row">
+    <label>Year <input id="year" type="number" value="2026"></label>
+    <span id="clsboxes" class="row"></span>
+    <label class="btn">Open .ics file<input id="ics" type="file" accept=".ics,text/calendar" hidden></label>
+  </div>
+  <div id="importmsg" class="mut"></div>
+</fieldset>
+
+<h2>2. Wikipedia helpers</h2>
+<fieldset>
+  <legend class="mut">Drafts from Wikipedia/Wikidata. A secondary source: check every value before posting.</legend>
+  <div class="row">
+    <label>Race <select id="wprace"></select></label>
+    <label>Edition page <input id="wptitle" type="text" value="2026 Tour de France" size="28"></label>
+    <button id="wpstages">Fill stages + rest days</button>
+    <button id="wplookup">Look up website</button>
+  </div>
+  <div id="wpmsg" class="mut"></div>
+  <div id="wpresults"></div>
+</fieldset>
+
+<h2>3. Learn from old threads</h2>
+<fieldset>
+  <legend class="mut">Paste one or more old race threads (markdown). Homepage, Wikipedia, socials, FirstCycling id and PCS slug go into the race registry; year-specific rows (roadbook, previews, where to watch) are left out.</legend>
+  <textarea id="oldthreads" spellcheck="false" style="min-height:100px" placeholder="[Race Thread] 2026 Strade Bianche ME (1.UWT) ..."></textarea>
+  <div class="row"><button id="learn">Learn from these threads</button></div>
+  <div id="learnmsg" class="mut" style="white-space:pre-wrap"></div>
+</fieldset>
+
+<fieldset>
+  <legend class="mut">Import a stage table: paste the table from your internal work thread (any column order). Fills the race selected under "Wikipedia helpers". Rest days are the days without a stage.</legend>
+  <textarea id="stagetable" spellcheck="false" style="min-height:100px" placeholder="| Date | Stage | Route | Length | Type |Altitude|Finish|Time |"></textarea>
+  <div class="row"><button id="stageimport">Import stages into the selected race</button></div>
+  <div id="stagemsg" class="mut" style="white-space:pre-wrap"></div>
+</fieldset>
+
+<h2>4. Table layout</h2>
+<fieldset>
+  <legend class="mut">Drag the column headers to reorder them. Moderators build the tables differently; pick yours.</legend>
+  <div class="row">
+    <label>Layout <select id="layoutname"></select></label>
+    <label>Table <select id="layoutkind"><option value="stage">Stage table</option><option value="oneday">One-day table</option></select></label>
+    <label>Date display <select id="datefmt"></select></label>
+    <span id="dateexample" class="mut"></span>
+  </div>
+  <ul id="layoutlist" style="list-style:none;padding:0;margin:8px 0"></ul>
+  <div class="row">
+    <button id="layoutreset">Reset to standard</button>
+    <button id="layoutcopy">Copy my layout (YAML)</button>
+    <button id="layoutload">Load layout from YAML below</button>
+  </div>
+  <details><summary class="mut">Layout as YAML (share it with other moderators)</summary>
+    <textarea id="layoutyaml" spellcheck="false" style="min-height:90px"></textarea>
+  </details>
+</fieldset>
+
+<h2>5. Season (edit freely)</h2>
+<textarea id="season" spellcheck="false"></textarea>
+<details>
+  <summary class="mut">Race registry: official sites, social links, FirstCycling ids, PCS slugs (kept between years)</summary>
+  <textarea id="registry" spellcheck="false"></textarea>
+</details>
+<div class="row" style="margin-top:8px">
+  <button id="render">Generate threads</button>
+  <button id="reset">Reset to examples</button>
+  <button id="dl-yaml">Download season.yaml</button>
+  <button id="dl-md">Download all threads (.md)</button>
+</div>
+<p id="msg" class="mut"></p>
+
+<h2>6. Threads</h2>
+<div id="out"></div>
+</main>
+<script src="app.js"></script>
+<script>RT.start("threads")</script>
+</body>
+</html>

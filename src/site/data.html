@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Threads: Data</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+<h1>Data</h1>
+<nav><a href="index.html">Threads</a><a href="teams.html">Teams and points</a><a href="races.html">Race results</a><a class="active" href="data.html">Data</a></nav>
+<div id="appstatus" class="warn"></div>
+
+<h2>Database</h2>
+<fieldset>
+  <legend class="mut">All pages share one SQLite database, kept in this browser. Save it as a .sqlite file to keep a copy or pass it on; it opens in any SQLite tool.</legend>
+  <div id="dbinfo" class="mut"></div>
+  <div class="row" style="margin-top:8px">
+    <button id="dbexport">Save database (.sqlite)</button>
+    <label class="btn">Open database (.sqlite)<input id="dbimport" type="file" accept=".sqlite,.db,application/vnd.sqlite3,application/octet-stream" hidden></label>
+    <button id="dbreset">Delete all data</button>
+  </div>
+  <div id="dbmsg" class="mut" style="margin-top:6px"></div>
+</fieldset>
+
+<h2>Ask the data (SQL, read only)</h2>
+<fieldset>
+  <legend class="mut">Tables: team_snapshot, team_rank, team_level, race_result, classification, result_row, queue_race. Views: v_team_points, v_results.</legend>
+  <div id="sqlexamples"></div>
+  <textarea id="sqlbox" spellcheck="false" style="min-height:90px" placeholder="SELECT ..."></textarea>
+  <div class="row" style="margin-top:6px"><button id="sqlrun">Run</button></div>
+  <div id="sqlout" style="margin-top:8px"></div>
+</fieldset>
+<p class="mut"><span>__VERSION__</span></p>
+</main>
+<script src="app.js"></script>
+<script>RT.start("data")</script>
+</body>
+</html>

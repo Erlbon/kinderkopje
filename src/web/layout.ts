@@ -1,5 +1,6 @@
 import { parse, stringify } from "yaml";
 import { Column, ColumnField, Profile, RenderOptions, fmtDate } from "../core";
+import type { Store } from "./store";
 
 type Kind = "stage" | "oneday";
 interface Item {
@@ -8,7 +9,7 @@ interface Item {
 }
 
 const CUSTOM = "__custom";
-const STORE = "rt-layout";
+const STORE = "layout";
 
 const FIELDS: { field: ColumnField; header: string }[] = [
   { field: "date", header: "Date" },
@@ -56,28 +57,23 @@ function opt(value: string, label: string): HTMLOptionElement {
   return el("option", { value, textContent: label });
 }
 
-function readStore(): { name?: string; custom?: { stage?: Column[]; oneday?: Column[] } } {
-  try {
-    return JSON.parse(localStorage.getItem(STORE) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
-function writeStore(v: unknown): void {
-  try {
-    localStorage.setItem(STORE, JSON.stringify(v));
-  } catch {
-    /* storage can be blocked; the layout then lasts for this visit only */
-  }
-}
-
 export interface LayoutControl {
   options(): RenderOptions;
 }
 
-export function initLayout(profile: Profile, onChange: () => void): LayoutControl {
+export function initLayout(profile: Profile, onChange: () => void, store: Store): LayoutControl {
   const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
+  // The layout is kept in the shared database, so it travels with the .sqlite file.
+  const readStore = (): { name?: string; custom?: { stage?: Column[]; oneday?: Column[] } } => {
+    try {
+      return JSON.parse(store.getText(STORE) ?? "{}");
+    } catch {
+      return {};
+    }
+  };
+  const writeStore = (v: unknown): void => {
+    void store.setText(STORE, JSON.stringify(v));
+  };
   const variants = profile.tables.variants ?? {};
   let name = "";
   let kind: Kind = "stage";

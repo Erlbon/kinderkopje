@@ -3,13 +3,37 @@
 Season YAML in, Reddit-ready race threads out. Built for the r/peloton moderators; the
 layout lives in a profile file, so other communities can reuse it.
 
-It is a single static page that runs in your browser. Nothing is uploaded and nothing is
-fetched from other sites.
+It is a small static site that runs in your browser. Nothing is uploaded. It has four pages that share one
+database:
 
-## Using it
+| Page | What it does |
+|---|---|
+| Threads | Season YAML to Reddit-ready threads: calendar import, Wikipedia helpers, learning from old threads, stage tables, table layout. |
+| Teams and points | UCI team ranking snapshots: seasons side by side, season to date against last year, points per month, WorldTeams/ProTeams. |
+| Race results | The capture queue and the point-scoring results of each race, one race at a time across the years. |
+| Data | Save and open the database (.sqlite), ask it questions in SQL (read only), delete everything. |
+
+## Where the data lives
+
+All pages share one SQLite database (sql.js, SQLite compiled to WebAssembly, inside `app.js`). It is kept in your
+browser (IndexedDB). **Save database** on the Data page gives you a `.sqlite` file: a backup, and the way to pass
+the data to someone else (it opens in any SQLite tool). **Open database** replaces what is in the browser with such
+a file. The file records its schema version; a file from a newer version of the tool is refused. Settings you edit
+(season YAML, race registry, table layout) are in the same file. Data from the earlier one-page version, kept in the
+browser's own storage, moves into the database the first time a page opens.
+
+Tables: `team_snapshot`, `team_rank`, `team_level`, `race_result`, `classification`, `result_row`, `queue_race`,
+`kv`, with the views `v_team_points` and `v_results`. The schema is in `src/db/schema.ts`.
+
+## Running it
 
 - **Online:** the GitHub Pages site (enabled from the repo settings: Pages, source GitHub Actions).
-- **Offline:** download `racethreads.html` from the latest release and open it.
+- **From a folder (offline):** download `racethreads.zip` from the latest release, unzip it, run `node serve.mjs`
+  (or double-click `start.cmd`) and open http://localhost:8765. Use that address rather than opening the files
+  directly: browsers keep a separate database for each file opened from disk, so the pages would not share data.
+- **From the source:** `npm run build` then `npm start`.
+
+## Using it (Threads page)
 
 1. Optional: open a calendar `.ics` (for example the INRNG feed, saved from your browser). The page
    drafts a season: one-day races, plus stage races with one empty stage per day.
@@ -60,9 +84,11 @@ unmatched list.
 Per-race results come from the UCI race pages (`uci.org/competition-details/<year>/ROA/<id>`):
 
 1. Drag the **Capture UCI race** link (source `tools/capture-uci-race.js`) to your bookmarks bar.
-2. Add the races to the queue: save a UCI hub page (for example "2027 UCI WorldTour", tab Races & Results) from your
-   browser and open it with *Add races from a UCI hub page*. The queue lists each race with a link to its UCI page
-   and ticks it off when its results have been captured.
+2. Add the races to the queue: save a UCI hub page (for example "2025 UCI WorldTour", tab Races & Results) from your
+   browser and open it with *Add races from a UCI hub page*. UCI gives every edition of a race its own number (the
+   year in the address is ignored), so each year needs its own hub page. The queue lines the editions up by race
+   name: one row per race, one column per year, each with a link to that edition's UCI page. That makes it easy to
+   collect one race at a time across five years.
 3. On a race page open *Final Classification* (and any stage you want) and press the bookmark. It copies only the
    rows that score points (rank, rider, team, age, nation, result, points) and sends no requests of its own.
 4. Download the collection from its box and open the file with *Open captured file(s)*.

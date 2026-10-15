@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Threads: Teams and points</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+<h1>Teams and points</h1>
+<nav><a href="index.html">Threads</a><a class="active" href="teams.html">Teams and points</a><a href="races.html">Race results</a><a href="data.html">Data</a></nav>
+<div id="appstatus" class="warn"></div>
+<fieldset>
+  <legend class="mut">Compare teams' UCI World Ranking points across seasons, and month by month against last year. Teams are matched by UCI's own team id, so renamed teams stay one line.</legend>
+  <p class="mut" style="margin:4px 0">
+    <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarklet" class="btn" href="__BOOKMARKLET_HREF__">Capture UCI table</a>
+    <b>2.</b> Open a UCI DataRide <em>team ranking</em> page, pick the season and date with the page's own dropdowns, and press the bookmark on every page of the table (40 teams per page). It copies only what is on screen and makes no requests.
+    <b>3.</b> Press <em>Download collection</em> in its box, then open that file here.
+  </p>
+  <div class="row">
+    <label class="btn">Open captured file(s)<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
+    <button id="cubeclear">Clear rankings and results</button>
+    <button id="cubelevels" title="Fetches the WorldTeam and ProTeam lists of each captured season from Wikipedia, one request at a time">Look up team levels (Wikipedia)</button>
+  </div>
+  <div id="cubemsg" class="mut" style="margin:6px 0"></div>
+  <div class="row">
+    <label>Year <input id="cubeyear" type="number" style="width:80px"></label>
+    <label>As of <input id="cubecutoff" type="date"></label>
+    <label>Top teams <input id="cubetop" type="number" value="20" style="width:70px"></label>
+    <label title="Needs the team levels lookup"><input id="cubelevelonly" type="checkbox" checked> Only WorldTeams and ProTeams</label>
+    <label title="Seasons still being raced are partial (data/cube/seasons.yaml)"><input id="cubeopen" type="checkbox"> Include unfinished seasons</label>
+    <label title="Lotto + Intermarché-Wanty before 2026 (see data/cube/team-lineage.yaml)"><input id="cubecombine" type="checkbox" checked> Combine merged teams for earlier seasons</label>
+  </div>
+  <div id="cubeout"></div>
+</fieldset>
+<p class="mut">Everything is kept in the shared database (see the Data page). <span>__VERSION__</span></p>
+</main>
+<script src="app.js"></script>
+<script>RT.start("teams")</script>
+</body>
+</html>
