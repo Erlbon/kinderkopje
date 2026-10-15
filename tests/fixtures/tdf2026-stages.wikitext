@@ -1,0 +1,60 @@
+<!-- Excerpt of https://en.wikipedia.org/wiki/2026_Tour_de_France (CC BY-SA 4.0) used as a parser test fixture. -->
+{| class="wikitable sortable col2right col4center"
+|+Stage characteristics<ref name="route2">{{Cite web |date=23 October 2025 |title=Tour de France 2026 Press kit |url=https://storage-aso.lequipe.fr/ASO/cycling_tdf/tdf2026-dossier-de-presse.pdf |access-date=23 October 2025 |website=Tour de France |publisher=ASO |language=en}}</ref>
+! scope="col" |Stage
+! scope="col" |Date
+! scope="col" |Course
+! scope="col" |Distance
+! colspan="2" scope="col" |Type
+! scope="col" | Winner
+|-
+! scope="row" |[[2026 Tour de France, Stage 1 to Stage 11#Stage 1|1]]
+| 4 July
+| [[Barcelona]] (Spain)
+| {{convert|19.6|km|abbr=on}}
+| [[File:Team Time Trial Stage.svg|20px|alt=|link=]]
+| [[Team time trial]]
+| {{flagicon|NLD}} {{UCI team code|TVL men|2026}}
+|-
+! scope="row" |[[2026 Tour de France, Stage 1 to Stage 11#Stage 2|2]]
+| 5 July
+| [[Tarragona]] (Spain) to Barcelona (Spain)
+| {{convert|168.5|km|abbr=on}}
+| [[File:Hillystage.svg|link=|alt=|20x20px]]
+| Hilly stage
+| {{Flag athlete|[[Isaac del Toro]]|MEX}}
+|-
+! scope="row" |[[2026 Tour de France, Stage 1 to Stage 11#Stage 3|3]]
+| 6 July
+| [[Granollers]] (Spain) to [[Les Angles, Pyrénées-Orientales|Les Angles]]
+| {{convert|195.9|km|abbr=on}}
+| [[File:Mountainstage.svg|link=|alt=|20x20px]]
+| Mountain stage
+| {{Flag athlete|[[Tadej Pogačar]]|SLO}}
+|-
+! scope="row" |[[2026 Tour de France, Stage 1 to Stage 11#Stage 6|6]]
+| 9 July
+| Pau to [[Gavarnie-Gèdre]]
+| {{convert|186.2|km|abbr=on}}
+| [[File:Mountainstage.svg|link=|alt=|20x20px]]
+| Mountain stage
+| {{Flag athlete|[[Tadej Pogačar]]|SLO}}
+|-
+! scope="row" |
+| 13 July
+| [[Cantal]]
+| colspan="5" |Rest day
+|-
+! scope="row" |[[2026 Tour de France, Stage 1 to Stage 11#Stage 10|10]]
+| 14 July
+| [[Aurillac]] to [[Le Lioran]]
+| {{convert|166.6|km|abbr=on}}
+| [[File:Mountainstage.svg|link=|alt=|20x20px]]
+| Mountain stage
+| {{Flag athlete|[[Tadej Pogačar]]|SLO}}
+|-
+! scope="row" |
+| 20 July
+| [[Haute-Savoie]]
+| colspan="5" |Rest day
+|}

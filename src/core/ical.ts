@@ -98,9 +98,10 @@ export function draftSeason(events: IcsEvent[], opts: DraftOptions): Season {
   for (const e of events) {
     const m = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(e.summary);
     const name = (m ? m[1]! : e.summary).trim();
-    const cls = m ? m[2]!.trim() : "";
+    // The INRNG feed lists championships without a class code.
+    const cls = m ? m[2]!.trim() : /^World Championships/i.test(e.summary) ? "WC" : "";
     if (opts.classes?.length && !opts.classes.some((c) => cls === c || cls.startsWith(c))) continue;
-    const category = /WWT/.test(cls) || WOMEN.test(name) ? "WE" : "ME";
+    const category = /mixed/i.test(name) ? "MX" : /WWT/.test(cls) || WOMEN.test(name) ? "WE" : "ME";
     const known = byKey.get(slugify(name) + "|" + category);
     let id = known ?? slugify(name) + "-" + category.toLowerCase();
     for (let n = 2; used.has(id); n++) id = (known ?? slugify(name) + "-" + category.toLowerCase()) + "-" + n;

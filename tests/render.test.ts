@@ -2,11 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   SeasonError,
+  classWarnings,
   draftSeason,
+  lookupRace,
+  parseClasses,
   parseIcs,
   parseProfile,
   parseRegistry,
   parseSeason,
+  parseStageTable,
   renderSeason,
   seasonToYaml,
 } from "../src/core";
@@ -127,6 +131,41 @@ describe("validation", () => {
   });
 });
 
+describe("classifications", () => {
+  const classes = parseClasses(read("data/classes.yaml"));
+  it("loads the table with string codes", () => {
+    expect(classes.map((c) => c.code)).toEqual(
+      expect.arrayContaining(["1.UWT", "2.WWT", "1.Pro", "1.1", "2.1", "1.2", "2.2"]),
+    );
+    expect(classes.every((c) => typeof c.code === "string")).toBe(true);
+  });
+  it("an unquoted class like 1.1 in a season is read as text", () => {
+    const s = parseSeason(
+      ["season: 2026", "races:", "  - race: strade-bianche-me", "    class: 1.1", "    date: 2026-03-07"].join(
+        String.fromCharCode(10),
+      ),
+      registry,
+    );
+    expect(s.races[0]!.class).toBe("1.1");
+  });
+  it("flags unknown classes and kind mismatches", () => {
+    expect(classWarnings("1.UWT", false, classes)).toEqual([]);
+    expect(classWarnings("9.X", false, classes)[0]).toContain("not in data/classes.yaml");
+    expect(classWarnings("1.UWT", true, classes)[0]).toContain("one-day class but the race has stages");
+    expect(classWarnings("2.UWT", false, classes)[0]).toContain("stage-race class but the race has no stages");
+  });
+  it("renderSeason adds class warnings to the thread", () => {
+    const bad = parseSeason(
+      ["season: 2026", "races:", "  - race: strade-bianche-me", "    class: 2.UWT", "    date: 2026-03-07"].join(
+        String.fromCharCode(10),
+      ),
+      registry,
+    );
+    const t = renderSeason(profile, registry, bad, classes)[0]!;
+    expect(t.warnings.join(" ")).toContain("stage-race class");
+  });
+});
+
 describe("iCal draft", () => {
   const ics = [
     "BEGIN:VCALENDAR",
@@ -172,5 +211,31 @@ describe("iCal draft", () => {
     const s = draftSeason(parseIcs(ics), { year: 2026, registry });
     const back = parseSeason(seasonToYaml(s), registry);
     expect(back.races.length).toBe(s.races.length);
+  });
+});
+
+describe("Wikipedia stage table", () => {
+  const wt = read("tests/fixtures/tdf2026-stages.wikitext");
+  const d = parseStageTable(wt, 2026);
+  it("reads stages with dates, courses, lengths and types", () => {
+    expect(d.stages.map((s) => s.n)).toEqual([1, 2, 3, 6, 10]);
+    expect(d.stages[0]).toMatchObject({ date: "2026-07-04", from: "Barcelona", to: "Barcelona", length: 19.6, type: "TTT" });
+    expect(d.stages[1]).toMatchObject({ from: "Tarragona", to: "Barcelona", length: 169, type: "hilly" });
+    expect(d.stages[2]).toMatchObject({ from: "Granollers", to: "Les Angles", type: "mountain" });
+    expect(d.stages[3]).toMatchObject({ date: "2026-07-09", from: "Pau", to: "Gavarnie-Gèdre", length: 186, type: "mountain" });
+  });
+  it("finds rest days", () => expect(d.restDays).toEqual(["2026-07-13", "2026-07-20"]));
+  it("returns nothing when the page has no stage table", () => {
+    expect(parseStageTable("just text", 2026)).toEqual({ stages: [], restDays: [] });
+  });
+  it("lookupRace reads official site and Wikipedia link via an injected fetch", async () => {
+    const fake = (async (url: string) => {
+      const body = String(url).includes("wbsearchentities")
+        ? { search: [{ id: "Q1", label: "Strade Bianche", description: "race" }] }
+        : { entities: { Q1: { claims: { P856: [{ mainsnak: { datavalue: { value: "https://www.strade-bianche.it/" } } }] }, sitelinks: { enwiki: { url: "https://en.wikipedia.org/wiki/Strade_Bianche" } } } } };
+      return { ok: true, json: async () => body } as unknown as Response;
+    }) as unknown as typeof fetch;
+    const r = await lookupRace("Strade Bianche", fake);
+    expect(r[0]).toMatchObject({ officialSite: "https://www.strade-bianche.it/", wikipedia: "https://en.wikipedia.org/wiki/Strade_Bianche" });
   });
 });

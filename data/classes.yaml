@@ -1,0 +1,19 @@
+# UCI road race classifications (https://en.wikipedia.org/wiki/UCI_race_classifications).
+# Code = <1 one-day | 2 stage race>.<rank>. Rank order, highest first: UWT/WWT, Pro, 1, 2.
+# Check the UCI regulations when in doubt; Wikipedia is a secondary source.
+# `women: false` / `men: false` means the level exists for one gender only.
+- { code: 1.UWT, name: UCI World Tour, kind: oneday, rank: 1, women: false }
+- { code: 2.UWT, name: UCI World Tour, kind: stage, rank: 1, women: false }
+- { code: 1.WWT, name: UCI Women's World Tour, kind: oneday, rank: 1, men: false }
+- { code: 2.WWT, name: UCI Women's World Tour, kind: stage, rank: 1, men: false }
+- { code: 1.Pro, name: UCI ProSeries, kind: oneday, rank: 2 }
+- { code: 2.Pro, name: UCI ProSeries, kind: stage, rank: 2 }
+- { code: "1.1", name: UCI Class 1, kind: oneday, rank: 3 }
+- { code: "2.1", name: UCI Class 1, kind: stage, rank: 3 }
+- { code: "1.2", name: UCI Class 2, kind: oneday, rank: 4 }
+- { code: "2.2", name: UCI Class 2, kind: stage, rank: 4 }
+- { code: 1.2U, name: "UCI Class 2 (under-23)", kind: oneday, rank: 4 }
+- { code: 2.2U, name: "UCI Class 2 (under-23)", kind: stage, rank: 4 }
+- { code: 1.NCup, name: "UCI Nations' Cup (under-23)", kind: oneday, rank: 4 }
+- { code: 2.NCup, name: "UCI Nations' Cup (under-23)", kind: stage, rank: 4 }
+- { code: WC, name: UCI World Championships, kind: either, rank: 1 }

@@ -37,18 +37,26 @@ input[type=number]{width:80px}
   <legend class="mut">Draft a season from an iCal calendar (e.g. the INRNG feed saved as .ics)</legend>
   <div class="row">
     <label>Year <input id="year" type="number" value="2026"></label>
-    <label><input type="checkbox" name="cls" value="1.UWT" checked> 1.UWT</label>
-    <label><input type="checkbox" name="cls" value="2.UWT" checked> 2.UWT</label>
-    <label><input type="checkbox" name="cls" value="1.WWT" checked> 1.WWT</label>
-    <label><input type="checkbox" name="cls" value="2.WWT" checked> 2.WWT</label>
-    <label><input type="checkbox" name="cls" value="1.Pro"> 1.Pro</label>
-    <label><input type="checkbox" name="cls" value="2.Pro"> 2.Pro</label>
+    <span id="clsboxes" class="row"></span>
     <label class="btn">Open .ics file<input id="ics" type="file" accept=".ics,text/calendar" hidden></label>
   </div>
   <div id="importmsg" class="mut"></div>
 </fieldset>
 
-<h2>2. Season (edit freely)</h2>
+<h2>2. Wikipedia helpers</h2>
+<fieldset>
+  <legend class="mut">Drafts from Wikipedia/Wikidata. A secondary source: check every value before posting.</legend>
+  <div class="row">
+    <label>Race <select id="wprace"></select></label>
+    <label>Edition page <input id="wptitle" type="text" value="2026 Tour de France" size="28"></label>
+    <button id="wpstages">Fill stages + rest days</button>
+    <button id="wplookup">Look up website</button>
+  </div>
+  <div id="wpmsg" class="mut"></div>
+  <div id="wpresults"></div>
+</fieldset>
+
+<h2>3. Season (edit freely)</h2>
 <textarea id="season" spellcheck="false"></textarea>
 <details>
   <summary class="mut">Race registry: official sites, social links, FirstCycling ids, PCS slugs (kept between years)</summary>
@@ -62,7 +70,7 @@ input[type=number]{width:80px}
 </div>
 <p id="msg" class="mut"></p>
 
-<h2>3. Threads</h2>
+<h2>4. Threads</h2>
 <div id="out"></div>
 </main>
 <script>__SCRIPT__</script>

@@ -1,3 +1,4 @@
+import { RaceClass, classWarnings } from "./classes";
 import { addDays, ddmm, yearOf } from "./dates";
 import {
   Column,
@@ -263,12 +264,16 @@ export function renderSeason(
   profile: Profile,
   registry: Record<string, RegistryRace>,
   season: Season,
+  classes?: RaceClass[],
 ): Thread[] {
   const all: Thread[] = [];
-  season.races.forEach((race, index) => {
-    for (const t of renderRace(profile, registry, season, race)) all.push({ ...t, id: t.id });
-    void index;
-  });
+  for (const race of season.races) {
+    const extra = classes ? classWarnings(race.class, !!race.stages, classes) : [];
+    for (const t of renderRace(profile, registry, season, race)) {
+      t.warnings.push(...extra);
+      all.push(t);
+    }
+  }
   const rank = { mega: 0, race: 1, stage: 1, rest: 1 } as const;
   return all
     .map((t, i) => ({ t, i }))

@@ -1,7 +1,13 @@
 import profileYaml from "../../data/profiles/peloton.yaml";
 import registryYaml from "../../data/peloton/races.yaml";
 import fixturesYaml from "../../data/peloton/2026-fixtures.yaml";
+import classesYaml from "../../data/classes.yaml";
+import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import {
+  fetchWikitext,
+  lookupRace,
+  parseStageTable,
+  parseClasses,
   SeasonError,
   Thread,
   draftSeason,
@@ -73,6 +79,7 @@ function download(name: string, text: string, type = "text/plain"): void {
 }
 
 const profile = parseProfile(profileYaml);
+const classes = parseClasses(classesYaml);
 let threads: Thread[] = [];
 
 function render(): void {
@@ -95,10 +102,11 @@ function render(): void {
     showError(e);
     return;
   }
-  threads = renderSeason(profile, registry, season);
+  threads = renderSeason(profile, registry, season, classes);
   store("rt-season", $<HTMLTextAreaElement>("season").value);
   store("rt-registry", $<HTMLTextAreaElement>("registry").value);
   const todo = threads.reduce((n, t) => n + t.warnings.length, 0);
+  fillRaceChoices();
   msg.textContent = threads.length + " threads" + (todo ? ", " + todo + " things still to fill in" : "");
   threads.forEach((t, i) => out.append(card(t, i)));
 }
@@ -155,10 +163,114 @@ function importIcs(text: string): void {
   render();
 }
 
+type Obj = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+function seasonObj(): Obj {
+  return (yamlParse($<HTMLTextAreaElement>("season").value) as Obj) ?? {};
+}
+
+function registryObj(): Obj {
+  return (yamlParse($<HTMLTextAreaElement>("registry").value) as Obj) ?? {};
+}
+
+function raceName(race: Obj, registry: Obj): string {
+  return String(race.name ?? registry[race.race]?.name ?? race.race);
+}
+
+function fillRaceChoices(): void {
+  const sel = $<HTMLSelectElement>("wprace");
+  const keep = sel.value;
+  sel.replaceChildren();
+  try {
+    const s = seasonObj();
+    const r = registryObj();
+    for (const race of (s.races ?? []) as Obj[]) {
+      sel.append(el("option", { value: race.race, textContent: raceName(race, r) + " (" + race.race + ")" }));
+    }
+    if (keep) sel.value = keep;
+  } catch {
+    /* invalid YAML is reported by render() */
+  }
+}
+
+function wpSay(text: string, err = false): void {
+  const m = $("wpmsg");
+  m.textContent = text;
+  m.className = err ? "err" : "mut";
+}
+
+async function fillStages(): Promise<void> {
+  const id = $<HTMLSelectElement>("wprace").value;
+  const title = $<HTMLInputElement>("wptitle").value.trim();
+  if (!id || !title) return wpSay("Pick a race and type the Wikipedia edition page.", true);
+  try {
+    const s = seasonObj();
+    const year = Number(/\b(19|20)\d\d\b/.exec(title)?.[0] ?? s.season);
+    wpSay("Fetching " + title + "...");
+    const draft = parseStageTable(await fetchWikitext(title), year);
+    if (!draft.stages.length) return wpSay("No stage table found on that page.", true);
+    const race = (s.races as Obj[]).find((r) => r.race === id)!;
+    const have = new Map(((race.stages ?? []) as Obj[]).map((x) => [x.n, x]));
+    // What you already typed wins; Wikipedia only fills the gaps.
+    race.stages = draft.stages.map((d) => ({ ...d, ...have.get(d.n) }));
+    if (!race.restDays?.length && draft.restDays.length) race.restDays = draft.restDays;
+    delete race.date;
+    $<HTMLTextAreaElement>("season").value = yamlStringify(s, { lineWidth: 0 });
+    wpSay(draft.stages.length + " stages and " + draft.restDays.length + " rest days from Wikipedia. Check them.");
+    render();
+  } catch (e) {
+    wpSay(String(e instanceof Error ? e.message : e), true);
+  }
+}
+
+async function lookupWebsite(): Promise<void> {
+  const id = $<HTMLSelectElement>("wprace").value;
+  const box = $("wpresults");
+  box.replaceChildren();
+  try {
+    const s = seasonObj();
+    const reg = registryObj();
+    const race = (s.races as Obj[]).find((r) => r.race === id);
+    if (!race) return wpSay("Pick a race first.", true);
+    const name = raceName(race, reg);
+    wpSay("Looking up " + name + "...");
+    const found = await lookupRace(name);
+    wpSay(found.length + " candidates for " + name + ". Pick the right one (men's and women's are separate entries).");
+    for (const c of found) {
+      const b = el("button", { textContent: "Use", title: "Copy website and Wikipedia link into the race registry" });
+      b.onclick = () => {
+        const r2 = registryObj();
+        const entry = (r2[id] ??= { name, category: race.category ?? "ME" });
+        if (c.officialSite) entry.officialSite = c.officialSite;
+        if (c.wikipedia) entry.wikipedia = c.wikipedia;
+        $<HTMLTextAreaElement>("registry").value = yamlStringify(r2, { lineWidth: 0 });
+        wpSay("Saved to the registry for " + id + ".");
+        render();
+      };
+      box.append(
+        el("div", { class: "row" }, b, el("span", { textContent: c.label + ": " + c.description + " | " + (c.officialSite ?? "no website") + " | " + (c.wikipedia ?? "no Wikipedia page") })),
+      );
+    }
+  } catch (e) {
+    wpSay(String(e instanceof Error ? e.message : e), true);
+  }
+}
+
+function initClassBoxes(): void {
+  const box = $("clsboxes");
+  for (const c of classes) {
+    const cb = el("input", { type: "checkbox", name: "cls", value: c.code, checked: c.rank <= 2 }); // WorldTour/WWT, ProSeries and the championships
+    box.append(el("label", { title: c.name }, cb, " " + c.code));
+  }
+}
+
 function init(): void {
+  initClassBoxes();
   $<HTMLTextAreaElement>("registry").value = store("rt-registry") ?? registryYaml;
   $<HTMLTextAreaElement>("season").value = store("rt-season") ?? fixturesYaml;
   $("render").onclick = render;
+  $("wpstages").onclick = () => void fillStages();
+  $("wplookup").onclick = () => void lookupWebsite();
   $("reset").onclick = () => {
     $<HTMLTextAreaElement>("registry").value = registryYaml;
     $<HTMLTextAreaElement>("season").value = fixturesYaml;

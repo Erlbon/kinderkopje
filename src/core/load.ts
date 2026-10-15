@@ -46,6 +46,8 @@ export function parseSeason(text: string, registry: Record<string, RegistryRace>
       errors.push(where + ": not a mapping");
       return;
     }
+    // YAML reads an unquoted class such as 1.1 as a number; it is a code, keep it as text.
+    if (typeof raw.class === "number") raw.class = String(raw.class);
     const id = raw.race;
     if (typeof id !== "string" || !id) {
       errors.push(where + ": missing 'race' id");

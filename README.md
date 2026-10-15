@@ -17,6 +17,27 @@ fetched from other sites.
 3. Press **Generate threads**. Each thread has Copy title / Copy body buttons and lists what is
    still `TBC`. Paste into Reddit's scheduled posts (Markdown mode).
 
+## Wikipedia helpers
+
+The page can draft data from Wikipedia and Wikidata (their APIs allow this and the page calls them
+straight from your browser):
+
+- **Fill stages + rest days:** reads the "Stage characteristics" table of an edition page
+  (for example `2026 Tour de France`): stage numbers, dates, courses, lengths, types, rest days.
+  Anything you already typed for a stage is kept; Wikipedia only fills gaps.
+- **Look up website:** finds the race on Wikidata and offers its official website and Wikipedia link
+  for the race registry. Men's and women's editions are separate entries; pick the right one.
+
+Wikipedia is a secondary source. Its stage types (flat, hilly, mountain, ITT, TTT) are not the same
+vocabulary as r/peloton's own Type values (for example "Hard"), so treat them as drafts.
+
+## Race classes
+
+`data/classes.yaml` lists the UCI classification codes (1.UWT, 2.WWT, 1.Pro, 1.1 ... and WC for
+championships). Class codes are checked: an unknown class, or a one-day class on a race with stages,
+shows up as a warning on the thread. The calendar import offers WorldTour/WWT, ProSeries and
+championships by default.
+
 ## Data files
 
 | File | What |
