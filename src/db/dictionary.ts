@@ -189,7 +189,12 @@ export const DICTIONARY: TableDoc[] = [
 /** The overview as Markdown, to paste into a post or a document. */
 export function dictionaryMarkdown(docs: TableDoc[] = DICTIONARY): string {
   const nl = String.fromCharCode(10);
-  const out: string[] = ["# Pelotonic data: tables and fields", ""];
+  const out: string[] = [
+    "# Pelotonic data: tables and fields",
+    "",
+    "Rankings, calendars and results come from the Union Cycliste Internationale (UCI): uci.org and DataRide. Team levels come from Wikipedia (CC BY-SA 4.0).",
+    "",
+  ];
   for (const t of docs) {
     out.push("## " + t.name + (t.kind === "view" ? " (view)" : ""), "", t.summary, "");
     out.push("|Field|Meaning|", "|:-|:-|");
@@ -198,4 +203,64 @@ export function dictionaryMarkdown(docs: TableDoc[] = DICTIONARY): string {
     out.push("", "Example, " + t.example.title.toLowerCase() + ":", "", "```sql", t.example.sql, "```", "");
   }
   return out.join(nl);
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** The overview as one self-contained HTML page (no scripts, light and dark, prints well), for download. */
+export function dictionaryHtml(docs: TableDoc[] = DICTIONARY, version = ""): string {
+  const nl = String.fromCharCode(10);
+  const out: string[] = [];
+  out.push(
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    "<title>Pelotonic data: tables and fields</title>",
+    "<style>",
+    ":root{--bg:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#0b57d0;--code:#f3f4f6}",
+    "@media (prefers-color-scheme:dark){:root{--bg:#121316;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#8ab4f8;--code:#1d1f24}}",
+    "body{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;margin:0;padding:20px}",
+    "main{max-width:880px;margin:0 auto}",
+    "h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 4px;border-top:1px solid var(--line);padding-top:14px}",
+    ".mut{color:var(--mut);font-size:13px}",
+    "table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}",
+    "th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}",
+    "code,pre{background:var(--code);border-radius:4px;font:13px ui-monospace,Consolas,monospace}code{padding:1px 4px}",
+    "pre{padding:8px;white-space:pre-wrap;word-break:break-word}",
+    "a{color:var(--acc)}.view{font-size:12px;border:1px solid var(--line);border-radius:10px;padding:0 6px;margin-left:6px}",
+    "@media print{body{padding:0}h2{break-after:avoid}table,pre{break-inside:avoid}}",
+    "</style>",
+    "</head>",
+    "<body>",
+    "<main>",
+    "<h1>Pelotonic data: tables and fields</h1>",
+    '<p class="mut">What is in the Pelotonic database (SQLite)' + (version ? ", " + esc(version) : "") + ". Open the Data page of the tool to ask it questions in SQL (read only). The two views, <code>v_team_points</code> and <code>v_results</code>, are the easy way in.</p>",
+    '<p class="mut">Rankings, calendars and results come from the Union Cycliste Internationale (UCI): uci.org and DataRide. Team levels come from Wikipedia (CC BY-SA 4.0).</p>',
+    "<ul>",
+  );
+  for (const d of docs) out.push('<li><a href="#' + esc(d.name) + '">' + esc(d.name) + "</a>" + (d.kind === "view" ? " (view)" : "") + ": " + esc(d.summary) + "</li>");
+  out.push("</ul>");
+  for (const d of docs) {
+    out.push(
+      '<h2 id="' + esc(d.name) + '">' + esc(d.name) + (d.kind === "view" ? '<span class="view">view</span>' : "") + "</h2>",
+      "<p>" + esc(d.summary) + "</p>",
+      "<table>",
+      "<tr><th>Field</th><th>Meaning</th></tr>",
+    );
+    for (const c of d.columns) out.push("<tr><td><code>" + esc(c.name) + "</code></td><td>" + esc(c.meaning) + "</td></tr>");
+    out.push("</table>");
+    if (d.links) out.push('<p class="mut">Links: ' + esc(d.links) + "</p>");
+    out.push('<p class="mut">Example, ' + esc(d.example.title.toLowerCase()) + ":</p>", "<pre>" + esc(d.example.sql) + "</pre>");
+  }
+  out.push("</main>", "</body>", "</html>", "");
+  return out.join(nl);
+}
+
+/** The overview as JSON, for people who want to use it in their own tools. */
+export function dictionaryJson(docs: TableDoc[] = DICTIONARY, version = ""): string {
+  return JSON.stringify({ name: "Pelotonic data overview", version, tables: docs }, null, 2) + String.fromCharCode(10);
 }

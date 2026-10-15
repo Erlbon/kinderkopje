@@ -49,6 +49,13 @@ for (const f of readdirSync("src/site").filter((n) => n.endsWith(".html"))) {
 }
 copyFileSync("src/site/app.css", "dist/app.css");
 
+// the data overview as downloadable files, written from the same text the Data page shows
+const dict = await build({ entryPoints: ["src/db/dictionary.ts"], bundle: true, format: "esm", platform: "node", write: false, logLevel: "warning" });
+const overview = await import("data:text/javascript;base64," + Buffer.from(dict.outputFiles[0].text).toString("base64"));
+writeFileSync("dist/pelotonic-data-overview.html", overview.dictionaryHtml(overview.DICTIONARY, version));
+writeFileSync("dist/pelotonic-data-overview.md", overview.dictionaryMarkdown(overview.DICTIONARY));
+writeFileSync("dist/pelotonic-data-overview.json", overview.dictionaryJson(overview.DICTIONARY, version));
+
 // to run the site from a folder: node serve.mjs (or start.cmd on Windows)
 copyFileSync("tools/serve.mjs", "dist/serve.mjs");
 writeFileSync("dist/start.cmd", "@echo off\r\nnode serve.mjs\r\n");
