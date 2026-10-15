@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, emptyCube, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, cleanHeading, emptyCube, isComplete, isScoringEvent, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -60,13 +60,30 @@ describe("a competition page", () => {
 describe("an event page", () => {
   const r = readEventResults(doc(EVENT), "/iframe/EventResults/374263", "?competitionId=77536&disciplineId=10")!;
   it("keeps only the rows that score points, with every field", () => {
-    expect(r).toMatchObject({ competitionId: 77536, eventId: 374263, totalRows: 4, date: "2026-10-14", heading: "Giro del Veneto Individual Road Race" });
+    expect(r).toMatchObject({ competitionId: 77536, eventId: 374263, totalRows: 51, date: "2026-10-14", heading: "Giro del Veneto Individual Road Race" });
     expect(r.rows).toHaveLength(3);
     expect(r.rows[0]).toEqual({ rank: 1, rider: "SEIXAS Paul", team: "DECATHLON CMA CGM TEAM", age: 20, nation: "FRA", result: "5:49:28", points: 800 });
+  });
+  it("reads the heading without the page's scripts", () => {
+    const withScript = EVENT.replace("<body>", "<body><script>$(document).on('keydown', 'input', function(e) { if (e.which) { e.preventDefault(); } });</script>");
+    expect(readEventResults(doc(withScript), "/iframe/EventResults/374263", "?competitionId=77536")!.heading).toBe("Giro del Veneto Individual Road Race");
+    expect(cleanHeading("n', '.k-input', function(e) { x(); }); ADAC Cyclassics Individual Road Race")).toBe("ADAC Cyclassics Individual Road Race");
   });
   it("needs the event and competition in the address, and a result table", () => {
     expect(readEventResults(doc(EVENT), "/iframe/EventResults/374263", "")).toBeUndefined();
     expect(readEventResults(doc("<html><body>loading</body></html>"), "/iframe/EventResults/1", "?competitionId=2")).toBeUndefined();
+  });
+});
+
+describe("when an event is complete", () => {
+  it("is not complete while every row of the page scored: the next page may hold more points", () => {
+    expect(isComplete({ rows: new Array(40).fill(0), totalRows: 40 })).toBe(false);
+    expect(isComplete({ rows: new Array(40).fill(0), totalRows: 80 })).toBe(true); // the next page was read and went on past the last scoring row
+    expect(isComplete({ rows: new Array(5).fill(0), totalRows: 40 })).toBe(true);
+  });
+  it("only the general classification and the stages count, not the jersey classifications", () => {
+    for (const n of ["General Classification", "Stage 3", "Prologue", "Individual Time Trial"]) expect(isScoringEvent(n), n).toBe(true);
+    for (const n of ["Points Classification", "Youth Classification", "Mountains Classification", "Teams Classification"]) expect(isScoringEvent(n), n).toBe(false);
   });
 });
 
@@ -84,7 +101,7 @@ describe("DataRide captures in the cube", () => {
     const cube = captured();
     expect(cube.queue!.map((q) => q.name)).toContain("Giro del Veneto");
     const line = queueStatus(cube).find((l) => l.uciId === 77536)!;
-    expect(line).toMatchObject({ class: "1.Pro", captured: true, rows: 3, eventsKnown: 1, eventsCaptured: 1 });
+    expect(line).toMatchObject({ class: "1.Pro", captured: true, rows: 3, eventsKnown: 1, eventsCaptured: 1, eventsComplete: 1 });
     const race = cube.raceResults![0]!;
     expect(race).toMatchObject({ uciId: 77536, year: 2026, name: "Giro del Veneto", class: "1.Pro" });
     expect(race.classifications[0]).toMatchObject({ label: "General Classification", eventId: 374263 });
@@ -94,6 +111,16 @@ describe("DataRide captures in the cube", () => {
     const next = { competitionId: 77536, eventId: 374263, heading: "x", totalRows: 40, rows: [{ rank: 41, rider: "LATE Rider", team: "T", age: 30, nation: "ITA", result: "x", points: 4 }] };
     addCapture(cube, { format: "racethreads-capture/1", eventResults: [next] });
     expect(cube.raceResults![0]!.classifications[0]!.rows.map((r) => r.rank)).toEqual([1, 2, 3, 41]);
+  });
+  it("a full page of scoring rows keeps the race open until the next page is captured", () => {
+    const cube = emptyCube();
+    addCapture(cube, { format: "racethreads-capture/1", competitions: readCompetitionList(doc(LIST)) });
+    addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 77536, events: [{ id: 1, name: "General Classification" }, { id: 2, name: "Points Classification" }] }] });
+    const full = (from: number) => Array.from({ length: 40 }, (_, i) => ({ rank: from + i, rider: "R" + (from + i), team: "T", age: 25, nation: "ITA", result: "x", points: 5 }));
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 77536, eventId: 1, heading: "x", totalRows: 40, rows: full(1) }] });
+    expect(queueStatus(cube).find((l) => l.uciId === 77536)).toMatchObject({ eventsKnown: 1, eventsCaptured: 1, eventsComplete: 0 });
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 77536, eventId: 1, heading: "x", totalRows: 80, rows: full(41).slice(0, 5) }] });
+    expect(queueStatus(cube).find((l) => l.uciId === 77536)).toMatchObject({ eventsKnown: 1, eventsCaptured: 1, eventsComplete: 1 });
   });
   it("men's and women's races of the list stay apart in the queue by race", () => {
     const { races } = queueByRace(captured());

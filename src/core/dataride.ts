@@ -38,7 +38,7 @@ export interface DrEventResult {
   eventId: number;
   heading: string; // "Giro del Veneto Individual Road Race"
   date?: string; // ISO start date of the event, when the page says
-  totalRows: number; // rows on screen (one page of the table is 40)
+  totalRows: number; // how far the table reached: the highest rank on screen (one page of the table is 40 rows)
   rows: ResultRow[]; // only the rows that score points
 }
 
@@ -115,6 +115,7 @@ export function readEventResults(doc: Document, pathname: string, search: string
 
   const rows: ResultRow[] = [];
   let totalRows = 0;
+  let lastRank = 0;
   for (const tr of Array.from(table.querySelectorAll("tbody tr"))) {
     const tds = Array.from(tr.querySelectorAll("td"));
     if (tds.length < heads.length) continue;
@@ -122,8 +123,9 @@ export function readEventResults(doc: Document, pathname: string, search: string
     const cell = (name: string) => clean(tds[col(name)]?.textContent);
     const pointsCell = tds[col("points")];
     const points = parseFloat(clean(pointsCell?.querySelector(".uci-points-left")?.textContent ?? pointsCell?.textContent).replace(",", "."));
-    if (!(points > 0)) continue;
     const rank = parseInt(cell("rank"), 10);
+    if (rank > lastRank) lastRank = rank;
+    if (!(points > 0)) continue;
     rows.push({
       rank: rank > 0 ? rank : null,
       rider: cell("rider"),
@@ -135,11 +137,29 @@ export function readEventResults(doc: Document, pathname: string, search: string
     });
   }
 
-  // "Giro del Veneto Individual Road Race - 14 Oct 2026 Results": the page's heading
-  const text = clean(doc.body?.textContent);
+  // "Giro del Veneto Individual Road Race - 14 Oct 2026 Results": the page's heading (read without the page's scripts)
+  const body = doc.body?.cloneNode(true) as HTMLElement | undefined;
+  for (const x of Array.from(body?.querySelectorAll("script, style") ?? [])) x.remove();
+  const text = clean(body?.textContent);
   const m = /(?:IFrame\s+)?(.{3,160}?)\s+-\s+(\d{1,2}\s+[A-Za-z]{3}(?:\s*-\s*\d{1,2}\s+[A-Za-z]{3})?\s+\d{4})\s+Results/.exec(text);
-  const out: DrEventResult = { competitionId, eventId, heading: m ? clean(m[1]!.replace(/^IFrame\s+/, "")) : "", totalRows, rows };
+  const out: DrEventResult = { competitionId, eventId, heading: m ? clean(m[1]!.replace(/^IFrame\s+/, "")) : "", totalRows: Math.max(totalRows, lastRank), rows };
   const when = m ? parseUciDates(m[2]!) : undefined;
   if (when) out.date = when.start;
   return out;
+}
+
+/** A heading with page script in front of it (an older capture): keep what comes after the script. */
+export function cleanHeading(h: string): string {
+  const i = h.lastIndexOf("});");
+  return clean(i >= 0 ? h.slice(i + 3) : h);
+}
+
+/** Events that give UCI points: the general classification and the stages, not the jersey classifications. */
+export function isScoringEvent(name: string): boolean {
+  return !/points|youth|young|mountain|climber|sprint classif|combativ|teams? classif|best |kom/i.test(name);
+}
+
+/** A result list is complete when the table went on past the last scoring row; otherwise the next page may hold more points. */
+export function isComplete(c: { rows: unknown[]; totalRows: number }): boolean {
+  return c.rows.length < c.totalRows;
 }

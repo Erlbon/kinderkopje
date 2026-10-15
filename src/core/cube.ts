@@ -1,4 +1,5 @@
 import { parse as parseYaml } from "yaml";
+import { cleanHeading, isComplete, isScoringEvent } from "./dataride";
 import type { DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
 import { normRaceName } from "./uci-hub";
 
@@ -218,20 +219,21 @@ function upsertCompetition(cube: Cube, c: DrCompetition): void {
  */
 export function mergeEventResult(cube: Cube, e: DrEventResult): void {
   const q = (cube.queue ?? []).find((x) => x.uciId === e.competitionId);
+  const heading = cleanHeading(e.heading);
   const list = (cube.raceResults ??= []);
   let race = list.find((x) => x.uciId === e.competitionId);
   if (!race) {
     const year = q?.year || Number((e.date ?? "").slice(0, 4)) || new Date().getFullYear();
-    race = { uciId: e.competitionId, year, name: q?.name ?? (e.heading || "Competition " + e.competitionId), classifications: [] };
+    race = { uciId: e.competitionId, year, name: q?.name ?? (heading || "Competition " + e.competitionId), classifications: [] };
     if (q?.class) race.class = q.class;
     if (q?.country) race.country = q.country;
     list.push(race);
   }
   race.capturedAt = new Date().toISOString();
-  const label = q?.events?.find((x) => x.id === e.eventId)?.name || e.heading || "Event " + e.eventId;
+  const label = q?.events?.find((x) => x.id === e.eventId)?.name || heading || "Event " + e.eventId;
   const have = race.classifications.find((c) => c.eventId === e.eventId);
   if (!have) {
-    race.classifications.push({ label, title: e.heading || label, eventId: e.eventId, totalRows: e.totalRows, rows: e.rows });
+    race.classifications.push({ label, title: heading || label, eventId: e.eventId, totalRows: e.totalRows, rows: e.rows });
     return;
   }
   const key = (r: { rank: number | null; rider: string }) => r.rank + "|" + r.rider;
@@ -275,8 +277,9 @@ export interface QueueLine extends QueueRace {
   captured: boolean;
   rows: number; // point-scoring rows captured so far
   classifications: number;
-  eventsKnown: number; // events listed on the competition page
+  eventsKnown: number; // events listed on the competition page that give points (general classification, stages)
   eventsCaptured: number; // of those, events with a result captured
+  eventsComplete: number; // of those, events whose table was read to the end (not waiting for the next page)
 }
 
 /** The queue with what has been captured for each race. */
@@ -285,9 +288,11 @@ export function queueStatus(cube: Cube): QueueLine[] {
   return (cube.queue ?? []).map((q) => {
     const r = byId.get(q.uciId);
     const rows = r ? r.classifications.reduce((n, c) => n + c.rows.length, 0) : 0;
-    const got = new Set((r?.classifications ?? []).map((c) => c.eventId));
-    const eventsKnown = q.events?.length ?? 0;
-    return { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown, eventsCaptured: (q.events ?? []).filter((e) => got.has(e.id)).length };
+    const byEvent = new Map((r?.classifications ?? []).map((c) => [c.eventId, c]));
+    const scoring = (q.events ?? []).filter((e) => isScoringEvent(e.name));
+    const have = scoring.filter((e) => byEvent.has(e.id));
+    const eventsComplete = have.filter((e) => isComplete(byEvent.get(e.id)!)).length;
+    return { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown: scoring.length, eventsCaptured: have.length, eventsComplete };
   });
 }
 
