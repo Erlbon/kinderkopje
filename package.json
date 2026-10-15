@@ -19,6 +19,7 @@
     "@types/node": "^26.6.5",
     "@types/sql.js": "^1.4.11",
     "esbuild": "^0.28.2",
+    "linkedom": "^0.18.13",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   },

@@ -64,6 +64,7 @@ export interface RaceResult {
   dates?: string;
   country?: string;
   capturedAt?: string;
+  contributor?: string; // who captured it, when it came from a helper moderator
   classifications: ResultClassification[];
 }
 

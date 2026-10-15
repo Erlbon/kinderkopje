@@ -1,5 +1,5 @@
 // Builds the site into dist/: four pages that share app.js (with SQLite inside) and app.css.
-import { build, transformSync } from "esbuild";
+import { build, buildSync } from "esbuild";
 import { execSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 
@@ -12,8 +12,9 @@ try {
 }
 const version = "v" + pkg.version + " (" + sha + ")";
 
-rmSync("dist", { recursive: true, force: true });
+// clear the folder's contents, not the folder: a server or a terminal may be sitting in it (Windows refuses to delete that)
 mkdirSync("dist", { recursive: true });
+for (const f of readdirSync("dist")) rmSync("dist/" + f, { recursive: true, force: true });
 
 // the app: one bundle, SQLite (WebAssembly inlined) included, so pages also open without a network
 await build({
@@ -31,7 +32,11 @@ await build({
 });
 
 // the capture helpers as bookmarklet links
-const bookmarklet = (file) => "javascript:" + encodeURIComponent(transformSync(readFileSync(file, "utf8"), { minify: true, target: "es2015" }).code);
+// bundled, because the race bookmark shares its page-reading code with the saved-page reader
+const bookmarklet = (file) => {
+  const out = buildSync({ entryPoints: [file], bundle: true, minify: true, write: false, format: "iife", target: "es2015", logLevel: "warning" });
+  return "javascript:" + encodeURIComponent(out.outputFiles[0].text);
+};
 const links = {
   __BOOKMARKLET_HREF__: bookmarklet("tools/capture-dataride.js"),
   __BOOKMARKLET_RACE_HREF__: bookmarklet("tools/capture-uci-race.js"),

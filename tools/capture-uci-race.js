@@ -6,14 +6,18 @@
  * screen and score UCI points (rank, rider, team, age, nation, result, points) into a collection kept
  * in your browser. It sends no requests of its own. Then download the collection and open the file in
  * Pelotonic.
+ *
+ * Reading the page is done by src/core/race-page.ts, the same code that reads saved race pages;
+ * the build bundles it into this bookmarklet.
  */
+import { raceIdFromUrl, readOpenResults, readRaceFacts } from "../src/core/race-page";
+
 (function () {
+  // The names below keep the tool's earlier name: collections already saved in your browser, and
+  // files already downloaded, must keep working.
   var STORE = "racethreads-capture-uci";
   var FORMAT = "racethreads-capture/1";
 
-  function text(el) {
-    return (el && el.textContent ? el.textContent : "").replace(/\s+/g, " ").trim();
-  }
   function load() {
     try {
       var v = JSON.parse(localStorage.getItem(STORE) || "null");
@@ -69,83 +73,26 @@
     document.body.appendChild(box);
   }
 
-  var m = /\/competition-details\/(\d{4})\/ROA\/(\d+)/.exec(location.pathname);
-  if (!m) {
+  var id = raceIdFromUrl(location.pathname);
+  if (!id) {
     overlay("This is not a UCI race page (competition-details). Open a race page first.", load());
     return;
   }
-  var year = Number(m[1]);
-  var uciId = Number(m[2]);
 
-  // race facts: the page embeds them as data; fall back to the title
-  var race = { uciId: uciId, year: year, name: text(document.querySelector("h1")) || document.title.replace(/\s*\|\s*UCI\s*$/, "") };
-  try {
-    var mod = document.querySelector('[data-component="CompetitionDetailsModule"]');
-    var d = mod ? JSON.parse(mod.getAttribute("data-props")).competitionDetails : null;
-    if (d) {
-      race.name = d.name || race.name;
-      race.dates = d.dates || "";
-      race.country = d.country || "";
-      race.classText = d.competitionClass || "";
-      race["class"] = (d.competitionClass || "").split(" - ")[0].trim();
-    }
-  } catch (e) {}
-  // Once the page is running, the embedded data is gone: read the same facts from the visible text.
-  if (!race["class"]) {
-    var body = String(document.body.innerText || "").replace(/\s+/g, " ").trim();
-    var cm = /Class\s+(\d\.[A-Za-z0-9]+)\s*-\s*([^-]+?)\s*-\s*([^W]+?)\s+(?:Website|Email|FINAL|Races|Final)/.exec(body);
-    if (cm) {
-      race["class"] = cm[1];
-      race.classText = cm[1] + " - " + cm[2].trim() + " - " + cm[3].trim();
-    } else {
-      var cm2 = /Class\s+(\d\.[A-Za-z0-9]+)/.exec(body);
-      if (cm2) race["class"] = cm2[1];
-    }
-    var dm = /(\d{1,2} [A-Z][a-z]{2}(?: - \d{1,2} [A-Z][a-z]{2})? \d{4})/.exec(body);
-    if (dm) race.dates = dm[1];
-  }
-
-  // the open result tables
-  var tables = document.querySelectorAll(".results-accordion .results-table");
-  var classifications = [];
-  var kept = 0;
-  for (var t = 0; t < tables.length; t++) {
-    var tbl = tables[t];
-    var rows = tbl.querySelectorAll("table tbody tr");
-    if (!rows.length) continue;
-    var panel = tbl.closest(".panel");
-    var label = text(panel && panel.querySelector(".panel__label"));
-    var title = text(tbl.querySelector(".results-table__title"));
-    var out = [];
-    for (var i = 0; i < rows.length; i++) {
-      var tr = rows[i];
-      var tds = tr.querySelectorAll("td");
-      if (tds.length < 4) continue;
-      var pts = parseFloat(text(tds[tds.length - 1]).replace(",", "."));
-      if (!(pts > 0)) continue; // only the rows that score points
-      var pos = parseInt(text(tr.querySelector(".results-table__row-position")), 10);
-      out.push({
-        rank: pos > 0 ? pos : null,
-        rider: (text(tr.querySelector(".results-table__row-firstname")) + " " + text(tr.querySelector(".results-table__row-lastname"))).trim(),
-        team: text(tr.querySelector(".results-table__row-team")),
-        age: parseInt(text(tds[0]), 10) || null,
-        nation: text(tds[1]),
-        result: text(tds[2]),
-        points: pts,
-      });
-    }
-    classifications.push({ label: label, title: title, totalRows: rows.length, rows: out });
-    kept += out.length;
-  }
-
-  if (!classifications.length) {
+  var found = readOpenResults(document);
+  if (!found.classifications.length) {
     overlay("No open results found. On the race page open Final Classification (the button) first, then press again.", load());
     return;
   }
+  var facts = readRaceFacts(document);
+  var race = { uciId: id.uciId, year: id.year, name: facts.name };
+  if (facts["class"]) race["class"] = facts["class"];
+  if (facts.classText) race.classText = facts.classText;
+  if (facts.dates) race.dates = facts.dates;
 
   var c = load();
   var existing = null;
-  for (var r = 0; r < c.raceResults.length; r++) if (c.raceResults[r].uciId === uciId) existing = c.raceResults[r];
+  for (var r = 0; r < c.raceResults.length; r++) if (c.raceResults[r].uciId === id.uciId) existing = c.raceResults[r];
   if (!existing) {
     existing = Object.assign({ classifications: [] }, race);
     c.raceResults.push(existing);
@@ -153,8 +100,8 @@
     Object.assign(existing, race);
   }
   existing.capturedAt = new Date().toISOString();
-  for (var k = 0; k < classifications.length; k++) {
-    var cl = classifications[k];
+  for (var k = 0; k < found.classifications.length; k++) {
+    var cl = found.classifications[k];
     var replaced = false;
     for (var e2 = 0; e2 < existing.classifications.length; e2++) {
       if (existing.classifications[e2].label === cl.label && existing.classifications[e2].title === cl.title) {
@@ -166,8 +113,8 @@
   }
   save(c);
   overlay(
-    "Captured " + kept + " point-scoring rows from " + classifications.length + " classification" + (classifications.length === 1 ? "" : "s") +
-      " of " + race.name + " (" + (race.year || "?") + ").",
+    "Captured " + found.kept + " point-scoring rows from " + found.classifications.length + " classification" + (found.classifications.length === 1 ? "" : "s") +
+      " of " + race.name + " (" + race.year + ").",
     c,
   );
 })();

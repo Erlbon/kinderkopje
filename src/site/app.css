@@ -31,3 +31,6 @@ table.queue{border-collapse:collapse;width:100%;font-size:13px}
 table.queue th,table.queue td{text-align:left;padding:3px 8px;border-bottom:1px solid var(--line)}
 #sqlexamples{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 #appstatus{margin:6px 0}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;margin:10px 0;display:flex;flex-direction:column;gap:6px;align-items:center}
+.drop.over{border-color:var(--acc);background:var(--card)}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--card);font:12px ui-monospace,Consolas,monospace}

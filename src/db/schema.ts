@@ -5,7 +5,7 @@ import type { Database } from "sql.js";
  * team ranking snapshots, race results, the capture queue, team levels and the settings texts.
  * Bump SCHEMA_VERSION and add a step to MIGRATIONS when a table changes.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const V1 = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -94,8 +94,13 @@ CREATE VIEW v_results AS
   JOIN race_result q ON q.uci_id = c.uci_id;
 `;
 
-/** Step n creates schema version n from n-1. */
-const MIGRATIONS: Record<number, string> = { 1: V1 };
+// 2: who captured a race result (helper moderators put their name on the file they send back)
+const V2 = `
+ALTER TABLE race_result ADD COLUMN contributor TEXT;
+`;
+
+/** Step n creates schema version n from n-1. Exported so tests can build an old database. */
+export const MIGRATIONS: Record<number, string> = { 1: V1, 2: V2 };
 
 export function schemaVersion(db: Database): number {
   const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='meta'");

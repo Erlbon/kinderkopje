@@ -17,15 +17,30 @@
     <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarkletrace" class="btn" href="__BOOKMARKLET_RACE_HREF__">Capture UCI race</a>
     <b>2.</b> Add each year's UCI hub page (for example "2025 UCI WorldTour", saved from your browser) to the queue. UCI gives every edition of a race its own number, so each year needs its own hub page; the queue lines the editions up by race name.
     <b>3.</b> Open an edition from the queue. On the race page open <em>Final Classification</em> (and any stage you want), then press the bookmark. It copies only what is on screen and makes no requests.
-    <b>4.</b> Press <em>Download collection</em> in its box, and open the file here with <em>Open captured file(s)</em>.
+    <b>4.</b> Press <em>Download collection</em> in its box, and open the file here. Or skip the bookmark: save the page with Ctrl+S (<em>Webpage, Complete</em>) after opening the results and drop the saved .html files here, many at a time.
   </p>
   <div class="row">
     <label class="btn">Add races from a UCI hub page (.html)<input id="hubfile" type="file" accept=".html,.htm,text/html" multiple hidden></label>
-    <label class="btn">Open captured file(s)<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
+    <label class="btn">Open captured files or saved race pages<input id="capturefile" type="file" accept=".json,.html,.htm,application/json,text/html" multiple hidden></label>
     <label><input id="queuemissing" type="checkbox" checked> Only races with editions still to capture</label>
   </div>
   <div id="queuemsg" class="mut" style="margin:6px 0"></div>
   <div id="queueout"></div>
+</fieldset>
+<h2>Help from other moderators</h2>
+<fieldset>
+  <legend class="mut">Split the work: each helper gets a link with their share of the races (whole races, all years). They save the pages from uci.org and send you one small results file, which you open above.</legend>
+  <div class="row">
+    <label>Races per helper <input id="sharecount" type="number" value="10" min="1" style="width:70px"></label>
+    <label><input id="sharemissing" type="checkbox" checked> Only editions not captured yet</label>
+    <span id="shareyears" class="row"></span>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <label style="flex:1 1 320px">Where should they send the file? <input id="sharenote" type="text" style="width:100%" placeholder="e.g. Send the file to me on Discord or modmail, thanks!"></label>
+    <button id="sharebuild">Make links</button>
+  </div>
+  <div id="sharemsg" class="mut" style="margin:6px 0"></div>
+  <div id="shareout"></div>
 </fieldset>
 <p class="mut">Everything is kept in the shared database (see the Data page). <span>__VERSION__</span></p>
 </main>

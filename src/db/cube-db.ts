@@ -40,11 +40,11 @@ export function saveCube(db: Database, cube: Cube): void {
     }
     lvl.free();
 
-    const race = db.prepare("INSERT INTO race_result(uci_id, year, name, class, class_text, dates, country, captured_at) VALUES (?,?,?,?,?,?,?,?)");
+    const race = db.prepare("INSERT INTO race_result(uci_id, year, name, class, class_text, dates, country, captured_at, contributor) VALUES (?,?,?,?,?,?,?,?,?)");
     const cls = db.prepare("INSERT INTO classification(uci_id, label, title, total_rows) VALUES (?,?,?,?)");
     const row = db.prepare("INSERT INTO result_row(classification_id, rank, rider, team, age, nation, result, points) VALUES (?,?,?,?,?,?,?,?)");
     for (const r of cube.raceResults ?? []) {
-      race.run([r.uciId, r.year, r.name, r.class ?? null, r.classText ?? null, r.dates ?? null, r.country ?? null, r.capturedAt ?? null]);
+      race.run([r.uciId, r.year, r.name, r.class ?? null, r.classText ?? null, r.dates ?? null, r.country ?? null, r.capturedAt ?? null, r.contributor ?? null]);
       for (const c of r.classifications) {
         cls.run([r.uciId, c.label, c.title, c.totalRows]);
         const cid = Number(db.exec("SELECT last_insert_rowid()")[0]!.values[0]![0]);
@@ -98,7 +98,7 @@ export function loadCube(db: Database): Cube {
     }
   }
 
-  const races = all(db, "SELECT uci_id, year, name, class, class_text, dates, country, captured_at FROM race_result ORDER BY year, uci_id");
+  const races = all(db, "SELECT uci_id, year, name, class, class_text, dates, country, captured_at, contributor FROM race_result ORDER BY year, uci_id");
   if (races.length) {
     cube.raceResults = races.map((r): RaceResult => {
       const classifications = all(db, "SELECT id, label, title, total_rows FROM classification WHERE uci_id = ? ORDER BY id", [r.uci_id as number]).map((c) => ({
@@ -121,6 +121,7 @@ export function loadCube(db: Database): Cube {
       if (r.dates !== null) out.dates = r.dates as string;
       if (r.country !== null) out.country = r.country as string;
       if (r.captured_at !== null) out.capturedAt = r.captured_at as string;
+      if (r.contributor !== null) out.contributor = r.contributor as string;
       return out;
     });
   }

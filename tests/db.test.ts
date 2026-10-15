@@ -123,3 +123,29 @@ describe("the SQL box", () => {
     expect(getKv(db, "k")).toBe("v");
   });
 });
+
+describe("upgrading an older database", () => {
+  it("a version 1 file opens, keeps its data and gains the contributor column", async () => {
+    const { MIGRATIONS } = await import("../src/db");
+    const old = new SQL.Database();
+    old.exec(MIGRATIONS[1]!);
+    old.run("INSERT INTO meta(key, value) VALUES ('schema_version', '1')");
+    old.run("INSERT INTO race_result(uci_id, year, name) VALUES (78462, 2026, 'Paris - Tours Elite')");
+    old.run("INSERT INTO kv(key, value) VALUES ('season', 'season: 2026')");
+    expect(schemaVersion(old)).toBe(1);
+
+    const upgraded = openDatabase(SQL, old.export());
+    expect(schemaVersion(upgraded)).toBe(2);
+    expect(getKv(upgraded, "season")).toBe("season: 2026");
+    const cube = loadCube(upgraded);
+    expect(cube.raceResults![0]).toMatchObject({ uciId: 78462, name: "Paris - Tours Elite" });
+    expect(cube.raceResults![0]!.contributor).toBeUndefined();
+  });
+  it("the contributor of a race result is kept", () => {
+    const cube = emptyCube();
+    cube.raceResults = [{ uciId: 1, year: 2026, name: "Some Race", contributor: "A Helper", classifications: [] }];
+    const db = openDatabase(SQL);
+    saveCube(db, cube);
+    expect(loadCube(db).raceResults![0]!.contributor).toBe("A Helper");
+  });
+});
