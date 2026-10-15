@@ -27,10 +27,12 @@ First slice of the data cube: team ranking snapshots by date, from UCI DataRide.
    (40 teams per page). It copies only the rows already on screen and sends no requests of its own.
 3. Press *Download collection* in its box and open the file in racethreads. Repeat for each date you want.
 
-The page then shows season to date against the same date last year, and points earned per month against last
-year. Rules: the ranking used for "the same date last year" is the latest one on or before that day, never a later
+The page then shows the seasons side by side (the latest ranking captured for each season), season to date against
+the same date last year, and points earned per month against last year. Rules: the ranking used for "the same date last year" is the latest one on or before that day, never a later
 one; a month's points need the previous month-end ranking, otherwise the month stays empty; teams are matched by
 UCI's team id (the same team keeps its id when its name or code changes, as with UAD in 2025 and UEX in 2026).
+The id follows UCI's licence, so it can join teams that are different organisations (the Qhubeka licence became
+Q36.5): check a line that jumps oddly.
 Capture the month-end rankings (and the latest ranking) for each season you want to compare.
 
 ## Stage tables

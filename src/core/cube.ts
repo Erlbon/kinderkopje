@@ -178,6 +178,77 @@ function round(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export interface SeasonColumn {
+  season: number;
+  date: string; // the ranking used for this season (its latest one)
+}
+
+export interface SeasonLine {
+  teamId: number;
+  name: string;
+  code: string;
+  nation: string;
+  points: (number | undefined)[]; // by column
+  ranks: (number | undefined)[];
+}
+
+/**
+ * Seasons side by side: for each season the latest ranking in the cube. Teams are matched by UCI team id,
+ * so a team keeps its line through renames. A team missing from a captured ranking shows no number
+ * (not zero): it was outside the captured part of that ranking, or it did not exist yet.
+ */
+export function seasonTable(
+  cube: Cube,
+  options: { seasons?: number[]; top?: number } = {},
+): { columns: SeasonColumn[]; lines: SeasonLine[] } {
+  const seasons = (options.seasons ?? [...new Set(cube.teamSnapshots.map((s) => s.season))]).sort((a, b) => a - b);
+  const snaps = seasons
+    .map((y) => cube.teamSnapshots.filter((s) => s.season === y).sort((a, b) => b.date.localeCompare(a.date))[0])
+    .filter((s): s is TeamSnapshot => !!s);
+  const columns = snaps.map((s) => ({ season: s.season, date: s.date }));
+  const byId = new Map<number, SeasonLine>();
+  snaps.forEach((s, i) => {
+    for (const t of s.teams) {
+      let l = byId.get(t.teamId);
+      if (!l) {
+        l = { teamId: t.teamId, name: t.name, code: t.code, nation: t.nation, points: snaps.map(() => undefined), ranks: snaps.map(() => undefined) };
+        byId.set(t.teamId, l);
+      }
+      l.name = t.name; // later seasons come later in the loop: the newest name wins
+      l.code = t.code;
+      l.nation = t.nation;
+      l.points[i] = t.points;
+      l.ranks[i] = t.rank;
+    }
+  });
+  const last = (l: SeasonLine) => {
+    for (let i = l.points.length - 1; i >= 0; i--) if (l.points[i] !== undefined) return [i, l.points[i]!] as const;
+    return [-1, -1] as const;
+  };
+  const lines = [...byId.values()].sort((a, b) => {
+    const [ia, pa] = last(a);
+    const [ib, pb] = last(b);
+    return ib - ia || pb - pa; // teams in the newest season first, by points
+  });
+  return { columns, lines: options.top ? lines.slice(0, options.top) : lines };
+}
+
+export function seasonTableMarkdown(t: ReturnType<typeof seasonTable>): string {
+  const nl = String.fromCharCode(10);
+  const dm = (iso: string) => Number(iso.slice(8, 10)) + " " + MONTHS[Number(iso.slice(5, 7)) - 1];
+  const head = "|Team|" + t.columns.map((c) => c.season + " (" + dm(c.date) + ")").join("|") + "|";
+  const sep = "|:-|" + t.columns.map(() => "-:").join("|") + "|";
+  const rows = t.lines.map(
+    (l) =>
+      "|" + l.name + " (" + l.code + ")|" +
+      l.points.map((p, i) => (p === undefined ? "-" : num(p) + " (#" + l.ranks[i] + ")")).join("|") + "|",
+  );
+  const note = "UCI World Ranking points of each season's latest ranking (date in brackets); rank in brackets after the points. A dash means the team is not in the captured part of that ranking.";
+  return [head, sep, ...rows].join(nl) + nl + nl + note;
+}
+
 export interface MonthLine {
   teamId: number;
   name: string;
@@ -230,8 +301,6 @@ export function monthlyOverview(cube: Cube, year: number, options: { top?: numbe
 }
 
 // ---- markdown for the threads ----
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function num(n: number | undefined): string {
   if (n === undefined) return "-";

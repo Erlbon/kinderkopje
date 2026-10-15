@@ -7,6 +7,8 @@ import {
   emptyCube,
   monthlyMarkdown,
   monthlyOverview,
+  seasonTable,
+  seasonTableMarkdown,
 } from "../core";
 
 const KEY = "rt-cube";
@@ -84,6 +86,7 @@ export function initTeams(): void {
     const cmp = compareToLastYear(cube, year, cutoffInput.value, { top });
     const monthly = monthlyOverview(cube, year, { top });
     const blocks: [string, string][] = [
+      ["Seasons side by side (latest ranking of each season)", seasonTableMarkdown(seasonTable(cube, { top }))],
       ["Season to date against the same date last year", comparisonMarkdown(cmp, year, cutoffInput.value)],
       ["Points earned per month against last year", monthlyMarkdown(monthly, year)],
     ];

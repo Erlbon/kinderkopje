@@ -10,6 +10,8 @@ import {
   monthlyMarkdown,
   monthlyOverview,
   sameDayInYear,
+  seasonTable,
+  seasonTableMarkdown,
   snapshotAsOf,
 } from "../src/core";
 
@@ -131,5 +133,34 @@ describe("importing the same date twice", () => {
     const f = JSON.parse(read("tests/fixtures/dataride-capture-sample.json")) as CaptureFile;
     f.snapshots[0]!.date = "";
     expect(addCapture(emptyCube(), f).skipped[0]).toContain("no date");
+  });
+});
+
+// Synthetic teams again: made-up numbers to test the arithmetic and layout, not UCI data.
+describe("seasons side by side (synthetic teams)", () => {
+  const team = (id: number, code: string, name: string, rank: number, points: number) => ({ teamId: id, code, name, nation: "XXX", rank, points });
+  const cube: Cube = {
+    teamSnapshots: [
+      { date: "2024-10-20", season: 2024, momentId: null, complete: false, teams: [team(1, "OLD", "Old Name", 1, 500), team(2, "BBB", "Team B", 2, 300), team(3, "CCC", "Team C", 3, 100)] },
+      { date: "2025-06-01", season: 2025, momentId: null, complete: false, teams: [team(1, "OLD", "Old Name", 1, 200)] },
+      { date: "2025-10-19", season: 2025, momentId: null, complete: false, teams: [team(1, "NEW", "New Name", 2, 700), team(2, "BBB", "Team B", 1, 800)] },
+    ],
+  };
+  const t = seasonTable(cube);
+  it("uses the latest ranking of each season and keeps a renamed team on one line", () => {
+    expect(t.columns).toEqual([{ season: 2024, date: "2024-10-20" }, { season: 2025, date: "2025-10-19" }]);
+    const one = t.lines.find((l) => l.teamId === 1)!;
+    expect(one).toMatchObject({ name: "New Name", code: "NEW", points: [500, 700], ranks: [1, 2] });
+  });
+  it("a team missing from a ranking has no number (not zero), and the newest season's teams come first", () => {
+    const c = t.lines.find((l) => l.teamId === 3)!;
+    expect(c.points).toEqual([100, undefined]);
+    expect(t.lines.map((l) => l.teamId)).toEqual([2, 1, 3]); // 2 (800) and 1 (700) are in 2025; 3 is not
+  });
+  it("renders markdown with dates in the header", () => {
+    const md = seasonTableMarkdown(t);
+    expect(md).toContain("|Team|2024 (20 Oct)|2025 (19 Oct)|");
+    expect(md).toContain("|New Name (NEW)|500 (#1)|700 (#2)|");
+    expect(md).toContain("|Team C (CCC)|100 (#3)|-|");
   });
 });
