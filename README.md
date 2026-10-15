@@ -187,3 +187,8 @@ Enable the hooks once per clone: `git config core.hooksPath .githooks`
 (pre-commit: control-character and syntax gate; pre-push: tests).
 
 Releases: tag `v0.1.0` and push the tag; the workflow attaches `racethreads.html`.
+
+## Licence
+
+MIT, see `LICENSE`. Material from Wikipedia, UCI and r/peloton used in the tests, and the data the tool reads, is not
+covered by it: see `NOTICE.md`.
