@@ -50,7 +50,7 @@ writeFileSync("dist/start.cmd", "@echo off\r\nnode serve.mjs\r\n");
 writeFileSync(
   "dist/README.txt",
   [
-    "racethreads " + version,
+    "Pelotonic " + version,
     "",
     "Run:  node serve.mjs   (or double-click start.cmd). Then open http://localhost:8765 in your browser.",
     "The pages keep their data in a SQLite database in your browser; save a copy from the Data page.",

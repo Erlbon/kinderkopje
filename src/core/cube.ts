@@ -31,6 +31,7 @@ export interface CaptureSnapshot {
 }
 
 export interface CaptureFile {
+  // The format id keeps the tool's earlier name so that files saved before the rename still open.
   format: "racethreads-capture/1";
   snapshots?: CaptureSnapshot[]; // DataRide team ranking pages
   raceResults?: RaceResult[]; // UCI race pages
@@ -119,7 +120,7 @@ const TEAM_RANKING = 2;
 export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   const report: ImportReport = { added: 0, replaced: 0, races: 0, skipped: [] };
   if (!file || file.format !== "racethreads-capture/1" || (!Array.isArray(file.snapshots) && !Array.isArray(file.raceResults))) {
-    report.skipped.push("not a racethreads capture file");
+    report.skipped.push("not a Pelotonic capture file");
     return report;
   }
   for (const r of file.raceResults ?? []) {

@@ -1,11 +1,11 @@
 /*
- * racethreads: capture helper for UCI race pages (runs as a bookmarklet in YOUR browser).
+ * Pelotonic: capture helper for UCI race pages (runs as a bookmarklet in YOUR browser).
  *
  * Use it on https://www.uci.org/competition-details/<year>/ROA/<id>, after you have opened the
  * "Final Classification" section (and any stage sections you want). It copies the rows that are on
  * screen and score UCI points (rank, rider, team, age, nation, result, points) into a collection kept
  * in your browser. It sends no requests of its own. Then download the collection and open the file in
- * racethreads.
+ * Pelotonic.
  */
 (function () {
   var STORE = "racethreads-capture-uci";
@@ -26,10 +26,10 @@
   }
 
   function overlay(msg, collection) {
-    var old = document.getElementById("racethreads-overlay");
+    var old = document.getElementById("pelotonic-overlay");
     if (old) old.remove();
     var box = document.createElement("div");
-    box.id = "racethreads-overlay";
+    box.id = "pelotonic-overlay";
     box.style.cssText =
       "position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;color:#111;border:2px solid #0b57d0;" +
       "border-radius:8px;padding:10px 12px;font:13px system-ui,sans-serif;max-width:360px;box-shadow:0 2px 10px rgba(0,0,0,.3)";

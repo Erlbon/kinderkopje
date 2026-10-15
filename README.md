@@ -1,4 +1,4 @@
-# racethreads
+# Pelotonic
 
 Season YAML in, Reddit-ready race threads out. Built for the r/peloton moderators; the
 layout lives in a profile file, so other communities can reuse it.
@@ -28,7 +28,7 @@ Tables: `team_snapshot`, `team_rank`, `team_level`, `race_result`, `classificati
 ## Running it
 
 - **Online:** the GitHub Pages site (enabled from the repo settings: Pages, source GitHub Actions).
-- **From a folder (offline):** download `racethreads.zip` from the latest release, unzip it, run `node serve.mjs`
+- **From a folder (offline):** download `pelotonic.zip` from the latest release, unzip it, run `node serve.mjs`
   (or double-click `start.cmd`) and open http://localhost:8765. Use that address rather than opening the files
   directly: browsers keep a separate database for each file opened from disk, so the pages would not share data.
 - **From the source:** `npm run build` then `npm start`.
@@ -49,7 +49,7 @@ First slice of the data cube: team ranking snapshots by date, from UCI DataRide.
 2. On DataRide open a *team ranking* page. Pick the season and date with the page's own dropdowns (the address
    does not change when you do, so links cannot select a season). Press the bookmark on each page of the table
    (40 teams per page). It copies only the rows already on screen and sends no requests of its own.
-3. Press *Download collection* in its box and open the file in racethreads. Repeat for each date you want.
+3. Press *Download collection* in its box and open the file in Pelotonic. Repeat for each date you want.
 
 The page then shows the seasons side by side (the latest ranking captured for each season), season to date against
 the same date last year, and points earned per month against last year. Rules: the ranking used for "the same date last year" is the latest one on or before that day, never a later
@@ -186,7 +186,7 @@ npm run build    # dist/index.html, one self-contained file
 Enable the hooks once per clone: `git config core.hooksPath .githooks`
 (pre-commit: control-character and syntax gate; pre-push: tests).
 
-Releases: tag `v0.1.0` and push the tag; the workflow attaches `racethreads.html`.
+Releases: tag `v0.1.0` and push the tag; the workflow attaches `pelotonic.zip`.
 
 ## Licence
 

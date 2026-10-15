@@ -1,7 +1,7 @@
 import type { Database } from "sql.js";
 
 /**
- * The racethreads database (SQLite). One file holds everything the pages share:
+ * The Pelotonic database (SQLite). One file holds everything the pages share:
  * team ranking snapshots, race results, the capture queue, team levels and the settings texts.
  * Bump SCHEMA_VERSION and add a step to MIGRATIONS when a table changes.
  */
@@ -109,7 +109,7 @@ export function migrate(db: Database): void {
   const have = schemaVersion(db);
   if (have > SCHEMA_VERSION) {
     throw new Error(
-      "This database was made by a newer version of racethreads (schema " + have + ", this one knows " + SCHEMA_VERSION + "). Update the tool first.",
+      "This database was made by a newer version of Pelotonic (schema " + have + ", this one knows " + SCHEMA_VERSION + "). Update the tool first.",
     );
   }
   for (let v = have + 1; v <= SCHEMA_VERSION; v++) {

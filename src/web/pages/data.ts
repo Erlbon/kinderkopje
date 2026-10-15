@@ -44,7 +44,7 @@ export function initData(store: Store): void {
     );
   }
 
-  $("dbexport").onclick = () => download("racethreads.sqlite", store.exportBytes(), "application/vnd.sqlite3");
+  $("dbexport").onclick = () => download("pelotonic.sqlite", store.exportBytes(), "application/vnd.sqlite3");
   $<HTMLInputElement>("dbimport").onchange = async (e) => {
     const f = (e.target as HTMLInputElement).files?.[0];
     if (!f) return;
