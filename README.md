@@ -103,31 +103,12 @@ Per-race results come from the UCI race pages (`uci.org/competition-details/<yea
    collect one race at a time across five years.
 3. On a race page open *Final Classification* (and any stage you want) and press the bookmark. It copies only the
    rows that score points (rank, rider, team, age, nation, result, points) and sends no requests of its own.
-4. Download the collection from its box and open the file with *Open captured files or saved race pages*.
+4. Download the collection from its box and open the file with *Open captured files*.
 
-**Without the bookmark:** after opening the results, save the page (Ctrl+S, *Webpage, Complete*) and drop the saved
-`.html` files on the Race results page, as many at a time as you like. The page says which race each file is from its
-own address (`og:url`, or the browser's "saved from url" comment), keeps only the point-scoring rows, and tells you
-plainly when a file has no open results or is not a race page.
+A page saved with *Save as* does not work: UCI loads the results when the accordion opens, and they never reach the saved file. Use the bookmark.
 
 Every result row keeps the team the rider rode for at the time, which is what the monthly team comparison needs.
 Nothing here crawls UCI: every page is opened and every capture started by a person.
-
-## Collecting with other moderators
-
-The *Help from other moderators* panel on the Race results page splits the editions that are still missing between
-helpers: each helper gets whole races, with all their years. It makes one link per helper (and a *Copy message* button
-with a ready-to-send note). The link opens `help.html`, a page that needs no database:
-
-1. The helper sees their list of race pages, with a link to each on uci.org, and your note about where to send the file.
-2. For each race they open the results, save the page (Ctrl+S, *Webpage, Complete*) and drop the files on the page.
-3. The page ticks off every race it could read, refuses files that are not race pages (with the reason), and gives
-   back **one small file** (about 1 KB per race) with their name on it, which they send to you.
-4. You open that file on the Race results page like any other; the queue ticks off the editions and shows who
-   contributed how many races.
-
-The work package is inside the link (compressed, about 300 characters for ten races); nothing is uploaded anywhere.
-Results a helper has read stay in their browser until they press *Forget everything*.
 
 ## Stage tables
 

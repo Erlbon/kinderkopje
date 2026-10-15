@@ -7,7 +7,7 @@
  * in your browser. It sends no requests of its own. Then download the collection and open the file in
  * Pelotonic.
  *
- * Reading the page is done by src/core/race-page.ts, the same code that reads saved race pages;
+ * Reading the page is done by src/core/race-page.ts, the same code the tests cover;
  * the build bundles it into this bookmarklet.
  */
 import { raceIdFromUrl, readOpenResults, readRaceFacts } from "../src/core/race-page";

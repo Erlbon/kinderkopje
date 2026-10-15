@@ -1,9 +1,9 @@
-import type { RaceResult, ResultClassification, ResultRow } from "./cube";
+import type { ResultClassification, ResultRow } from "./cube";
 
 /**
  * Reading a UCI race page (uci.org/competition-details/<year>/ROA/<id>) once its results are open.
- * Shared by the capture bookmark (the live page) and the drop zone (a page saved with
- * "Save page as, Webpage complete"): both see the same structure.
+ * Used by the capture bookmark, which reads the live page. A page saved with "Save as" does not work: UCI loads the
+ * results when the accordion opens and they never reach the saved file.
  */
 
 export interface RaceFacts {
@@ -40,17 +40,6 @@ export function spacedText(root: Node): string {
   };
   walk(root);
   return clean(parts.join(" "));
-}
-
-/**
- * Which race is this page? The page names itself in og:url; a saved copy may also carry the address in the
- * browser's "saved from url" comment. Returns nothing when neither is there.
- */
-export function raceIdFromDocument(doc: Document, rawHtml = ""): { year: number; uciId: number } | undefined {
-  const og = doc.querySelector('meta[property="og:url"]')?.getAttribute("content");
-  const canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute("href");
-  const saved = /saved from url=\(\d+\)(\S+)/.exec(rawHtml)?.[1];
-  return raceIdFromUrl(og) ?? raceIdFromUrl(canonical) ?? raceIdFromUrl(saved);
 }
 
 /** Name, class and dates of the race, read from the visible text. */
@@ -104,25 +93,4 @@ export function readOpenResults(doc: Document): { classifications: ResultClassif
     kept += rows.length;
   }
   return { classifications, kept };
-}
-
-/**
- * A saved race page (the HTML file) into a race result. `parse` turns HTML text into a document
- * (the browser's DOMParser). Throws a readable message when the page is not usable.
- */
-export function parseSavedRacePage(html: string, parse: (html: string) => Document): RaceResult {
-  const doc = parse(html);
-  const id = raceIdFromDocument(doc, html);
-  if (!id) throw new Error("this does not look like a UCI race page (no race address found in it)");
-  const { classifications, kept } = readOpenResults(doc);
-  if (!classifications.length) {
-    throw new Error("no open results in this file: open Final Classification on the page before saving it");
-  }
-  if (!kept) throw new Error("the results table has no rows that score points");
-  const facts = readRaceFacts(doc);
-  const out: RaceResult = { uciId: id.uciId, year: id.year, name: facts.name, classifications, capturedAt: new Date().toISOString() };
-  if (facts.class) out.class = facts.class;
-  if (facts.classText) out.classText = facts.classText;
-  if (facts.dates) out.dates = facts.dates;
-  return out;
 }
