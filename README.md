@@ -97,17 +97,23 @@ Per-race results come from DataRide, UCI's results site (`dataride.uci.ch`). One
 (source `tools/capture-uci-race.js`), reads three kinds of DataRide road pages that you open yourself:
 
 1. **The competition list** (`/iframe/Results/10/`). Pick a season and a category (Men Elite, Women Elite) with the
-   page's own filters and press the bookmark on each page of the list (40 rows). The queue gets every race with its
-   class (`2.UWT`, `1.Pro`, `1.1` ...), dates and country, and lines the editions of a race up by name across the years.
-2. **A competition** (a link in that list, opened from the queue). The bookmark notes the race's events: the
-   General Classification and each stage.
-3. **An event** (a link on the competition page). The bookmark copies the rows that score points (rank, rider, team,
-   age, nation, result, points). The table shows 40 rows at a time: when all 40 score points, page on and press it
-   again, and the rows are added to the same event.
+   page's own filters and press the bookmark. It pages through the whole list by itself (40 rows a page). The queue
+   gets every race with its class (`2.UWT`, `1.Pro`, `1.1` ...), dates and country, and lines the editions of a race
+   up by name across the years.
+2. **A competition** (a link in that list, opened from the queue). The bookmark opens every closed row (the stages and
+   the final classification) and notes the events: each event is named after its row ("Stage 5: Stage Classification").
+3. **An event** (a link on the competition page): the General Classification and each *Stage Classification*, not the
+   points or youth rankings, which never give UCI points. The bookmark copies the rows that score points (rank,
+   rider, team, age, nation, result, points) and goes on to the next page of the table while every row on the page
+   scored; the rows are added to the same event.
+
+The bookmark clicks only the page's own controls (a row's triangle, the next-page button), one click at a time with a
+pause, as you would. It never leaves the page you pressed it on, never follows a link, has a Stop button, and sends no
+requests of its own: the page loads its data itself. The clicking is in `src/core/autopilot.ts`.
 
 Then press *Download collection* in the bookmark's box and open the file on the Race results page. The queue shows
 per race and year how many events are captured, and can be limited to WorldTour, ProSeries and championships.
-The bookmark copies only what is on screen and sends no requests of its own. Every result row keeps the team the rider
+Every result row keeps the team the rider
 rode for at the time, which is what the monthly team comparison needs.
 
 DataRide numbers the races itself: the number in `CompetitionResults/<id>` is the race edition's id in this tool

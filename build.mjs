@@ -34,7 +34,7 @@ await build({
 // the capture helpers as bookmarklet links
 // bundled, because the race bookmark shares its page-reading code with the saved-page reader
 const bookmarklet = (file) => {
-  const out = buildSync({ entryPoints: [file], bundle: true, minify: true, write: false, format: "iife", target: "es2015", logLevel: "warning" });
+  const out = buildSync({ entryPoints: [file], bundle: true, minify: true, write: false, format: "iife", target: "es2017", logLevel: "warning" });
   return "javascript:" + encodeURIComponent(out.outputFiles[0].text);
 };
 const links = {
