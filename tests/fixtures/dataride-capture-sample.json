@@ -1,0 +1,37 @@
+{
+  "format": "racethreads-capture/1",
+  "source": "dataride.uci.ch",
+  "note": "Partial real values read from the UCI World Ranking team page on 2026-10-15; only teams whose UCI team id was seen on screen are included.",
+  "snapshots": [
+    {
+      "key": "2:238:22:195025",
+      "rankingTypeId": 2,
+      "rankingId": 238,
+      "categoryId": 22,
+      "momentId": 195025,
+      "season": "2025",
+      "date": "2025-10-19",
+      "total": 206,
+      "complete": false,
+      "rows": [
+        { "rank": 1, "change": "", "name": "UAE TEAM EMIRATES XRG", "code": "UAD", "nation": "UAE", "points": 40637.65, "objectId": 595, "momentId": 195025 },
+        { "rank": 2, "change": "", "name": "TEAM VISMA | LEASE A BIKE", "code": "TVL", "nation": "NED", "points": 22876.74, "objectId": 538, "momentId": 195025 },
+        { "rank": 3, "change": "", "name": "LIDL-TREK", "code": "LTK", "nation": "USA", "points": 21267.43, "objectId": 1628, "momentId": 195025 }
+      ]
+    },
+    {
+      "key": "2:238:22:205931",
+      "rankingTypeId": 2,
+      "rankingId": 238,
+      "categoryId": 22,
+      "momentId": 205931,
+      "season": "2026",
+      "date": "2026-10-13",
+      "total": 214,
+      "complete": false,
+      "rows": [
+        { "rank": 1, "change": "", "name": "UAE TEAM EMIRATES XRG", "code": "UEX", "nation": "UAE", "points": 30329.1, "objectId": 595, "momentId": 205931 }
+      ]
+    }
+  ]
+}

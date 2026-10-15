@@ -1,5 +1,5 @@
 // Bundles the web app into ONE self-contained dist/index.html (no network, works offline).
-import { build } from "esbuild";
+import { build, transformSync } from "esbuild";
 import { execSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
@@ -21,10 +21,15 @@ const result = await build({
   loader: { ".yaml": "text" },
 });
 
+// The capture helper for UCI DataRide pages, as a bookmarklet link (javascript: URL, percent-encoded).
+const capture = transformSync(readFileSync("tools/capture-dataride.js", "utf8"), { minify: true, target: "es2015" }).code;
+const bookmarklet = "javascript:" + encodeURIComponent(capture);
+
 // Make the inlined script safe inside <script>.
 const js = result.outputFiles[0].text.split("</script").join("<" + String.fromCharCode(92) + "/script");
 const html = readFileSync("src/web/index.html", "utf8")
   .replace("__VERSION__", "v" + pkg.version + " (" + sha + ")")
+  .replace("__BOOKMARKLET_HREF__", () => bookmarklet)
   .replace("__SCRIPT__", () => js);
 
 mkdirSync("dist", { recursive: true });

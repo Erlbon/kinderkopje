@@ -17,6 +17,22 @@ fetched from other sites.
 3. Press **Generate threads**. Each thread has Copy title / Copy body buttons and lists what is
    still `TBC`. Paste into Reddit's scheduled posts (Markdown mode).
 
+## Team points (UCI World Ranking)
+
+First slice of the data cube: team ranking snapshots by date, from UCI DataRide. UCI points only.
+
+1. Drag the **Capture UCI table** link from the page to your bookmarks bar (the source is `tools/capture-dataride.js`).
+2. On DataRide open a *team ranking* page. Pick the season and date with the page's own dropdowns (the address
+   does not change when you do, so links cannot select a season). Press the bookmark on each page of the table
+   (40 teams per page). It copies only the rows already on screen and sends no requests of its own.
+3. Press *Download collection* in its box and open the file in racethreads. Repeat for each date you want.
+
+The page then shows season to date against the same date last year, and points earned per month against last
+year. Rules: the ranking used for "the same date last year" is the latest one on or before that day, never a later
+one; a month's points need the previous month-end ranking, otherwise the month stays empty; teams are matched by
+UCI's team id (the same team keeps its id when its name or code changes, as with UAD in 2025 and UEX in 2026).
+Capture the month-end rankings (and the latest ranking) for each season you want to compare.
+
 ## Stage tables
 
 Paste the table from your internal work thread into "Import a stage table". Columns are found by their

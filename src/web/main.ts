@@ -3,6 +3,7 @@ import registryYaml from "../../data/peloton/races.yaml";
 import fixturesYaml from "../../data/peloton/2026-fixtures.yaml";
 import classesYaml from "../../data/classes.yaml";
 import { initLayout, LayoutControl } from "./layout";
+import { initTeams } from "./teams";
 import { parse as yamlParse, stringify as yamlStringify } from "yaml";
 import {
   RegistryRace,
@@ -349,6 +350,7 @@ function initClassBoxes(): void {
 function init(): void {
   initClassBoxes();
   layout = initLayout(profile, render);
+  initTeams();
   $<HTMLTextAreaElement>("registry").value = store("rt-registry") ?? registryYaml;
   $<HTMLTextAreaElement>("season").value = store("rt-season") ?? fixturesYaml;
   $("render").onclick = render;

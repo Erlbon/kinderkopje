@@ -111,7 +111,30 @@ input[type=number]{width:80px}
 </div>
 <p id="msg" class="mut"></p>
 
-<h2>6. Threads</h2>
+<h2>6. Team points (UCI ranking)</h2>
+<fieldset>
+  <legend class="mut">Compare teams' UCI World Ranking points across seasons, and month by month against last year. Teams are matched by UCI's own team id, so renamed teams stay one line.</legend>
+  <p class="mut" style="margin:4px 0">
+    <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarklet" class="btn" href="__BOOKMARKLET_HREF__" style="background:var(--acc);color:#fff;padding:4px 8px;border-radius:6px;text-decoration:none">Capture UCI table</a>
+    <b>2.</b> Open a UCI DataRide <em>team ranking</em> page, pick the season and date with the page's own dropdowns, and press the bookmark on every page of the table (40 teams per page). It copies only what is on screen and makes no requests.
+    <b>3.</b> Press <em>Download collection</em> in its box, then open that file here.
+  </p>
+  <div class="row">
+    <label class="btn">Open captured file(s)<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
+    <label class="btn">Open saved cube<input id="cubefile" type="file" accept=".json,application/json" hidden></label>
+    <button id="cubesave">Save cube</button>
+    <button id="cubeclear">Clear</button>
+  </div>
+  <div id="cubemsg" class="mut" style="margin:6px 0"></div>
+  <div class="row">
+    <label>Year <input id="cubeyear" type="number" style="width:80px"></label>
+    <label>As of <input id="cubecutoff" type="date"></label>
+    <label>Top teams <input id="cubetop" type="number" value="20" style="width:70px"></label>
+  </div>
+  <div id="cubeout"></div>
+</fieldset>
+
+<h2>7. Threads</h2>
 <div id="out"></div>
 </main>
 <script>__SCRIPT__</script>
