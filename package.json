@@ -1,0 +1,22 @@
+{
+  "name": "racethreads",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Season overview and race-thread generator for Reddit moderators (r/xcworldcup, r/peloton). Runs entirely in the browser.",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

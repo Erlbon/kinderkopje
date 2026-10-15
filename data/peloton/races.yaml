@@ -1,0 +1,43 @@
+# Races that come back every year. One entry per race AND category: the men's
+# and women's editions have different FirstCycling ids and PCS slugs.
+# Season files refer to these by id, so official site / socials / ids are
+# entered once and carried over every year.
+
+strade-bianche-me:
+  name: Strade Bianche
+  category: ME
+  titleTag: ME
+  officialSite: https://www.strade-bianche.it/en/
+  pcs: strade-bianche
+  firstcycling: 54
+  social:
+    - { text: Instagram, url: "https://www.instagram.com/strade_bianche" }
+    - { text: Facebook, url: "https://www.facebook.com/stradebianche" }
+    - { text: Twitter, url: "https://x.com/StradeBianche" }
+
+strade-bianche-we:
+  name: Strade Bianche
+  category: WE
+  titleTag: WE
+  officialSite: https://www.strade-bianche.it/en/
+  pcs: strade-bianche-donne
+  firstcycling: 9044
+  social:
+    - { text: Instagram, url: "https://www.instagram.com/strade_bianche/" }
+    - { text: Facebook, url: "https://www.facebook.com/stradebianche" }
+    - { text: Twitter, url: "https://twitter.com/StradeBianche" }
+
+tour-de-france-me:
+  name: Tour de France
+  category: ME
+  titleTag: ""
+  officialSite: https://www.letour.fr/en/
+  wikipedia: https://en.wikipedia.org/wiki/Tour_de_France
+  firstcycling: 17
+  social:
+    - { text: Instagram, url: "https://www.instagram.com/letourdefrance/" }
+    - { text: Facebook, url: "https://www.facebook.com/letour" }
+    - { text: X, url: "https://x.com/LeTour" }
+    - { text: Youtube, url: "https://www.youtube.com/c/LeTourDeFrance/videos" }
+    - { text: Dailymotion, url: "https://www.dailymotion.com/tourdefrance" }
+    - { text: Tiktok, url: "https://www.tiktok.com/@letourdefrance" }

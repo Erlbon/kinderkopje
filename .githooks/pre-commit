@@ -1,0 +1,16 @@
+#!/bin/sh
+# Staged text files must be free of control characters, .mjs must parse, and the project must type-check.
+files=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$files" ] && exit 0
+fail=0
+text=$(echo "$files" | grep -E '\.(ts|mjs|js|json|yaml|yml|html|md|css|sh)$' || true)
+if [ -n "$text" ]; then
+  node scripts/ctrlchars.mjs $text || fail=1
+fi
+for f in $(echo "$files" | grep -E '\.mjs$' || true); do
+  node --check "$f" || { echo "pre-commit: syntax error in $f" >&2; fail=1; }
+done
+if echo "$files" | grep -qE '\.(ts|yaml)$'; then
+  npm run --silent typecheck || { echo "pre-commit: type check failed" >&2; fail=1; }
+fi
+exit $fail

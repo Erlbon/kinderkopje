@@ -1,0 +1,50 @@
+# Test fixtures: two real 2026 r/peloton threads re-expressed as data.
+# This is NOT the 2026 season; use a drafted season (iCal import) for that.
+season: 2026
+races:
+  - race: strade-bianche-me
+    class: 1.UWT
+    date: 2026-03-07
+    from: Siena
+    to: Siena
+    routeUrl: https://www.strade-bianche.it/en/men-route/
+    length: 203
+    type: punchy
+    finish: uphill
+    start: "11:45"
+    end: "16:43"
+    info:
+      information:
+        - { text: Roadbook (pdf), url: "https://www.strade-bianche.it/wp-content/uploads/2026/03/ySovlhtBGkrnv25rykp1_020326-113530.pdf" }
+      previews:
+        - { text: Escape Collective, url: "https://escapecollective.com/preview-is-pogacar-a-shoo-in-to-set-a-new-strade-bianche-record/" }
+        - { text: Domestique, url: "https://www.domestiquecycling.com/en/features/2026-strade-bianche-preview-can-pogacar-be-stopped-at-his-season-debut/" }
+      watch:
+        - { text: Regionally, url: "https://www.strade-bianche.it/en/news/strade-bianche-2026-where-to-watch-the-race-on-tv/" }
+
+  - race: tour-de-france-me
+    class: 2.UWT
+    restDays: [2026-07-13]
+    stages:
+      - n: 6
+        date: 2026-07-09
+        from: Pau
+        to: Gavarnie-Gèdre
+        routeUrl: https://tourview.pages.dev/tdf2026/stage-6
+        stageUrl: https://www.letour.fr/en/stage-6
+        length: 186
+        type: Hard
+        altitude: 3978
+        finish: Uphill
+        start: "12:25"
+        end: "17:46"
+        info:
+          tracker:
+            - { text: Official, url: "https://racecenter.letour.fr/en/" }
+            - { text: Tissot, url: "https://www.tissottiming.com/2026/tdf/route" }
+          watch:
+            - { text: CourseDeJour, url: "https://coursedujour.com/day/2026-07-09/" }
+    info:
+      previews:
+        - { text: INRNG, url: "https://inrng.com/2026/06/tour-de-france-2026-stage-guide/" }
+        - { text: CyclingNews, url: "https://www.cyclingnews.com/races/tour-de-france-2026/preview/" }

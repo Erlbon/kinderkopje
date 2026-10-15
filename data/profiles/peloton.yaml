@@ -1,0 +1,55 @@
+# r/peloton thread layout. Built from the 2026 Strade Bianche (one-day) and
+# 2026 Tour de France stage 6 threads and the 2019 Giro rest-day thread.
+# Edit here when the community changes its template; no code change needed.
+id: peloton
+name: r/peloton
+placeholder: TBC
+
+titles:
+  oneday: "[Race Thread] {year} {name} {tag} ({class})"
+  stage: "[Race Thread] {year} {name} – Stage {stage} ({class})"
+  rest: "[Race Thread] {year} {name} Rest Day {n}"
+  mega: "[Race Thread] {year} {name} {tag} ({class}) – overall"
+
+tables:
+  oneday:
+    - { header: Date, field: date, format: "dd.mm" }
+    - { header: From > To, field: route }
+    - { header: Length, field: length }
+    - { header: Type, field: type }
+    - { header: Finish, field: finish }
+    - { header: Time, field: time, format: " – " }
+  stage:
+    - { header: Date, field: date, format: "ddd. dd/mm", align: r }
+    - { header: Stage, field: stage }
+    - { header: Route, field: route }
+    - { header: Length, field: length, align: r }
+    - { header: Type, field: type, align: r }
+    - { header: Altitude, field: altitude, align: r }
+    - { header: Finish, field: finish }
+    - { header: Time, field: time, format: "-" }
+
+infoRows:
+  - { id: information, label: Information, auto: [official, startlistFc, wikipedia] }
+  - { id: previews, label: Previews }
+  - { id: content, label: "/r/Peloton Content", optional: true }
+  - { id: social, label: Social Media, auto: [social] }
+  - { id: tracker, label: Live Trackers, auto: [pcsLive] }
+  - { id: coverage, label: Coverage, optional: true }
+  - { id: watch, label: Where to watch }
+
+restIntro: >-
+  [//]: # (Write the rest-day recap here: how the race has gone, what the coming
+  stages look like. This is a joint thread with the Weekly Peloton Question
+  thread, so say that and invite questions.)
+
+restFooter: >-
+  To aid some questions, [here's a link to the wiki](https://www.reddit.com/r/peloton/wiki/index),
+  a link to a list of [frequently asked questions](https://www.reddit.com/r/peloton/wiki/faq),
+  and even a guide to the terms [used in Pro Cycling](http://www.reddit.com/r/peloton/wiki/procylingdictionary).
+
+megaIntro: >-
+  This is the overall thread for the whole race: general classification,
+  predictions and general chat. Every stage also gets its own race thread.
+
+defaultIntro: ""

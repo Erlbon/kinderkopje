@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Threads</title>
+<style>
+:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#0b57d0;--warn:#a15c00;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#8ab4f8;--warn:#f0b35a;--err:#f2b8b5}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;margin:0;padding:16px}
+main{max-width:900px;margin:0 auto}
+h1{font-size:20px;margin:0 0 4px}
+h2{font-size:16px;margin:20px 0 6px}
+.mut{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0}
+.card.done{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.title{font-weight:600;flex:1 1 280px;word-break:break-word}
+button,label.btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit}
+button.ok{background:#2e7d32}
+textarea{width:100%;min-height:160px;font:12px ui-monospace,Consolas,monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px}
+details pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:var(--bg);padding:8px;border-radius:6px}
+.warn{color:var(--warn);font-size:13px;margin-top:4px}
+#msg.err{color:var(--err);white-space:pre-wrap}
+fieldset{border:1px solid var(--line);border-radius:6px;margin:8px 0}
+input[type=number]{width:80px}
+</style>
+</head>
+<body>
+<main>
+<h1>Race Threads</h1>
+<p class="mut">Season YAML in, Reddit-ready threads out. Everything runs in your browser; nothing is uploaded. <span id="ver">__VERSION__</span></p>
+
+<h2>1. Calendar</h2>
+<fieldset>
+  <legend class="mut">Draft a season from an iCal calendar (e.g. the INRNG feed saved as .ics)</legend>
+  <div class="row">
+    <label>Year <input id="year" type="number" value="2026"></label>
+    <label><input type="checkbox" name="cls" value="1.UWT" checked> 1.UWT</label>
+    <label><input type="checkbox" name="cls" value="2.UWT" checked> 2.UWT</label>
+    <label><input type="checkbox" name="cls" value="1.WWT" checked> 1.WWT</label>
+    <label><input type="checkbox" name="cls" value="2.WWT" checked> 2.WWT</label>
+    <label><input type="checkbox" name="cls" value="1.Pro"> 1.Pro</label>
+    <label><input type="checkbox" name="cls" value="2.Pro"> 2.Pro</label>
+    <label class="btn">Open .ics file<input id="ics" type="file" accept=".ics,text/calendar" hidden></label>
+  </div>
+  <div id="importmsg" class="mut"></div>
+</fieldset>
+
+<h2>2. Season (edit freely)</h2>
+<textarea id="season" spellcheck="false"></textarea>
+<details>
+  <summary class="mut">Race registry: official sites, social links, FirstCycling ids, PCS slugs (kept between years)</summary>
+  <textarea id="registry" spellcheck="false"></textarea>
+</details>
+<div class="row" style="margin-top:8px">
+  <button id="render">Generate threads</button>
+  <button id="reset">Reset to examples</button>
+  <button id="dl-yaml">Download season.yaml</button>
+  <button id="dl-md">Download all threads (.md)</button>
+</div>
+<p id="msg" class="mut"></p>
+
+<h2>3. Threads</h2>
+<div id="out"></div>
+</main>
+<script>__SCRIPT__</script>
+</body>
+</html>
