@@ -1,0 +1,5 @@
+# Seasons that are still being raced. Their rankings are partial, so the page leaves them out of the
+# comparisons unless you tick "Include unfinished seasons". Remove a year here once its final ranking
+# (after the last race) has been captured.
+open:
+  - 2026

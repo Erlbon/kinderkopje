@@ -1,0 +1,36 @@
+<!-- Excerpt of the 2026 UCI ProTeams table at https://en.wikipedia.org/wiki/List_of_2026_UCI_ProTeams_and_Continental_teams (CC BY-SA 4.0), used as a parser test fixture. -->
+{| class="wikitable sortable"
+|- style="background:#ccf;"
+! Code
+! Official Team Name
+! Country
+! Continent
+|-
+|| BCS || {{UCI team code|BCS|2026}} || {{ITA}} || Europe
+|-
+|| BBH || {{UCI team code|BBH|2026}} || {{ESP}} || Europe
+|-
+|| CJR || {{UCI team code|CJR|2026}} || {{ESP}} || Europe
+|-
+|| COF || {{UCI team code|COF men|2026}} || {{FRA}} || Europe
+|-
+|| EKP || {{UCI team code|EKP|2026}} || {{ESP}} || Europe
+|-
+|| EUS || {{UCI team code|EUK|2026}} || {{ESP}} || Europe
+|-
+|| MBH || {{UCI team code|MBH|2026}} || {{HUN}} || Europe
+|-
+|| MAP || {{UCI team code|MAP2|2026}} || {{USA}} || America
+|-
+|| PQT || {{UCI team code|PQT|2026}} || {{SUI}} || Europe
+|-
+|| TFT || {{UCI team code|TFT|2026}} || {{ITA}} || Europe
+|-
+|| PTV || {{UCI team code|PTV|2026}} || {{ITA}} || Europe
+|-
+|| TEN || {{UCI team code|TEN|2026}} || {{FRA}} || Europe
+|-
+|| TUD || {{UCI team code|TUD|2026}} || {{SUI}} || Europe
+|-
+|| URR || {{UCI team code|URR|2026}} || {{FRA}} || Europe
+|}

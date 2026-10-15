@@ -53,6 +53,8 @@ export interface TeamSnapshot {
 
 export interface Cube {
   teamSnapshots: TeamSnapshot[];
+  /** WorldTeam and ProTeam ids per season (key = season), see team-levels.ts */
+  levels?: Record<string, { WT: number[]; PT: number[] }>;
 }
 
 export function emptyCube(): Cube {
@@ -108,6 +110,17 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   return report;
 }
 
+/** Seasons that are still being raced (data/cube/seasons.yaml). */
+export function parseOpenSeasons(text: string): number[] {
+  const v = parseYaml(text) as { open?: unknown } | null;
+  return Array.isArray(v?.open) ? (v!.open as unknown[]).filter((x): x is number => typeof x === "number") : [];
+}
+
+/** A copy of the cube without the given seasons (the unfinished ones, by default in the page). */
+export function withoutSeasons(cube: Cube, seasons: number[]): Cube {
+  return { levels: cube.levels, teamSnapshots: cube.teamSnapshots.filter((s) => !seasons.includes(s.season)) };
+}
+
 export interface Merge {
   into: number; // UCI team id that continues
   from: number; // UCI team id that stops at `effective`
@@ -137,7 +150,7 @@ export function parseLineage(text: string): Lineage {
  * is lower than the lowest captured team, because then the true rank is unknown.
  */
 export function combineMerged(cube: Cube, lineage: Lineage): Cube {
-  const out: Cube = { teamSnapshots: [] };
+  const out: Cube = { levels: cube.levels, teamSnapshots: [] };
   for (const s of cube.teamSnapshots) {
     let teams = s.teams.map((t) => ({ ...t }));
     let changed = false;

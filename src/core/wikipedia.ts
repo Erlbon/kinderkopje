@@ -149,6 +149,33 @@ export async function fetchWikitext(title: string, f: typeof fetch = fetch): Pro
   return j.parse.wikitext;
 }
 
+export interface WikiSection {
+  index: string;
+  line: string;
+}
+
+/** The section headings of a page (cheap: used to find the section for a given year). */
+export async function fetchSectionList(title: string, f: typeof fetch = fetch): Promise<WikiSection[]> {
+  const url = API + "?action=parse&prop=sections&format=json&formatversion=2&redirects=1&origin=*&page=" + encodeURIComponent(title);
+  const r = await f(url, { headers: HEADERS });
+  if (!r.ok) throw new Error("Wikipedia answered " + r.status);
+  const j = (await r.json()) as { parse?: { sections?: WikiSection[] }; error?: { info?: string } };
+  if (!j.parse?.sections) throw new Error(j.error?.info ?? "page not found: " + title);
+  return j.parse.sections;
+}
+
+/** The wikitext of one section of a page. */
+export async function fetchSection(title: string, index: string, f: typeof fetch = fetch): Promise<string> {
+  const url =
+    API + "?action=parse&prop=wikitext&format=json&formatversion=2&redirects=1&origin=*&section=" + encodeURIComponent(index) +
+    "&page=" + encodeURIComponent(title);
+  const r = await f(url, { headers: HEADERS });
+  if (!r.ok) throw new Error("Wikipedia answered " + r.status);
+  const j = (await r.json()) as { parse?: { wikitext?: string }; error?: { info?: string } };
+  if (!j.parse?.wikitext) throw new Error(j.error?.info ?? "section not found: " + title + " " + index);
+  return j.parse.wikitext;
+}
+
 /** Look a race up on Wikidata: official website (P856) and the English Wikipedia page. */
 export async function lookupRace(name: string, f: typeof fetch = fetch): Promise<WikidataRace[]> {
   const s = await f(

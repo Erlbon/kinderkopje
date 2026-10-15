@@ -39,6 +39,22 @@ and 1372). With "Combine merged teams" ticked, earlier seasons add the two teams
 merged team compares like with like; ranks in those seasons are where the combined total would stand.
 Capture the month-end rankings (and the latest ranking) for each season you want to compare.
 
+UCI points reset on 1 January, so every ranking is a season-to-date total and January's monthly figure is the
+total itself. Seasons still being raced are listed in `data/cube/seasons.yaml` (2026 for now); the page leaves
+them out unless you tick "Include unfinished seasons". Remove the year from that file once its final ranking
+(after the last race) has been captured.
+
+### WorldTeams and ProTeams
+
+The main interest is the WorldTeams (WT) and ProTeams (PT); lower-level teams matter when they beat them.
+"Look up team levels (Wikipedia)" fetches, for each captured season, the WorldTeam list (the "UCI WorldTeam"
+article) and the ProTeam list ("List of <year> UCI ProTeams and Continental teams"), one request at a time with
+a pause, and matches them to the captured teams by UCI code and then by name. Anything not found is shown;
+a team outside the captured part of a ranking (only the pages you captured) cannot be matched. Levels are
+saved in the cube. With "Only WorldTeams and ProTeams" ticked the tables show just those teams, and a table
+lists every WT/PT team that a lower-level team finished above. Wikipedia is a secondary source: check the
+unmatched list.
+
 ## Stage tables
 
 Paste the table from your internal work thread into "Import a stage table". Columns are found by their

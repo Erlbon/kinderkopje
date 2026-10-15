@@ -124,12 +124,15 @@ input[type=number]{width:80px}
     <label class="btn">Open saved cube<input id="cubefile" type="file" accept=".json,application/json" hidden></label>
     <button id="cubesave">Save cube</button>
     <button id="cubeclear">Clear</button>
+    <button id="cubelevels" title="Fetches the WorldTeam and ProTeam lists of each captured season from Wikipedia, one request at a time">Look up team levels (Wikipedia)</button>
   </div>
   <div id="cubemsg" class="mut" style="margin:6px 0"></div>
   <div class="row">
     <label>Year <input id="cubeyear" type="number" style="width:80px"></label>
     <label>As of <input id="cubecutoff" type="date"></label>
     <label>Top teams <input id="cubetop" type="number" value="20" style="width:70px"></label>
+    <label title="Needs the team levels lookup"><input id="cubelevelonly" type="checkbox" checked> Only WorldTeams and ProTeams</label>
+    <label title="Seasons still being raced are partial (data/cube/seasons.yaml)"><input id="cubeopen" type="checkbox"> Include unfinished seasons</label>
     <label title="Lotto + Intermarché-Wanty before 2026 (see data/cube/team-lineage.yaml)"><input id="cubecombine" type="checkbox" checked> Combine merged teams for earlier seasons</label>
   </div>
   <div id="cubeout"></div>

@@ -1,21 +1,34 @@
 import lineageYaml from "../../data/cube/team-lineage.yaml";
+import seasonsYaml from "../../data/cube/seasons.yaml";
 import {
   CaptureFile,
   Cube,
   addCapture,
+  beatenByLowerLevel,
+  beatenMarkdown,
   combineMerged,
   compareToLastYear,
   comparisonMarkdown,
   emptyCube,
+  fetchSection,
+  fetchSectionList,
+  hasLevels,
+  matchListed,
   monthlyMarkdown,
   monthlyOverview,
+  onlyWorldAndPro,
   parseLineage,
+  parseOpenSeasons,
+  parseTeamList,
   seasonTable,
   seasonTableMarkdown,
+  setLevels,
+  withoutSeasons,
 } from "../core";
 
 const KEY = "rt-cube";
 const lineage = parseLineage(lineageYaml);
+const openSeasons = parseOpenSeasons(seasonsYaml);
 
 function $<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -74,7 +87,8 @@ export function initTeams(): void {
 
   function refresh(): void {
     $("cubemsg").textContent = summary();
-    const ys = seasons();
+    const showOpen = $<HTMLInputElement>("cubeopen").checked;
+    const ys = seasons().filter((y) => showOpen || !openSeasons.includes(y));
     if (!ys.length) {
       $("cubeout").replaceChildren();
       return;
@@ -88,7 +102,10 @@ export function initTeams(): void {
     const top = Number($<HTMLInputElement>("cubetop").value) || 20;
 
     // Merged teams (Lotto + Intermarché-Wanty before 2026) are added together when the box is ticked.
-    const view = $<HTMLInputElement>("cubecombine").checked ? combineMerged(cube, lineage) : cube;
+    const base = showOpen ? cube : withoutSeasons(cube, openSeasons);
+    const merged = $<HTMLInputElement>("cubecombine").checked ? combineMerged(base, lineage) : base;
+    const anyLevels = ys.some((y) => hasLevels(cube, y));
+    const view = anyLevels && $<HTMLInputElement>("cubelevelonly").checked ? onlyWorldAndPro(merged) : merged;
     const cmp = compareToLastYear(view, year, cutoffInput.value, { top });
     const monthly = monthlyOverview(view, year, { top });
     const nl = String.fromCharCode(10);
@@ -101,6 +118,10 @@ export function initTeams(): void {
       ["Season to date against the same date last year", comparisonMarkdown(cmp, year, cutoffInput.value)],
       ["Points earned per month against last year", monthlyMarkdown(monthly, year)],
     ];
+    if (anyLevels) {
+      const results = ys.slice().sort((a, b) => a - b).filter((y) => hasLevels(cube, y)).map((y) => ({ season: y, res: beatenByLowerLevel(base, y) }));
+      blocks.unshift(["WorldTeams and ProTeams beaten by lower-level teams", beatenMarkdown(results)]);
+    }
     const out = $("cubeout");
     out.replaceChildren();
     for (const [title, md] of blocks) {
@@ -156,7 +177,41 @@ export function initTeams(): void {
     store(cube);
     refresh();
   };
-  for (const id of ["cubeyear", "cubecutoff", "cubetop", "cubecombine"]) $(id).onchange = refresh;
+  for (const id of ["cubeyear", "cubecutoff", "cubetop", "cubecombine", "cubeopen", "cubelevelonly"]) $(id).onchange = refresh;
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  $("cubelevels").onclick = async () => {
+    const msg = $("cubemsg");
+    const years = seasons().filter((y) => !hasLevels(cube, y));
+    if (!years.length) {
+      msg.textContent = "Team levels are already loaded for every season in the cube.";
+      return;
+    }
+    const lines: string[] = [];
+    try {
+      msg.textContent = "Fetching the WorldTeam list structure from Wikipedia ...";
+      const wtSections = await fetchSectionList("UCI WorldTeam");
+      for (const y of years) {
+        await sleep(1200); // one request at a time, with a pause: Wikipedia limits bursts
+        const snap = cube.teamSnapshots.filter((s) => s.season === y).sort((a, b) => b.date.localeCompare(a.date))[0]!;
+        const wtIdx = wtSections.find((s) => s.line === String(y))?.index;
+        msg.textContent = "Fetching " + y + " ...";
+        const wtList = wtIdx ? parseTeamList(await fetchSection("UCI WorldTeam", wtIdx)) : [];
+        await sleep(1200);
+        const ptList = parseTeamList(await fetchSection("List of " + y + " UCI ProTeams and Continental teams", "1"));
+        const wt = matchListed(wtList, snap.teams);
+        const pt = matchListed(ptList, snap.teams);
+        setLevels(cube, y, { WT: wt.ids, PT: pt.ids });
+        const lost = [...wt.unmatched, ...pt.unmatched].map((t) => t.name ?? t.code);
+        lines.push(y + ": " + wt.ids.length + " of " + wtList.length + " WorldTeams, " + pt.ids.length + " of " + ptList.length + " ProTeams found in the captured ranking" + (lost.length ? " (not found: " + lost.join(", ") + ")" : ""));
+      }
+    } catch (e) {
+      lines.push("Stopped: " + (e instanceof Error ? e.message : String(e)) + ". What was fetched so far is kept; try again later for the rest.");
+    }
+    store(cube);
+    refresh();
+    $("cubemsg").textContent = lines.join(" | ");
+  };
 
   // the install link for the capture bookmark is filled in by the build
   refresh();

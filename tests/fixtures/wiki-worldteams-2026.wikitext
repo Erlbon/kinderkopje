@@ -1,0 +1,141 @@
+<!-- Section 2026 of https://en.wikipedia.org/wiki/UCI_WorldTeam (CC BY-SA 4.0), used as a parser test fixture. -->
+=== 2026 ===
+The 18 WorldTeams in 2026 are:
+
+{| class="wikitable sortable plainrowheaders"
+|+ 2026 UCI WorldTeams
+{{align|right|{{view|edit|talk|template=2022 UCI WorldTeams}}}}
+|- style="background:#ccccff;"
+! scope="col" | Code
+! scope="col" | Official Team Name
+! scope="col" | Country
+! scope="col" | Continent
+! scope="col" | Bike Manufacturer
+! scope="col" | Groupset
+|-
+| APC
+! scope="row" | [[Alpecin–Premier Tech]]
+| {{BEL}}
+| Europe
+| [[Canyon Bicycles|Canyon]]
+| [[Shimano]]
+|-
+| TBV
+! scope="row" | [[Team Bahrain Victorious|Team Bahrain-Victorious]]
+| {{BHR}}
+| Asia
+| [[Bianchi (company)|Bianchi]]
+| [[Shimano]]
+|-
+| DCT
+! scope="row" | [[Decathlon CMA CGM Team]]
+| {{FRA}}
+| Europe
+| [[Van Rysel]]
+| [[SRAM Corporation|SRAM]]
+|-
+| EFE
+! scope="row" | [[EF Education–EasyPost]]
+| {{USA}}
+| America
+| [[Cannondale]]
+| [[Shimano]]
+|-
+| GFC
+! scope="row" | [[Groupama–FDJ United]]
+| {{FRA}}
+| Europe
+| [[Wilier Triestina]]
+| [[Shimano]]
+|-
+| IGD
+! scope="row" | [[Netcompany-Ineos Cycling Team]]
+| {{GBR}}
+| Europe
+| [[Pinarello]]
+| [[Shimano]]
+|-
+| LTK
+! scope="row" | [[Lidl–Trek (men's team)|Lidl–Trek]]
+| {{GER}}
+| Europe
+| [[Trek Bicycle Corporation|Trek]]
+| [[SRAM Corporation|SRAM]]
+|-
+| LOI
+! scope="row" | [[Lotto–Intermarché]]
+| {{BEL}}
+| Europe
+| [[Orbea]]
+| [[Shimano]]
+|-
+| MOV
+! scope="row" | [[Movistar Team (men's team)|Movistar Team]]
+| {{ESP}}
+| Europe
+| [[Canyon Bicycles|Canyon]]
+| [[SRAM Corporation|SRAM]]
+|-
+| NSN
+! scope="row" | [[NSN Cycling Team]]
+| {{SWI}}
+| Europe
+| [[Scott Sports|Scott]]
+| [[SRAM Corporation|SRAM]]
+|-
+| RBH
+! scope="row" | [[Red Bull–Bora–Hansgrohe]]
+| {{GER}}
+| Europe
+| [[Specialized Bicycle Components|Specialized]]
+| [[SRAM Corporation|SRAM]]
+|-
+| SOQ
+! scope="row" | [[Soudal Quick-Step]]
+| {{BEL}}
+| Europe
+| [[Specialized Bicycle Components|Specialized]]
+| [[Shimano]]
+|-
+| JAY
+! scope="row" | [[Team Jayco–AlUla (men's team)|Team Jayco–AlUla]]
+| {{AUS}}
+| Australia
+| [[Giant Bicycles|Giant]]
+| [[Shimano]]
+|-
+| TPP
+! scope="row" | [[Team Picnic–PostNL (men's team)|Team Picnic–PostNL]]
+| {{NED}}
+| Europe
+| [[Lapierre Bikes|Lapierre]]
+| [[Shimano]]
+|-
+| TVL
+! scope="row" | [[Visma–Lease a Bike (men's team)|Visma–Lease a Bike]]
+| {{NED}}
+| Europe
+| [[Cervélo]]
+| [[SRAM Corporation|SRAM]]
+|-
+| UAD
+! scope="row" | [[UAE Team Emirates XRG]]
+| {{UAE}}
+| Asia
+| [[Colnago]]
+| [[Shimano]]
+|-
+| UXM
+! scope="row" | [[Uno-X Mobility (men's team)|Uno-X Mobility]]
+| {{NOR}}
+| Europe
+| [[Ridley Bikes|Ridley]]
+| [[SRAM Corporation|SRAM]]
+|-
+| XAT
+! scope="row" | [[XDS Astana Team]]
+| {{KAZ}}
+| Asia
+| [[:zh:喜德盛|X-Lab]]
+| [[Shimano]]
+|}

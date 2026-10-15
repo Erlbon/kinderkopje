@@ -4,17 +4,26 @@ import {
   CaptureFile,
   Cube,
   addCapture,
+  beatenByLowerLevel,
+  beatenMarkdown,
   combineMerged,
   compareToLastYear,
   comparisonMarkdown,
   emptyCube,
+  levelOf,
+  matchListed,
   monthlyMarkdown,
   monthlyOverview,
+  onlyWorldAndPro,
   parseLineage,
+  parseOpenSeasons,
+  parseTeamList,
   sameDayInYear,
   seasonTable,
   seasonTableMarkdown,
+  setLevels,
   snapshotAsOf,
+  withoutSeasons,
 } from "../src/core";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -199,5 +208,78 @@ describe("merged teams (lineage)", () => {
   it("a team outside the captured part of the continuing side takes the stopping team's place", () => {
     const only: Cube = { teamSnapshots: [{ date: "2025-10-19", season: 2025, momentId: null, complete: false, teams: [team(2, "Stops", 1, 150)] }] };
     expect(combineMerged(only, lineage).teamSnapshots[0]!.teams[0]).toMatchObject({ teamId: 1, points: 150 });
+  });
+});
+
+describe("unfinished seasons", () => {
+  const snap = (date: string, season: number) => ({ date, season, momentId: null, complete: false, teams: [] });
+  it("reads the list of open seasons from data/cube/seasons.yaml", () => {
+    expect(parseOpenSeasons(read("data/cube/seasons.yaml"))).toEqual([2026]);
+    expect(parseOpenSeasons("open: []")).toEqual([]);
+    expect(parseOpenSeasons("")).toEqual([]);
+  });
+  it("leaves open seasons out of a copy of the cube", () => {
+    const cube: Cube = { teamSnapshots: [snap("2025-10-19", 2025), snap("2026-10-13", 2026), snap("2024-10-20", 2024)] };
+    const done = withoutSeasons(cube, [2026]);
+    expect(done.teamSnapshots.map((s) => s.season)).toEqual([2025, 2024]);
+    expect(cube.teamSnapshots).toHaveLength(3); // the original is untouched
+  });
+});
+
+describe("team levels (Wikipedia lists)", () => {
+  const wt = parseTeamList(read("tests/fixtures/wiki-worldteams-2026.wikitext"));
+  const pt = parseTeamList(read("tests/fixtures/wiki-proteams-2026.wikitext"));
+  // Names, codes and UCI ids as captured from DataRide; the points are made up for these tests.
+  const t = (teamId: number, code: string, name: string, points: number, rank: number) => ({ teamId, code, name, nation: "XXX", rank, points });
+  const captured = [
+    t(1552, "NCI", "NETCOMPANY INEOS", 5000, 1),
+    t(1488, "APT", "ALPECIN-PREMIER TECH", 4000, 2),
+    t(3440, "LNS", "LI NING STAR", 3000, 3), // a lower-level team in these lists
+    t(1377, "PQT", "PINARELLO-Q36.5 PRO CYCLING TEAM", 2500, 4),
+    t(3768, "URR", "UNIBET ROSE ROCKETS", 2000, 5),
+    t(4086, "MBH", "MBH BANK CSB TELECOM FORT", 1000, 6),
+  ];
+
+  it("reads both table layouts (18 WorldTeams with names, ProTeams with codes)", () => {
+    expect(wt).toHaveLength(18);
+    expect(wt[0]).toEqual({ code: "APC", name: "Alpecin–Premier Tech" });
+    expect(pt.map((x) => x.code)).toEqual(["BCS", "BBH", "CJR", "COF", "EKP", "EUS", "MBH", "MAP", "PQT", "TFT", "PTV", "TEN", "TUD", "URR"]);
+  });
+  it("matches by code, then by name where the codes differ (IGD / NCI, APC / APT)", () => {
+    const m = matchListed(wt, captured);
+    expect(m.ids.sort()).toEqual([1488, 1552]);
+    expect(m.unmatched.length).toBe(16); // the other WorldTeams are not in this small captured list
+  });
+  it("matches ProTeams by code", () => {
+    expect(matchListed(pt, captured).ids.sort((a, b) => a - b)).toEqual([1377, 3768, 4086]);
+  });
+
+  const cube: Cube = { teamSnapshots: [{ date: "2026-10-13", season: 2026, momentId: null, complete: false, teams: captured }] };
+  setLevels(cube, 2026, { WT: matchListed(wt, captured).ids, PT: matchListed(pt, captured).ids });
+
+  it("knows each team's level", () => {
+    expect(levelOf(cube, 2026, 1552)).toBe("WT");
+    expect(levelOf(cube, 2026, 1377)).toBe("PT");
+    expect(levelOf(cube, 2026, 3440)).toBeUndefined();
+    expect(levelOf(cube, 2025, 1552)).toBeUndefined(); // no levels loaded for 2025
+  });
+  it("finds the WorldTeams and ProTeams that a lower-level team finished above", () => {
+    const r = beatenByLowerLevel(cube, 2026);
+    expect(r.lines.map((l) => [l.team.code, l.beatenBy.map((b) => b.code)])).toEqual([
+      ["PQT", ["LNS"]],
+      ["URR", ["LNS"]],
+      ["MBH", ["LNS"]],
+    ]);
+    expect(beatenMarkdown([{ season: 2026, res: r }])).toContain("|2026|PINARELLO-Q36.5 PRO CYCLING TEAM (PQT)|PT|2,500|LI NING STAR (3,000)|");
+  });
+  it("keeps only WorldTeams and ProTeams for the main tables", () => {
+    const only = onlyWorldAndPro(cube);
+    expect(only.teamSnapshots[0]!.teams.map((x) => x.code)).toEqual(["NCI", "APT", "PQT", "URR", "MBH"]);
+    expect(cube.teamSnapshots[0]!.teams).toHaveLength(6);
+  });
+  it("seasons without levels are left as they are", () => {
+    const c2: Cube = { teamSnapshots: [{ date: "2025-10-19", season: 2025, momentId: null, complete: false, teams: captured }] };
+    expect(onlyWorldAndPro(c2).teamSnapshots[0]!.teams).toHaveLength(6);
+    expect(beatenByLowerLevel(c2, 2025)).toEqual({ lines: [], missing: 0 });
   });
 });
