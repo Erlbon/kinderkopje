@@ -122,6 +122,17 @@ describe("DataRide captures in the cube", () => {
     addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 77536, eventId: 1, heading: "x", totalRows: 80, rows: full(41).slice(0, 5) }] });
     expect(queueStatus(cube).find((l) => l.uciId === 77536)).toMatchObject({ eventsKnown: 1, eventsCaptured: 1, eventsComplete: 1 });
   });
+  it("a one-day race needs no event list: its single event is enough", () => {
+    const cube = emptyCube();
+    addCapture(cube, { format: "racethreads-capture/1", competitions: readCompetitionList(doc(LIST)) });
+    const e = readEventResults(doc(EVENT), "/iframe/EventResults/374263", "?competitionId=77536&disciplineId=10")!;
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [e] });
+    expect(queueStatus(cube).find((l) => l.uciId === 77536)).toMatchObject({ eventsKnown: 1, eventsComplete: 1 });
+    // a stage race (several days) still waits for its event list
+    const stage = { competitionId: 76415, eventId: 9, heading: "x", totalRows: 40, rows: [{ rank: 1, rider: "A", team: "T", age: 20, nation: "ITA", result: "x", points: 5 }] };
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [stage] });
+    expect(queueStatus(cube).find((l) => l.uciId === 76415)).toMatchObject({ eventsKnown: 0 });
+  });
   it("men's and women's races of the list stay apart in the queue by race", () => {
     const { races } = queueByRace(captured());
     expect(races.find((r) => r.name === "Veneto Women")!.category).toBe("WE");

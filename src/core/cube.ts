@@ -292,7 +292,14 @@ export function queueStatus(cube: Cube): QueueLine[] {
     const scoring = (q.events ?? []).filter((e) => isScoringEvent(e.name));
     const have = scoring.filter((e) => byEvent.has(e.id));
     const eventsComplete = have.filter((e) => isComplete(byEvent.get(e.id)!)).length;
-    return { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown: scoring.length, eventsCaptured: have.length, eventsComplete };
+    const line = { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown: scoring.length, eventsCaptured: have.length, eventsComplete };
+    // a one-day race has one event: no competition page is needed to know that
+    if (!scoring.length && q.start && q.start === q.end && r?.classifications.length) {
+      line.eventsKnown = 1;
+      line.eventsCaptured = 1;
+      line.eventsComplete = r.classifications.every(isComplete) ? 1 : 0;
+    }
+    return line;
   });
 }
 
