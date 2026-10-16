@@ -91,7 +91,17 @@ export function initRaces(store: Store): void {
     table.append(head);
     for (const r of rows) {
       const eds = Object.values(r.editions);
-      const tr = el("tr", {}, el("td", { textContent: r.name + (r.category === "ME" ? "" : " (" + CATEGORY_NAMES[r.category].toLowerCase() + ")") }), el("td", { textContent: eds.filter(finished).length + "/" + eds.length }));
+      const nameCell = el("td");
+      // the UCI class in front of the name: the newest edition's, with the history in the tooltip when it changed
+      const newest = eds.reduce((a, b) => (b.year > a.year ? b : a));
+      if (newest.class) {
+        const changed = new Set(eds.map((e) => e.class).filter(Boolean)).size > 1;
+        const tag = el("span", { class: "tag", textContent: newest.class });
+        if (changed) tag.title = eds.sort((a, b) => b.year - a.year).map((e) => e.year + ": " + (e.class ?? "?")).join(", ");
+        nameCell.append(tag);
+      }
+      nameCell.append(r.name + (r.category === "ME" ? "" : " (" + CATEGORY_NAMES[r.category].toLowerCase() + ")"));
+      const tr = el("tr", {}, nameCell, el("td", { textContent: eds.filter(finished).length + "/" + eds.length }));
       for (const y of years) {
         const e = r.editions[y];
         const td = el("td");

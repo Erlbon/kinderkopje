@@ -82,6 +82,17 @@ describe("the race queue page", () => {
     expect(text()).toContain("Finished Classic");
     expect((doc.getElementById("queuemissing") as HTMLInputElement).checked).toBe(false);
   });
+  it("puts the UCI class in front of the race name", () => {
+    const { doc } = page();
+    (doc.getElementById("queuemissing") as HTMLInputElement).checked = false;
+    doc.getElementById("queuemissing")!.onchange!(new Event("change"));
+    const cells = Array.from(doc.querySelectorAll("#queueout table tr td:first-child"));
+    const finished = cells.find((c) => c.textContent?.includes("Finished Classic"))!;
+    expect(finished.firstElementChild?.textContent).toBe("1.UWT");
+    expect(finished.textContent).toBe("1.UWTFinished Classic");
+    const waiting = cells.find((c) => c.textContent?.includes("Waiting Classic"))!;
+    expect(waiting.firstElementChild?.textContent).toBe("1.Pro");
+  });
   it("shows the finished race when the filter is switched off", () => {
     const { doc, text } = page();
     (doc.getElementById("queuemissing") as HTMLInputElement).checked = false;
