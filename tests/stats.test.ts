@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCapture, buildRaces, displayName, emptyCube, fiveByFiveMarkdown, finalClassification, topRiders } from "../src/core";
+import { addCapture, ageByTeam, ageByYear, averageAge, buildRaces, displayName, emptyCube, fiveByFiveMarkdown, finalClassification, topRiders } from "../src/core";
 
 const comp = (id: number, name: string, year: number) => ({ id, name, start: year + "-03-20", end: year + "-03-20", year, country: "ITA", class: "1.UWT", inProgress: false, category: "ME" as const });
 const row = (rank: number, rider: string) => ({ rank, rider, team: "T", age: 28, nation: "NED", result: "x", points: 100 - rank });
@@ -60,5 +60,43 @@ describe("the 5x5", () => {
     expect(picked?.label).toBe("Final Classification: General Classification");
     expect(finalClassification([cls("General Classification", 1)])?.label).toBe("General Classification"); // a one-day race
     expect(finalClassification([cls("Stage 1: Stage Classification", 1), cls("Stage 2: Stage Classification", 2)])).toBeUndefined();
+  });
+});
+
+describe("average age", () => {
+  const rowA = (rank: number, team: string, age: number | null) => ({ rank, rider: "R" + rank, team, age, nation: "NED", result: "x", points: 10 });
+  function cube() {
+    const c = emptyCube();
+    const comp = (id: number, name: string, year: number, category: "ME" | "WE" = "ME") => ({ id, name, start: year + "-03-20", end: year + "-03-20", year, country: "ITA", class: "1.UWT", inProgress: false, category });
+    addCapture(c, { format: "racethreads-capture/1", competitions: [comp(1, "Race One", 2025), comp(2, "Race Two", 2025), comp(3, "Race One", 2026), comp(4, "Women Race", 2025, "WE")] });
+    const res = (competitionId: number, rows: ReturnType<typeof rowA>[]) => ({ competitionId, eventId: competitionId, heading: "x", totalRows: 80, rows });
+    addCapture(c, {
+      format: "racethreads-capture/1",
+      eventResults: [
+        res(1, [rowA(1, "Team A", 20), rowA(2, "Team A", 30), rowA(3, "Team B", 40)]),
+        res(2, [rowA(1, "Team A", 22), rowA(2, "Team B", null)]), // an unknown age is not counted
+        res(3, [rowA(1, "Team A", 34)]),
+        res(4, [rowA(1, "Team W", 18)]),
+      ],
+    });
+    return c;
+  }
+
+  it("averages the known ages and ignores a missing one", () => {
+    expect(averageAge([{ age: 20 }, { age: 30 }, { age: null }])).toBe(25);
+    expect(averageAge([{ age: null }])).toBeUndefined();
+    expect(averageAge([])).toBeUndefined();
+  });
+  it("gives the average age of the point-scoring riders per year, men and women apart", () => {
+    const men = ageByYear(cube(), "ME");
+    expect(men.map((l) => l.label)).toEqual(["2025", "2026"]);
+    expect(men[0]).toMatchObject({ riders: 4, races: 2, average: (20 + 30 + 40 + 22) / 4 });
+    expect(men[1]).toMatchObject({ riders: 1, races: 1, average: 34 });
+    expect(ageByYear(cube(), "WE")).toEqual([{ label: "2025", riders: 1, races: 1, average: 18 }]);
+  });
+  it("gives the average age per team in a year, youngest first, leaving out teams with too few results", () => {
+    const teams = ageByTeam(cube(), 2025, "ME", 1);
+    expect(teams.map((t) => [t.label, t.average])).toEqual([["Team A", (20 + 30 + 22) / 3], ["Team B", 40]]);
+    expect(ageByTeam(cube(), 2025, "ME", 4)).toEqual([]); // nobody has four results
   });
 });

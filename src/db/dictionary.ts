@@ -105,7 +105,7 @@ export const DICTIONARY: TableDoc[] = [
       { name: "rank", meaning: "The place in that list. Empty when the page showed none." },
       { name: "rider", meaning: "First name and SURNAME as UCI writes them." },
       { name: "team", meaning: "The team name as written on the race page. This is a name, not a team number." },
-      { name: "age", meaning: "The rider's age as shown." },
+      { name: "age", meaning: "The rider's age at the time of the race, as DataRide shows it (19 to 50 in the captured data, present on every row). Part of the public file." },
       { name: "nation", meaning: "The rider's nation (three-letter code)." },
       { name: "result", meaning: "The time or gap as shown, for example 4:31:46 or +02." },
       { name: "points", meaning: "UCI points this result gave." },

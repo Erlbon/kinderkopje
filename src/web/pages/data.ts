@@ -154,7 +154,7 @@ export function initData(store: Store): void {
   $("pubsave").onclick = async () => {
     const SQL = await initSqlJs();
     download("pelotonic-public.sqlite", makePublicCopy(SQL, store.db), "application/vnd.sqlite3");
-    $("pubmsg").textContent = "Saved. Names, nations, places, points, team and race names and race facts only; saved texts, the queue, contributor names and rider ages are left out.";
+    $("pubmsg").textContent = "Saved. Names, nations, rider ages, places, points, team and race names and race facts only; saved texts, the queue and contributor names are left out.";
   };
   const which = $("sqlwhich");
   $("pubload").onclick = async () => {

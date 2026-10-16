@@ -31,8 +31,8 @@ to paste elsewhere. The views `v_team_points` and `v_results` are the easy way i
 ## Public dataset
 
 The Data page can **Save a public copy** of your database: the ranking and result tables with names, nations, places,
-points, team names, race names and race facts, and nothing else (saved texts, the capture queue, contributor names,
-capture times and rider ages are removed, and the file is rewritten so they do not linger inside it). Put that file
+points, team names, race names, rider ages and race facts, and nothing else (saved texts, the capture queue, contributor
+names and capture times are removed, and the file is rewritten so they do not linger inside it). Put that file
 at `data/public/pelotonic-public.sqlite` and commit it; the build then serves it as `pelotonic-public.sqlite`, and
 **Search the public dataset** on the Data page loads it and runs the SQL box against it. It is one static file read in
 the visitor's own browser, so there is no server to overload. The file carries the UCI and Wikipedia credits and a

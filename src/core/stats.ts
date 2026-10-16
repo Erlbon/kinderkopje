@@ -1,4 +1,5 @@
 import type { Cube, RaceRecord, ResultClassification, ResultRow } from "./cube";
+import type { Category } from "./dataride";
 
 /**
  * Race statistics from the captured results. First: the 5x5, the top five of each of the last five editions of a race.
@@ -71,4 +72,70 @@ export function fiveByFiveMarkdown(rows: FiveRow[], places = 5): string {
     return "| " + r.year + " | " + cells.join(" | ") + " |";
   });
   return [head, rule, ...body].join(NL);
+}
+
+/** The average of the ages that are known, or nothing when none is. */
+export function averageAge(rows: { age: number | null }[]): number | undefined {
+  const ages = rows.map((r) => r.age).filter((a): a is number => typeof a === "number" && a > 0);
+  return ages.length ? ages.reduce((a, b) => a + b, 0) / ages.length : undefined;
+}
+
+export interface AgeLine {
+  label: string; // the year, or the team
+  riders: number; // results counted (one per rider per race)
+  races: number;
+  average: number;
+}
+
+/**
+ * The results the age statistics count: for each race edition its final result (the single result of a one-day race,
+ * the final general classification of a stage race), so that a rider is counted once per race and not once per stage.
+ * Only the riders who scored points are in the data, so these are the ages at the front of the race, not of the whole field.
+ */
+function finalRows(cube: Cube, category: Category): { year: number; uciId: number; rows: ResultRow[] }[] {
+  const cat = new Map((cube.queue ?? []).map((q) => [q.uciId, q.category ?? "ME"]));
+  const out: { year: number; uciId: number; rows: ResultRow[] }[] = [];
+  for (const r of cube.raceResults ?? []) {
+    if ((cat.get(r.uciId) ?? "ME") !== category) continue;
+    const final = finalClassification(r.classifications);
+    if (final) out.push({ year: r.year, uciId: r.uciId, rows: final.rows });
+  }
+  return out;
+}
+
+/** The average age of the point-scoring riders per year, oldest year last. */
+export function ageByYear(cube: Cube, category: Category = "ME"): AgeLine[] {
+  const years = new Map<number, { rows: ResultRow[]; races: number }>();
+  for (const r of finalRows(cube, category)) {
+    const y = years.get(r.year) ?? { rows: [], races: 0 };
+    y.rows.push(...r.rows);
+    y.races++;
+    years.set(r.year, y);
+  }
+  return [...years]
+    .sort((a, b) => a[0] - b[0])
+    .flatMap(([year, y]) => {
+      const average = averageAge(y.rows);
+      return average === undefined ? [] : [{ label: String(year), riders: y.rows.filter((r) => r.age).length, races: y.races, average }];
+    });
+}
+
+/** The average age of each team's point-scoring riders in a year; teams with fewer than `minResults` results are left out. Youngest first. */
+export function ageByTeam(cube: Cube, year: number, category: Category = "ME", minResults = 20): AgeLine[] {
+  const teams = new Map<string, { rows: ResultRow[]; races: Set<number> }>();
+  for (const r of finalRows(cube, category).filter((x) => x.year === year)) {
+    for (const row of r.rows) {
+      const t = teams.get(row.team) ?? { rows: [], races: new Set<number>() };
+      t.rows.push(row);
+      t.races.add(r.uciId);
+      teams.set(row.team, t);
+    }
+  }
+  return [...teams]
+    .flatMap(([team, t]) => {
+      const average = averageAge(t.rows);
+      const riders = t.rows.filter((r) => r.age).length;
+      return average === undefined || riders < minResults ? [] : [{ label: team, riders, races: t.races.size, average }];
+    })
+    .sort((a, b) => a.average - b.average);
 }

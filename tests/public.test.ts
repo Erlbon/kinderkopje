@@ -39,7 +39,7 @@ describe("public copy", () => {
     expect(one("SELECT points FROM result_row")).toBe(250);
     expect(one("SELECT COUNT(*) FROM kv")).toBe(0);
     expect(one("SELECT COUNT(*) FROM queue_race")).toBe(0);
-    expect(one("SELECT age FROM result_row")).toBeNull();
+    expect(one("SELECT age FROM result_row")).toBe(23); // the rider's age is part of the public file
     expect(one("SELECT contributor FROM race_result")).toBeNull();
     expect(one("SELECT captured_at FROM race_result")).toBeNull();
     expect(publicCredits(pub)).toBe(PUBLIC_CREDITS);
