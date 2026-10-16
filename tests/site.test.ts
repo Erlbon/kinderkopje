@@ -51,11 +51,13 @@ describe("the intro page", () => {
     expect(html).toContain("AI-assisted hub for collecting information from r/peloton, UCI.org and other sources");
     expect(html).toContain("a small open database of cycling results, about five years back");
     expect(html).toContain("the code here is open source (MIT)");
-    for (const task of ["Race thread generation", "Race statistics", "Team statistics"]) expect(html, task).toContain(task);
-    // what is built and what is not is said honestly
-    expect(html).toContain('<span class="tag ok">Working</span> Race thread generation');
-    expect(html).toContain('<span class="tag plan">Planned</span> Race statistics');
-    expect(html).toContain('<span class="tag ok">Working</span> Team statistics');
+    // what is built and what is not is said honestly, on the cards
+    const doc = parseHTML(html).document as unknown as Document;
+    const status = (title: string) => Array.from(doc.querySelectorAll(".card2")).find((c) => c.querySelector("h3")?.textContent === title)?.querySelector(".tag")?.textContent;
+    expect(status("Race thread generation")).toBe("Working");
+    expect(status("Race statistics")).toBe("Planned");
+    expect(status("Team statistics")).toBe("Working");
+    expect(status("Open database")).toBe("Planned");
     // the old typos stay out
     for (const typo of ["raison d'etre", "pointshaul", "sql lite", "f.e.", "reddit/r/peloton"]) expect(html, typo).not.toContain(typo);
   });
@@ -70,8 +72,11 @@ describe("the intro page", () => {
     expect(html).toContain("We deliberately do not scrape ProCyclingStats or FirstCycling");
     expect(html).toContain("we will not work around a refusal");
   });
-  it("has the data flow picture, with a title and description for screen readers", () => {
+  it("has the peloton banner, and the data flow picture, each with a text alternative", () => {
     const doc = parseHTML(read("src/site/index.html")).document as unknown as Document;
+    const hero = doc.querySelector("svg.hero")!;
+    expect(hero.getAttribute("role")).toBe("img");
+    expect(hero.querySelector("title")!.textContent).toContain("peloton");
     const svg = doc.querySelector("svg.flow")!;
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.querySelector("title")!.textContent).toBeTruthy();

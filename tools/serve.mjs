@@ -13,6 +13,9 @@ const types = {
   ".css": "text/css; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
   ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".md": "text/markdown; charset=utf-8",
+  ".sqlite": "application/vnd.sqlite3",
 };
 
 createServer(async (req, res) => {

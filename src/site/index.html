@@ -11,18 +11,45 @@
 <main>
 <header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt=""><h1>Pelotonic - The R Peloton Database Project</h1></a></header>
 <nav><a class="active" href="index.html">Intro</a><a href="threads.html">Threads</a><a href="teams.html">Teams and points</a><a href="races.html">Race results</a><a href="data.html">Data</a></nav>
+<svg class="hero" viewBox="0 0 680 120" role="img" aria-labelledby="herot">
+<title id="herot">A peloton of riders in the leader jersey colours climbing a stage profile</title>
+<path class="ground" d="M0 112L90 102L160 106L230 86L300 92L370 56L440 64L510 30L580 38L640 18L680 24V120H0Z"/>
+<g class="riders"><circle cx="372" cy="40" r="7" fill="#ffd23f"/><circle cx="394" cy="46" r="7" fill="#1fa34a"/><circle cx="414" cy="50" r="7" fill="#fff"/><circle cx="434" cy="52" r="7" fill="#fff"/></g>
+<g fill="#d6282c"><circle cx="412" cy="48" r="1.5"/><circle cx="416" cy="52" r="1.5"/><circle cx="415" cy="47" r="1.2"/></g>
+</svg>
 
 <h2>Statement of intent</h2>
 <p>This project is an AI-assisted hub for collecting information from r/peloton, UCI.org and other sources (<a href="#sources">see Sources below</a>) to help create future content for r/peloton. It is built for the r/peloton moderators and is open to anyone.</p>
 
 <p>What it is for:</p>
-<ul>
-  <li><span class="tag ok">Working</span> Race thread generation: one-day, stage, rest-day and mega threads, drafted from the season and race data and ready to paste into Reddit's scheduler.</li>
-  <li><span class="tag plan">Planned</span> Race statistics: for example the 5x5 table (the top five of each of the last five editions of a race) and the most likely riders to win.</li>
-  <li><span class="tag ok">Working</span> Team statistics: this year against last year, points haul per month. Per race is next.</li>
-</ul>
+<div class="cards">
+  <div class="card2">
+    <svg class="ic" viewBox="0 0 56 56" aria-hidden="true"><rect class="f" x="11" y="6" width="34" height="44" rx="4"/><rect x="17" y="14" width="18" height="4" rx="2" fill="var(--acc)"/><rect x="17" y="24" width="22" height="3" rx="1.5" fill="var(--line)"/><rect x="17" y="31" width="20" height="3" rx="1.5" fill="var(--line)"/><rect x="17" y="38" width="15" height="3" rx="1.5" fill="var(--line)"/></svg>
+    <h3>Race thread generation</h3>
+    <div><span class="tag ok">Working</span></div>
+    <p>One-day, stage, rest-day and mega threads, drafted from the season and race data and ready to paste into Reddit's scheduler.</p>
+  </div>
+  <div class="card2">
+    <svg class="ic" viewBox="0 0 56 56" aria-hidden="true"><rect x="9" y="30" width="8" height="16" rx="2" fill="#ffd23f"/><rect x="21" y="20" width="8" height="26" rx="2" fill="#1fa34a"/><rect x="33" y="10" width="8" height="36" rx="2" fill="var(--acc)"/><rect x="45" y="24" width="4" height="22" rx="2" fill="var(--mut)"/><path d="M6 48h46" stroke="var(--line)" stroke-width="1.5"/></svg>
+    <h3>Race statistics</h3>
+    <div><span class="tag plan">Planned</span></div>
+    <p>For example the 5x5 table (the top five of each of the last five editions of a race) and the most likely riders to win.</p>
+  </div>
+  <div class="card2">
+    <svg class="ic" viewBox="0 0 56 56" aria-hidden="true"><polyline points="7,40 17,30 27,33 37,20 49,12" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7,44 17,40 27,38 37,32 49,28" fill="none" stroke="var(--mut)" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"/><path d="M6 49h46" stroke="var(--line)" stroke-width="1.5"/></svg>
+    <h3>Team statistics</h3>
+    <div><span class="tag ok">Working</span></div>
+    <p>This year against last year, points haul per month. Per race is next.</p>
+  </div>
+  <div class="card2">
+    <svg class="ic" viewBox="0 0 56 56" aria-hidden="true"><ellipse class="f" cx="28" cy="14" rx="18" ry="6"/><path class="f" d="M10 14v26c0 3.3 8 6 18 6s18-2.7 18-6V14"/><path d="M10 27c0 3.3 8 6 18 6s18-2.7 18-6" fill="none" stroke="var(--acc)" stroke-width="1.5"/></svg>
+    <h3>Open database</h3>
+    <div><span class="tag plan">Planned</span></div>
+    <p>About five years of results in one SQLite file that anyone can download. The first public file is not published yet.</p>
+  </div>
+</div>
 
-<p>As a side effect we are also building a small open database of cycling results, about five years back, as a single SQLite file that anyone can download (<span class="tag plan">Planned</span> the first public file is not published yet). Other cycling statistics sites exist, but the code here is open source (MIT) and the data are publicly published results, credited to their sources.</p>
+<p>As a side effect we are also building a small open database of cycling results, about five years back, as a single SQLite file that anyone can download. Other cycling statistics sites exist, but the code here is open source (MIT) and the data are publicly published results, credited to their sources.</p>
 
 <h2>How it fits together</h2>
 <svg class="flow" viewBox="0 0 680 190" role="img" aria-labelledby="flowt flowd">
