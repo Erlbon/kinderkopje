@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, cleanHeading, emptyCube, isComplete, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -44,6 +44,29 @@ describe("the competition list", () => {
     expect(list[0]!.category).toBe("ME");
     expect(list[1]!.category).toBe("WE");
     expect(readCompetitionList(doc(LIST), "Women Elite")[0]!.category).toBe("WE");
+  });
+});
+
+describe("the categories", () => {
+  it("only men's and women's elite are collected", () => {
+    expect(categoryFromFilter("Men Elite")).toBe("ME");
+    expect(categoryFromFilter("Women Elite")).toBe("WE");
+    for (const other of ["Men Under 23", "Women Under 23", "Men Junior", "Women Junior", "All", ""]) expect(categoryFromFilter(other), other).toBeUndefined();
+    expect(isOtherCategory("Men Under 23")).toBe(true);
+    expect(isOtherCategory("Women Junior")).toBe(true);
+    expect(isOtherCategory("Men Elite")).toBe(false);
+    expect(isOtherCategory("")).toBe(false);
+  });
+  it("a list captured under the Category filter keeps its category, whatever the race is called", () => {
+    const men = readCompetitionList(doc(LIST), "Men Elite");
+    expect(men.every((c) => c.category === "ME")).toBe(true);
+    const women = readCompetitionList(doc(LIST), "Women Elite");
+    expect(women.every((c) => c.category === "WE")).toBe(true);
+  });
+  it("the import says how many of each came in", () => {
+    const cube = emptyCube();
+    const r = addCapture(cube, { format: "racethreads-capture/1", competitions: [...readCompetitionList(doc(LIST), "Men Elite"), ...readCompetitionList(doc(LIST).documentElement.ownerDocument, "Women Elite").map((c) => ({ ...c, id: c.id + 1000 }))] });
+    expect(r.categories).toEqual({ "Men elite": 3, "Women elite": 3 });
   });
 });
 

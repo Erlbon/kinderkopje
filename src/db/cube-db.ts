@@ -1,4 +1,5 @@
 import type { Database } from "sql.js";
+import type { Category } from "../core/dataride";
 import type { Cube, QueueRace, RaceResult, ResultClassification, TeamSnapshot } from "../core/cube";
 import { migrate } from "./schema";
 
@@ -151,7 +152,7 @@ export function loadCube(db: Database): Cube {
         hub: x.hub as string,
       };
       if (x.class !== null) out.class = x.class as string;
-      if (x.category !== null) out.category = x.category as "ME" | "WE";
+      if (x.category !== null) out.category = x.category as Category;
       const mine = events.filter((e) => e.uci_id === x.uci_id);
       if (mine.length) out.events = mine.map((e) => ({ id: e.event_id as number, name: e.name as string }));
       return out;

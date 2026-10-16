@@ -1,6 +1,7 @@
 import { parse as parseYaml } from "yaml";
 import { cleanHeading, isComplete, isScoringEvent, mergeEvents } from "./dataride";
-import type { DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
+import { CATEGORY_NAMES } from "./dataride";
+import type { Category, DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
 import { normRaceName } from "./uci-hub";
 
 /**
@@ -84,7 +85,7 @@ export interface QueueRace {
   country: string;
   hub: string; // "2027 UCI WorldTour"
   class?: string; // "1.Pro", "2.UWT" ... (from the DataRide list)
-  category?: "ME" | "WE";
+  category?: Category;
   events?: { id: number; name: string }[]; // from the competition page
 }
 
@@ -122,6 +123,7 @@ export interface ImportReport {
   replaced: number;
   races: number; // race results added or updated
   competitions?: number; // competitions added to or updated in the queue
+  categories?: Record<string, number>; // of those, how many per category ("Men elite" ...)
   events?: number; // event lists read from competition pages
   skipped: string[];
 }
@@ -147,6 +149,8 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
   for (const c of file.competitions ?? []) {
     upsertCompetition(cube, c);
     report.competitions = (report.competitions ?? 0) + 1;
+    const name = CATEGORY_NAMES[c.category ?? "ME"];
+    (report.categories ??= {})[name] = (report.categories[name] ?? 0) + 1;
   }
   for (const e of file.competitionEvents ?? []) {
     const q = queueRace(cube, e.competitionId);
@@ -455,7 +459,7 @@ export function cleanRaceName(name: string): string {
 export interface RaceEditions {
   key: string;
   name: string;
-  category: "ME" | "WE";
+  category: Category;
   editions: Record<number, QueueLine>; // by year
 }
 
@@ -466,7 +470,7 @@ export interface RaceEditions {
 export function queueByRace(cube: Cube): { years: number[]; races: RaceEditions[] } {
   const map = new Map<string, RaceEditions>();
   for (const l of queueStatus(cube)) {
-    const category = l.category ?? (/women/i.test(l.hub) ? "WE" : "ME");
+    const category: Category = l.category ?? (/women/i.test(l.hub) ? "WE" : "ME");
     const key = normRaceName(l.name) + "|" + category;
     let r = map.get(key);
     if (!r) {

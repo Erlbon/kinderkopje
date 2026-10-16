@@ -5,7 +5,7 @@ import { addCapture, emptyCube } from "../src/core";
 import { initRaces } from "../src/web/pages/races";
 import type { Store } from "../src/web/store";
 
-// the real page, with a queue of three races: one finished, one not, one in a class the filter leaves out
+// the real page, with a queue of four races: one finished, one not, one in a class the filter leaves out, one women's
 function page(): { doc: Document; text: () => string } {
   const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
@@ -15,8 +15,8 @@ function page(): { doc: Document; text: () => string } {
   for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = true;
 
   const cube = emptyCube();
-  const comp = (id: number, name: string, cls: string) => ({ id, name, start: "2026-04-05", end: "2026-04-05", year: 2026, country: "BEL", class: cls, inProgress: false, category: "ME" as const });
-  addCapture(cube, { format: "racethreads-capture/1", competitions: [comp(1, "Finished Classic", "1.UWT"), comp(2, "Waiting Classic", "1.Pro"), comp(3, "Small Race", "1.2")] });
+  const comp = (id: number, name: string, cls: string, category: "ME" | "WE" = "ME") => ({ id, name, start: "2026-04-05", end: "2026-04-05", year: 2026, country: "BEL", class: cls, inProgress: false, category });
+  addCapture(cube, { format: "racethreads-capture/1", competitions: [comp(1, "Finished Classic", "1.UWT"), comp(2, "Waiting Classic", "1.Pro"), comp(3, "Small Race", "1.2"), comp(4, "Women's Classic", "1.WWT", "WE")] });
   const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ rank: i + 1, rider: "R" + i, team: "T", age: 25, nation: "BEL", result: "x", points: 5 }));
   // race 1: the table ended on a short page; race 2: a full page of scoring rows, the next page not read
   addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 1, eventId: 11, heading: "x", totalRows: 20, rows: rows(20) }, { competitionId: 2, eventId: 22, heading: "x", totalRows: 40, rows: rows(40) }] });
@@ -25,6 +25,28 @@ function page(): { doc: Document; text: () => string } {
   initRaces(store);
   return { doc, text: () => doc.getElementById("queueout")!.textContent ?? "" };
 }
+
+describe("men's and women's races", () => {
+  it("shows men's elite by default and says how many women's races are hidden", () => {
+    const { text, doc } = page();
+    const chosen = Array.from((doc.getElementById("queuecat") as HTMLSelectElement).options).find((o) => o.selected || o.hasAttribute("selected"));
+    expect(chosen?.value ?? "ME").toBe("ME");
+    expect(text()).toContain("Waiting Classic");
+    expect(text()).not.toContain("Women's Classic");
+    expect(text()).toContain("1 women's race hidden");
+  });
+  it("shows the women's races when asked, labelled as women's", () => {
+    const { text, doc } = page();
+    const sel = doc.getElementById("queuecat") as HTMLSelectElement;
+    for (const o of Array.from(sel.options)) o.toggleAttribute("selected", false);
+    const women = Array.from(sel.options).find((o) => o.value === "WE")!;
+    women.selected = true;
+    women.toggleAttribute("selected", true);
+    sel.onchange!(new Event("change"));
+    expect(text()).toContain("Women's Classic (women elite)");
+    expect(text()).not.toContain("Waiting Classic");
+  });
+});
 
 describe("the race queue page", () => {
   it("lists the unfinished race, and says how many finished and how many other-class races are hidden", () => {

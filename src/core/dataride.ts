@@ -11,6 +11,26 @@ import { parseUciDates } from "./uci-hub";
 
 export type PageKind = "list" | "competition" | "event";
 
+/** ME = men's elite, WE = women's elite: the only two categories this project collects. */
+export type Category = "ME" | "WE";
+
+export const CATEGORY_NAMES: Record<Category, string> = { ME: "Men elite", WE: "Women elite" };
+
+/** The category named by the list page's Category filter, when it is "Men Elite" or "Women Elite". */
+export function categoryFromFilter(text: string): Category | undefined {
+  const t = text.trim().toLowerCase();
+  if (!t.includes("elite") || t.includes("under 23") || t.includes("u23") || t.includes("junior")) return undefined;
+  if (t.startsWith("women")) return "WE";
+  if (t.startsWith("men")) return "ME";
+  return undefined;
+}
+
+/** A Category filter that names some other category (Men Under 23, Women Junior ...), which is not collected. */
+export function isOtherCategory(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (t.startsWith("men") || t.startsWith("women")) && categoryFromFilter(text) === undefined;
+}
+
 export interface DrCompetition {
   id: number;
   name: string;
@@ -20,7 +40,7 @@ export interface DrCompetition {
   country: string;
   class: string; // "1.Pro", "2.UWT" ...
   inProgress: boolean;
-  category?: "ME" | "WE";
+  category?: Category;
 }
 
 export interface DrEvent {
@@ -54,9 +74,9 @@ export function pageKind(pathname: string): PageKind | undefined {
 }
 
 /** The women's races of the list are told from the men's by the page's Category filter, or by the name. */
-export function categoryOf(name: string, filterText = ""): "ME" | "WE" {
-  if (/women/i.test(filterText)) return "WE";
-  if (/men/i.test(filterText)) return "ME";
+export function categoryOf(name: string, filterText = ""): Category {
+  const named = categoryFromFilter(filterText);
+  if (named) return named;
   return /women|donne|dames|femmes|f[eé]minin|femenina|femminile|vrouwen|damen/i.test(name) ? "WE" : "ME";
 }
 

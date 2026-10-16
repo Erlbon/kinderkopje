@@ -17,7 +17,7 @@
  * the build bundles them here.
  */
 import { expandAll, pageThrough, realEnv } from "../src/core/autopilot";
-import { isComplete, mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
+import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
 
 (function () {
   // The names below keep the tool's earlier name: collections already saved in your browser, and
@@ -149,6 +149,10 @@ import { isComplete, mergeEvents, pageKind, readCompetitionEvents, readCompetiti
 
     if (kind === "list") {
       var filter = categoryFilterText();
+      if (isOtherCategory(filter)) {
+        overlay("This list is filtered to \"" + filter + "\". Only Men Elite and Women Elite are collected: change the Category filter and press again.", c, false);
+        return;
+      }
       overlay("Reading the list" + (filter ? " (" + filter + ")" : "") + " ...", c, true);
       var listed = 0;
       var pages = await pageThrough(document, realEnv, {

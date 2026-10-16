@@ -14,7 +14,7 @@ export async function importCaptureFiles(store: Store, files: File[]): Promise<s
       }
       const r = addCapture(store.cube, parsed);
       lines.push(
-        f.name + ": " + r.added + " rankings added, " + r.replaced + " replaced" + (r.competitions ? ", " + r.competitions + " competitions" : "") + (r.events ? ", " + r.events + " event lists" : "") + (r.races ? ", " + r.races + " event results" : "") +
+        f.name + ": " + r.added + " rankings added, " + r.replaced + " replaced" + (r.competitions ? ", " + r.competitions + " competitions (" + Object.entries(r.categories ?? {}).map(([n, c]) => c + " " + n.toLowerCase()).join(", ") + ")" : "") + (r.events ? ", " + r.events + " event lists" : "") + (r.races ? ", " + r.races + " event results" : "") +
           (r.skipped.length ? ", skipped: " + r.skipped.join("; ") : ""),
       );
     } catch (e) {
