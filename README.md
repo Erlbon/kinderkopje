@@ -103,8 +103,10 @@ Per-race results come from DataRide, UCI's results site (`dataride.uci.ch`). One
    up by name across the years.
 2. **A competition** (a link in that list, opened from the queue). The bookmark opens every closed row (the stages and
    the final classification) and notes the events: each event is named after its row ("Stage 5: Stage Classification").
-3. **An event** (a link on the competition page): the General Classification and each *Stage Classification*, not the
-   points or youth rankings, which never give UCI points. The bookmark copies the rows that score points (rank,
+3. **An event** (a link on the competition page): the *Final Classification: General Classification* and each *Stage
+   Classification*. A race is counted by these (a 21-stage Giro is 22 events). The jersey classifications (points,
+   mountains, youth, teams) and the standings after each stage ("Stage General Classification", "Overall ...") are not
+   counted: they are cumulative and give at most a point or two to the leader. The bookmark copies the rows that score points (rank,
    rider, team, age, nation, result, points) and goes on to the next page of the table while every row on the page
    scored; the rows are added to the same event.
 

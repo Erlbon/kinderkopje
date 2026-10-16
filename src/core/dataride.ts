@@ -190,9 +190,14 @@ export function cleanHeading(h: string): string {
   return clean(i >= 0 ? h.slice(i + 3) : h);
 }
 
-/** Events that give UCI points: the general classification and the stages, not the jersey classifications. */
+/**
+ * The events a race is counted by: the result of each stage and the final general classification. Not the jersey
+ * classifications (points, mountains, youth, teams ...), and not the standings after each stage ("Stage 5: Stage General
+ * Classification", "Stage 5: Overall Points Classification"): those are cumulative, and give a point or two to the leader
+ * at most. A stage race of 21 stages is 22 events, whatever DataRide lists besides.
+ */
 export function isScoringEvent(name: string): boolean {
-  return !/points|youth|young|mountain|climber|sprint classif|combativ|teams? classif|best |kom/i.test(name);
+  return !/points|youth|young|mountain|climber|sprint classif|combativ|teams? classif|best |kom|overall|stage general/i.test(name);
 }
 
 /** Rows in one page of a DataRide table. */

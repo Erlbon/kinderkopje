@@ -132,7 +132,9 @@ describe("when an event is complete", () => {
     expect(isComplete({ rows: new Array(80).fill(0), totalRows: 80 })).toBe(false);
   });
   it("only the general classification and the stages count, not the jersey classifications", () => {
-    for (const n of ["General Classification", "Stage 3", "Prologue", "Individual Time Trial"]) expect(isScoringEvent(n), n).toBe(true);
+    for (const n of ["General Classification", "Stage 3", "Prologue", "Individual Time Trial", "Stage 5: Stage Classification", "Final Classification: General Classification", "Final Result: General Classification", "Prologue: Stage Classification"]) expect(isScoringEvent(n), n).toBe(true);
+    // the standings after a stage, and the jersey classifications, are not what a race is counted by
+    for (const n of ["Stage 5: Stage General Classification", "Stage 5: Overall Points Classification", "Stage 5: Overall Mountain Classification", "Stage 5: Overall Youth Classification", "Stage 5: Stage Points Classification", "Stage 5: Stage Mountain Classification", "Final Classification: Youth Classification"]) expect(isScoringEvent(n), n).toBe(false);
     for (const n of ["Points Classification", "Youth Classification", "Mountains Classification", "Teams Classification"]) expect(isScoringEvent(n), n).toBe(false);
   });
 });
@@ -210,6 +212,20 @@ describe("the same race under different names", () => {
     const imported = Date.now();
     queue(...many); // the import itself, too
     expect(Date.now() - imported).toBeLessThan(1500);
+  });
+  it("a Grand Tour is counted as its stages plus the general classification, whatever else DataRide lists for each stage", () => {
+    // the names DataRide really lists for a 21-stage race (Giro d'Italia 2026): 165 events, 22 of them count
+    const events: { id: number; name: string }[] = [];
+    let id = 1;
+    for (let stage = 1; stage <= 21; stage++) {
+      for (const kind of ["Stage Classification", "Stage Points Classification", "Stage Youth Classification", "Stage Mountain Classification"]) events.push({ id: id++, name: "Stage " + stage + ": " + kind });
+      if (stage < 21) for (const kind of ["Stage General Classification", "Overall Points Classification", "Overall Mountain Classification", "Overall Youth Classification"]) events.push({ id: id++, name: "Stage " + stage + ": " + kind });
+    }
+    for (const kind of ["General Classification", "Points Classification", "Mountain Classification", "Youth Classification"]) events.push({ id: id++, name: "Final Classification: " + kind });
+    expect(events.filter((e) => isScoringEvent(e.name))).toHaveLength(22);
+    const cube = queue(comp(1, "Giro d'Italia", 2026));
+    addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 1, events }] });
+    expect(queueStatus(cube)[0]).toMatchObject({ eventsKnown: 22, eventsCaptured: 0, eventsComplete: 0 });
   });
   it("a longer line joins every name before the last into the last, in any order", () => {
     const cube = queue(comp(1, "Alpha Grand Prix", 2021), comp(2, "Alpha Grand Prix Open", 2022), comp(3, "Alpha GP Open Belgium", 2023), comp(4, "Alpha GP of Belgium", 2024));
