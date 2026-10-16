@@ -18,3 +18,10 @@ describe("the site icon", () => {
     }
   });
 });
+
+describe("the site headline", () => {
+  it("is the project name on the home page and a link back on every other page", () => {
+    expect(read("src/site/index.html")).toContain("<h1>The R-Pelotonic Database project</h1>");
+    for (const f of ["teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain('<p class="site"><a href="index.html">The R-Pelotonic Database project</a></p>');
+  });
+});
