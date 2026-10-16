@@ -22,7 +22,7 @@ describe("the site icon", () => {
 describe("the site headline", () => {
   const brand = (inner: string) => '<header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt="">' + inner + "</a></header>";
   it("is the project name with the logo, as the title of the home page and a link back on every other page", () => {
-    expect(read("src/site/index.html")).toContain(brand("<h1>The R-Pelotonic Database project</h1>"));
-    for (const f of ["teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">The R-Pelotonic Database project</span>'));
+    expect(read("src/site/index.html")).toContain(brand("<h1>Pelotonic - The R Peloton Database Project</h1>"));
+    for (const f of ["teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Pelotonic - The R Peloton Database Project</span>'));
   });
 });
