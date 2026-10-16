@@ -63,7 +63,7 @@ describe("links of a race", () => {
     "    - { text: Strava, url: \"https://www.strava.com/clubs/strade\" }",
   ].join(String.fromCharCode(10));
 
-  it("come from the race registry: site, Wikipedia, FirstCycling and the social media, never ProCyclingStats", () => {
+  it("come from the race registry: site, Wikipedia, FirstCycling and the social media; the registry's pcs field does not become a link", () => {
     const store = linksFromRegistry(REGISTRY);
     const links = store[linkKey("Strade Bianche", "ME")]!;
     expect(links.map((l) => l.kind)).toEqual(["website", "wikipedia", "firstcycling", "instagram", "x", "other"]);

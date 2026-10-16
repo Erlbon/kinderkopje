@@ -146,7 +146,7 @@ export const DICTIONARY: TableDoc[] = [
   {
     name: "race_link",
     kind: "table",
-    summary: "Where each race lives on the web: official site, Wikipedia, social media and FirstCycling. ProCyclingStats is left out on purpose.",
+    summary: "Where each race lives on the web: official site, Wikipedia, social media and FirstCycling.",
     columns: [
       { name: "race_id", meaning: "Which race: race.race_id." },
       { name: "kind", meaning: "website, wikipedia, wikidata, x, instagram, facebook, youtube, tiktok, firstcycling or other." },

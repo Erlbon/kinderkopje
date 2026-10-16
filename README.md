@@ -136,8 +136,7 @@ race by any of its names and lets you change the internal name (a line `any exte
 The database has them as `race` (one row per race, men's and women's elite apart) and `race_name` (its external names),
 and every edition and result carries a `race_id`, so one race has the same id in every year whatever it was called.
 
-**Race links.** Each race can have its official site, Wikipedia page, social media and FirstCycling page (ProCyclingStats is
-left out on purpose: the project does not use it). They come from three places: the race registry of the Threads tab,
+**Race links.** Each race can have its official site, Wikipedia page, social media and FirstCycling page. They come from three places: the race registry of the Threads tab,
 Wikidata, and links typed in by hand on a race's card under *Race names*. **Find links (World Tour)** asks Wikidata
 about the World Tour races of the chosen category, one race at a time with a pause, trying each name a race has had,
 and shows every match with its description for you to decide: *Same race*, *Not the same* or *Don't know*. Nothing is
@@ -224,8 +223,8 @@ the three-week Grand Tours), and an optional overall thread (`mega: true`).
 
 ## Data sources
 
-The tool reads no websites. Calendars come from files you give it. Some sites (ProCyclingStats,
-FirstCycling) forbid automated access, so the plan is for moderators to save pages from their own
+The tool reads no websites. Calendars come from files you give it. Some sites (FirstCycling, for one)
+forbid automated access, so the plan is for moderators to save pages from their own
 browser. Do not add scrapers for sites that ban them without their written permission.
 
 ## Developing

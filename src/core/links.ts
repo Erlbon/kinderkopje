@@ -4,8 +4,7 @@ import type { WikidataRace } from "./wikipedia";
 import { normRaceName } from "./uci-hub";
 
 /**
- * Where a race lives on the web: its official site, Wikipedia, social media and FirstCycling. ProCyclingStats is left
- * out on purpose: the project does not use it (it does not allow automated access, and we do not point to it either).
+ * Where a race lives on the web: its official site, Wikipedia, social media and FirstCycling.
  * Links come from the race registry of the Threads tab, from Wikidata (after you have checked the match) and from
  * links typed in by hand.
  */
@@ -90,7 +89,7 @@ export function removeFromLinkStore(store: LinkStore, keys: string[], link: Race
   return out;
 }
 
-/** Links from the race registry YAML of the Threads tab. ProCyclingStats slugs are ignored on purpose. */
+/** Links from the race registry YAML of the Threads tab (site, Wikipedia, FirstCycling and social media). */
 export function linksFromRegistry(yamlText: string | undefined): LinkStore {
   const out: LinkStore = {};
   if (!yamlText) return out;
