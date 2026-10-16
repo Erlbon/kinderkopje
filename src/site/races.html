@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pelotonic: Race results</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=__BUILD__">
 </head>
 <body>
 <main>
@@ -33,13 +33,14 @@
     <div id="mergednote" class="mut"></div>
     <textarea id="racealiases" spellcheck="false" style="min-height:70px" placeholder="Boucles de la Mayenne = Boucles de la Mayenne - Crédit Mutuel"></textarea>
     <div class="row" style="margin-top:6px"><button id="racealiasessave">Save and join</button></div>
+    <div id="aliasmsg" class="mut" style="margin-top:6px"></div>
   </details>
   <div id="queuemsg" class="mut" style="margin:6px 0"></div>
   <div id="queueout"></div>
 </fieldset>
 <p class="mut">Everything is kept in the shared database (see the Data page). <span>__VERSION__</span></p>
 </main>
-<script src="app.js"></script>
+<script src="app.js?v=__BUILD__"></script>
 <script>RT.start("races")</script>
 </body>
 </html>

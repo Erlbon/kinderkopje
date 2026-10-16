@@ -44,6 +44,49 @@ describe("races whose names changed", () => {
   });
 });
 
+describe("the Save and join button", () => {
+  it("joins the two names you wrote, on the page, and remembers the line", async () => {
+    const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
+    const { document } = parseHTML(html);
+    (globalThis as unknown as { document: Document }).document = document as unknown as Document;
+    const doc = document as unknown as Document;
+    for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = false;
+    const cube = emptyCube();
+    const comp = (id: number, name: string, year: number) => ({ id, name, start: year + "-06-01", end: year + "-06-08", year, country: "FRA", class: "2.UWT", inProgress: false, category: "ME" as const });
+    addCapture(cube, { format: "racethreads-capture/1", competitions: [comp(1, "Critérium du Dauphiné", 2025), comp(2, "Critérium du Dauphiné", 2024), comp(3, "Tour Auvergne - Rhône-Alpes", 2026)] });
+    const texts = new Map<string, string>();
+    const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: (k: string) => texts.get(k), setText: async (k: string, v: string) => void texts.set(k, v) } as unknown as Store;
+    initRaces(store);
+    const rows = () => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => c.textContent);
+    expect(rows().filter((r) => /Dauphin|Auvergne/.test(r ?? ""))).toHaveLength(2);
+
+    (doc.getElementById("racealiases") as HTMLTextAreaElement).value = "Critérium du Dauphiné = Tour Auvergne - Rhône-Alpes";
+    await (doc.getElementById("racealiasessave")!.onclick as () => Promise<void>)();
+    expect(rows().filter((r) => /Dauphin|Auvergne/.test(r ?? ""))).toHaveLength(1);
+    expect(texts.get("racealiases")).toContain("Dauphiné");
+    expect(doc.getElementById("mergednote")!.textContent).toContain("Joined: ");
+    expect(doc.getElementById("aliasmsg")!.textContent).toContain("joined");
+  });
+  it("says why a line did nothing", async () => {
+    const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
+    const { document } = parseHTML(html);
+    (globalThis as unknown as { document: Document }).document = document as unknown as Document;
+    const doc = document as unknown as Document;
+    for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = false;
+    const cube = emptyCube();
+    const comp = (id: number, name: string, year: number) => ({ id, name, start: year + "-06-01", end: year + "-06-08", year, country: "FRA", class: "2.UWT", inProgress: false, category: "ME" as const });
+    addCapture(cube, { format: "racethreads-capture/1", competitions: [comp(1, "Race One", 2026), comp(2, "Race Two", 2026)] });
+    const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: () => undefined, setText: async () => undefined } as unknown as Store;
+    initRaces(store);
+    const NL = String.fromCharCode(10);
+    (doc.getElementById("racealiases") as HTMLTextAreaElement).value = ["Race One = Race Two", "Race One = Nothing Like It"].join(NL);
+    await (doc.getElementById("racealiasessave")!.onclick as () => Promise<void>)();
+    const said = doc.getElementById("aliasmsg")!.textContent ?? "";
+    expect(said).toContain("same year");
+    expect(said).toContain('no race named "Nothing Like It"');
+  });
+});
+
 describe("men's and women's races", () => {
   it("shows men's elite by default and says how many women's races are hidden", () => {
     const { text, doc } = page();

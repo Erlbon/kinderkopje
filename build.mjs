@@ -43,7 +43,7 @@ const links = {
 };
 
 for (const f of readdirSync("src/site").filter((n) => n.endsWith(".html"))) {
-  let html = readFileSync("src/site/" + f, "utf8").split("__VERSION__").join(version);
+  let html = readFileSync("src/site/" + f, "utf8").split("__VERSION__").join(version).split("__BUILD__").join(sha);
   for (const [k, v] of Object.entries(links)) html = html.split(k).join(v);
   writeFileSync("dist/" + f, html);
 }

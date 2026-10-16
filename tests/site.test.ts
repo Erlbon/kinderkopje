@@ -94,3 +94,14 @@ describe("the intro page", () => {
     expect(doc.querySelector('a[href="#sources"]')).not.toBeNull();
   });
 });
+
+describe("cached files", () => {
+  it("every page asks for the stylesheet and the script with the build id, so an old copy cannot be paired with a new page", () => {
+    for (const f of readdirSync(new URL("../src/site", import.meta.url)).filter((n) => n.endsWith(".html"))) {
+      const html = read("src/site/" + f);
+      expect(html, f).toContain('href="app.css?v=__BUILD__"');
+      if (html.includes("app.js")) expect(html, f).toContain('src="app.js?v=__BUILD__"');
+    }
+    expect(read("build.mjs")).toContain('split("__BUILD__")');
+  });
+});

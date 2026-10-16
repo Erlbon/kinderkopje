@@ -493,7 +493,7 @@ function mergeEditions(from: RaceEditions, into: RaceEditions): boolean {
 /** Shorter names must be at least this long (after cleaning) to be taken for the start of a longer one. */
 const MIN_PREFIX = 8;
 
-export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races: RaceEditions[]; merged: string[] } {
+export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races: RaceEditions[]; merged: string[]; aliasReport: string[] } {
   const map = new Map<string, RaceEditions>();
   for (const l of queueStatus(cube)) {
     const category: Category = l.category ?? (/women/i.test(l.hub) ? "WE" : "ME");
@@ -508,16 +508,26 @@ export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races:
     r.editions[l.year] = l;
   }
   const merged: string[] = [];
-  // 1. the aliases the user wrote down
+  const aliasReport: string[] = [];
+  // 1. the aliases the user wrote down, each with an account of what it did
   for (const [from, to] of parseRaceAliases(aliases)) {
+    let said = "";
     for (const category of ["ME", "WE"] as const) {
       const a = map.get(normRaceName(from) + "|" + category);
       const b = map.get(normRaceName(to) + "|" + category);
-      if (a && b && a !== b && mergeEditions(a, b)) {
+      if (!a || !b) continue;
+      if (a === b) said = "already the same race";
+      else if (mergeEditions(a, b)) {
         map.delete(a.key);
         merged.push(a.name + " -> " + b.name);
-      }
+        said = "joined";
+      } else said = "not joined: both have an edition in the same year";
     }
+    if (!said) {
+      const known = (n: string) => ["ME", "WE"].some((c) => map.has(normRaceName(n) + "|" + c));
+      said = !known(from) ? 'not joined: no race named "' + from + '" in the queue' : !known(to) ? 'not joined: no race named "' + to + '" in the queue' : "not joined: the two races are in different categories";
+    }
+    aliasReport.push(from + " = " + to + ": " + said);
   }
   // 2. the same race with a sponsor added or dropped: one cleaned name starts the other, and the years never overlap
   for (let again = true; again; ) {
@@ -541,7 +551,7 @@ export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races:
     }
   }
   const years = [...new Set([...map.values()].flatMap((r) => Object.keys(r.editions).map(Number)))].sort((a, b) => b - a);
-  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)), merged };
+  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)), merged, aliasReport };
 }
 
 export interface SeasonColumn {

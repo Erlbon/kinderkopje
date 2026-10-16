@@ -132,8 +132,16 @@ export function initRaces(store: Store): void {
   };
   $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
   $("racealiasessave").onclick = async () => {
-    await store.setText("racealiases", $<HTMLTextAreaElement>("racealiases").value);
-    draw();
+    const msg = $("aliasmsg");
+    msg.textContent = "Saving ...";
+    try {
+      await store.setText("racealiases", $<HTMLTextAreaElement>("racealiases").value);
+    } catch (e) {
+      msg.textContent = "Could not save: " + (e instanceof Error ? e.message : String(e));
+    }
+    draw(); // joins what it can even when the save failed
+    const report = queueByRace(cube(), $<HTMLTextAreaElement>("racealiases").value).aliasReport;
+    if (msg.textContent === "Saving ...") msg.textContent = report.length ? "Saved. " + report.join(" | ") : "Saved. No alias lines to apply (write one as: old name = new name).";
   };
   $("queuemissing").onchange = draw;
   $("queuetop").onchange = draw;
