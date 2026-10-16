@@ -1,4 +1,4 @@
-import { CATEGORY_NAMES, JoinSuggestion, chainLines, normRaceName, queueByRace, suggestJoins } from "../../core";
+import { CATEGORY_NAMES, JoinSuggestion, QueueLine, chainLines, normRaceName, queueByRace, suggestJoins } from "../../core";
 import { importCaptureFiles } from "../capture-import";
 import { $, el, tick } from "../dom";
 import type { Store } from "../store";
@@ -32,6 +32,35 @@ export function initRaces(store: Store): void {
   const chosenCategory = () => chosen("queuecat") || "ME";
   /** WorldTour, ProSeries and championships: the classes the main interest is in. */
   const isTop = (cls?: string) => /UWT|WWT|Pro|WC|CM/i.test(cls ?? "");
+  /** "Stage 14: Stage Classification" -> "Stage 14"; "Final Classification: General Classification" -> "General Classification". */
+  const shortEvent = (name: string) => name.replace(": Stage Classification", "").replace("Final Classification: ", "").replace("Final Result: ", "");
+  /** The lines under a race that say, per year, which events are missing or wait for their next page, each a link to that event. */
+  function missingRow(editions: QueueLine[], columns: number): HTMLElement {
+    const td = el("td");
+    td.setAttribute("colspan", String(columns));
+    for (const e of [...editions].sort((a, b) => b.year - a.year)) {
+      if (!e.missingEvents.length && !e.waitingEvents.length) continue;
+      const line = el("div");
+      line.append(el("b", { textContent: e.year + ": " }));
+      const list = (events: { id: number; name: string }[], title: string) =>
+        events.forEach((ev, i) => {
+          if (i) line.append(", ");
+          const href = "https://dataride.uci.ch/iframe/EventResults/" + ev.id + "?competitionId=" + e.uciId + "&disciplineId=10";
+          line.append(el("a", { href, target: "_blank", rel: "noopener", textContent: shortEvent(ev.name), title }));
+        });
+      if (e.missingEvents.length) {
+        line.append("not captured yet: ");
+        list(e.missingEvents, "Open this event, then press the bookmark");
+      }
+      if (e.waitingEvents.length) {
+        if (e.missingEvents.length) line.append(". ");
+        line.append("next page still to read: ");
+        list(e.waitingEvents, "Go to the next page of the table, then press the bookmark");
+      }
+      td.append(line);
+    }
+    return el("tr", { class: "detail" }, td);
+  }
   /** How many joins wait for a decision; undefined = work it out again (it is the slow part, so only when the data changed). */
   let pendingJoins: number | undefined;
   /** How high a UCI class ranks: WorldTour first, then ProSeries, then the rest by level. */
@@ -126,6 +155,17 @@ export function initRaces(store: Store): void {
       }
       nameCell.append(r.name + (r.category === "ME" ? "" : " (" + CATEGORY_NAMES[r.category].toLowerCase() + ")"));
       const tr = el("tr", {}, nameCell, el("td", { textContent: eds.filter(finished).length + "/" + eds.length }));
+      if (eds.some((e) => e.missingEvents.length || e.waitingEvents.length)) {
+        // a twist in front of the name opens the list of what is missing under the row
+        const twist = el("button", { class: "twist", textContent: "▸", title: "Which events are missing", type: "button" });
+        twist.onclick = () => {
+          const open = tr.nextElementSibling?.classList.contains("detail");
+          if (open) tr.nextElementSibling!.remove();
+          else tr.after(missingRow(eds, 2 + years.length));
+          twist.textContent = open ? "▸" : "▾";
+        };
+        nameCell.prepend(twist);
+      }
       for (const y of years) {
         const e = r.editions[y];
         const td = el("td");

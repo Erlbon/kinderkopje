@@ -27,7 +27,7 @@ function page(): { doc: Document; text: () => string } {
 }
 
 // a page with a small queue built from (name, year, class) lines, and a store that remembers what is saved
-function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit?: (doc: Document) => void) {
+function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit?: (doc: Document) => void, prepare?: (cube: ReturnType<typeof emptyCube>) => void) {
   const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
   (globalThis as unknown as { document: Document }).document = document as unknown as Document;
@@ -38,6 +38,7 @@ function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit
   addCapture(cube, { format: "racethreads-capture/1", competitions: names.map(([n, y, c, k], i) => comp(i + 1, n, y, c, k)) });
   const texts = new Map<string, string>();
   const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: (k: string) => texts.get(k), setText: async (k: string, v: string) => void texts.set(k, v) } as unknown as Store;
+  prepare?.(cube);
   beforeInit?.(doc);
   initRaces(store);
   const rows = () => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => c.textContent ?? "").filter((t) => t.includes("Mayenne"));
@@ -141,6 +142,36 @@ describe("races whose names changed", () => {
     both.button("Find joins").click();
     expect(headings(both.doc)).toEqual(["Men's elite races (1)", "Women's elite races (1)"]);
     expect(both.doc.querySelectorAll("#joinreview table")).toHaveLength(2);
+  });
+});
+
+describe("which events are missing", () => {
+  it("a twist on an unfinished race lists the missing events as links to their DataRide pages", () => {
+    const { doc } = pageWith([["Stage Tour", 2026, "2.Pro"]], undefined, (cube) => {
+      addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 1, events: [{ id: 11, name: "Stage 1: Stage Classification" }, { id: 12, name: "Stage 2: Stage Classification" }, { id: 13, name: "Final Classification: General Classification" }] }] });
+      const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ rank: i + 1, rider: "R" + i, team: "T", age: 25, nation: "BEL", result: "x", points: 5 }));
+      addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 1, eventId: 11, heading: "x", totalRows: 40, rows: rows(5) }, { competitionId: 1, eventId: 12, heading: "x", totalRows: 40, rows: rows(40) }] });
+    });
+    const twist = doc.querySelector("#queueout button.twist") as HTMLButtonElement;
+    expect(twist).not.toBeNull();
+    expect(doc.querySelector("#queueout tr.detail")).toBeNull(); // closed until you ask
+    twist.click();
+    const detail = doc.querySelector("#queueout tr.detail")!;
+    expect(detail.textContent).toContain("2026: not captured yet: General Classification");
+    expect(detail.textContent).toContain("next page still to read: Stage 2");
+    const hrefs = Array.from(detail.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "https://dataride.uci.ch/iframe/EventResults/13?competitionId=1&disciplineId=10",
+      "https://dataride.uci.ch/iframe/EventResults/12?competitionId=1&disciplineId=10",
+    ]);
+    twist.click(); // and closes again
+    expect(doc.querySelector("#queueout tr.detail")).toBeNull();
+  });
+  it("a finished race has no twist", () => {
+    const { doc } = pageWith([["Finished Classic", 2026, "1.UWT"]], undefined, (cube) => {
+      addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 1, eventId: 5, heading: "x", totalRows: 40, rows: [{ rank: 1, rider: "R", team: "T", age: 25, nation: "BEL", result: "x", points: 5 }] }] });
+    });
+    expect(doc.querySelector("#queueout button.twist")).toBeNull();
   });
 });
 
@@ -254,7 +285,7 @@ describe("the race queue page", () => {
     expect(finished.firstElementChild?.textContent).toBe("1.UWT");
     expect(finished.textContent).toBe("1.UWTFinished Classic");
     const waiting = cells.find((c) => c.textContent?.includes("Waiting Classic"))!;
-    expect(waiting.firstElementChild?.textContent).toBe("1.Pro");
+    expect(waiting.querySelector(".tag")?.textContent).toBe("1.Pro"); // an unfinished race also has a twist in front of the pill
   });
   it("searches by name, ignoring case and accents", () => {
     const { doc, text } = page();

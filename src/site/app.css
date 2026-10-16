@@ -69,3 +69,6 @@ td.seg button.on.seg-unknown{background:var(--mut);color:var(--on-mut);border-co
 .card2 p{margin:0;font-size:13px;color:var(--mut)}
 .ic{width:56px;height:56px}
 .ic .f{fill:var(--acc-soft);stroke:var(--acc);stroke-width:1.5}
+tr.detail td{background:var(--card);padding:6px 10px 8px 34px;font-size:13px;color:var(--mut)}
+tr.detail div{margin:2px 0}
+button.twist{border:0;background:transparent;color:var(--acc-text);padding:0 6px 0 0;font-size:14px}

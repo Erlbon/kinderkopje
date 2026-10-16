@@ -286,6 +286,8 @@ export interface QueueLine extends QueueRace {
   eventsKnown: number; // events listed on the competition page that give points (general classification, stages)
   eventsCaptured: number; // of those, events with a result captured
   eventsComplete: number; // of those, events whose table was read to the end (not waiting for the next page)
+  missingEvents: { id: number; name: string }[]; // events that give points and have no result captured yet
+  waitingEvents: { id: number; name: string }[]; // captured, but the next page of the table is still to be read
 }
 
 /** The queue with what has been captured for each race. */
@@ -301,12 +303,15 @@ export function queueStatus(cube: Cube): QueueLine[] {
     const scoring = [...listed, ...extra];
     const have = scoring.filter((e) => byEvent.has(e.id));
     const eventsComplete = have.filter((e) => isComplete(byEvent.get(e.id)!)).length;
-    const line = { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown: scoring.length, eventsCaptured: have.length, eventsComplete };
+    const missingEvents = scoring.filter((e) => !byEvent.has(e.id));
+    const waitingEvents = have.filter((e) => !isComplete(byEvent.get(e.id)!));
+    const line = { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown: scoring.length, eventsCaptured: have.length, eventsComplete, missingEvents, waitingEvents };
     // a one-day race has one event: no competition page is needed to know that
     if (!scoring.length && q.start && q.start === q.end && r?.classifications.length) {
       line.eventsKnown = 1;
       line.eventsCaptured = 1;
       line.eventsComplete = r.classifications.every(isComplete) ? 1 : 0;
+      line.waitingEvents = r.classifications.filter((c) => !isComplete(c)).map((c) => ({ id: c.eventId ?? 0, name: c.label }));
     }
     return line;
   });

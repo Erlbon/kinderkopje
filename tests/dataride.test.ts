@@ -213,6 +213,20 @@ describe("the same race under different names", () => {
     queue(...many); // the import itself, too
     expect(Date.now() - imported).toBeLessThan(1500);
   });
+  it("says which events are missing and which only wait for the next page of their table", () => {
+    const cube = queue(comp(1, "Stage Tour", 2026));
+    const events = [{ id: 1, name: "Stage 1: Stage Classification" }, { id: 2, name: "Stage 2: Stage Classification" }, { id: 3, name: "Final Classification: General Classification" }, { id: 4, name: "Stage 1: Stage Points Classification" }];
+    addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 1, events }] });
+    const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ rank: i + 1, rider: "R" + i, team: "T", age: 25, nation: "BEL", result: "x", points: 5 }));
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [
+      { competitionId: 1, eventId: 1, heading: "x", totalRows: 40, rows: rows(5) }, // stage 1: the table went on past the points: complete
+      { competitionId: 1, eventId: 2, heading: "x", totalRows: 40, rows: rows(40) }, // stage 2: every row scored, the next page is not read
+    ] });
+    const line = queueStatus(cube)[0]!;
+    expect(line.missingEvents.map((e) => e.id)).toEqual([3]); // the final classification; the jersey event is not counted
+    expect(line.waitingEvents.map((e) => e.id)).toEqual([2]);
+    expect(line).toMatchObject({ eventsKnown: 3, eventsCaptured: 2, eventsComplete: 1 });
+  });
   it("a Grand Tour is counted as its stages plus the general classification, whatever else DataRide lists for each stage", () => {
     // the names DataRide really lists for a 21-stage race (Giro d'Italia 2026): 165 events, 22 of them count
     const events: { id: number; name: string }[] = [];
