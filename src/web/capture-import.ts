@@ -21,6 +21,11 @@ export async function importCaptureFiles(store: Store, files: File[]): Promise<s
       lines.push(f.name + ": " + (e instanceof Error ? e.message : "could not read this file"));
     }
   }
-  await store.saveCube();
+  try {
+    await store.saveCube();
+  } catch (e) {
+    // what was read is on the page, but it is not in the stored database: say so
+    lines.push("NOT SAVED to the database: " + (e instanceof Error ? e.message : String(e)));
+  }
   return lines;
 }

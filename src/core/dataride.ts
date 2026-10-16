@@ -175,7 +175,13 @@ export function isScoringEvent(name: string): boolean {
   return !/points|youth|young|mountain|climber|sprint classif|combativ|teams? classif|best |kom/i.test(name);
 }
 
-/** A result list is complete when the table went on past the last scoring row; otherwise the next page may hold more points. */
+/** Rows in one page of a DataRide table. */
+export const PAGE_SIZE = 40;
+
+/**
+ * A result list is complete when the table went on past the last scoring row (a non-scoring row was seen), or when the
+ * last page was short (the table ended there). Otherwise the next page may hold more points.
+ */
 export function isComplete(c: { rows: unknown[]; totalRows: number }): boolean {
-  return c.rows.length < c.totalRows;
+  return c.rows.length < c.totalRows || c.rows.length % PAGE_SIZE !== 0;
 }

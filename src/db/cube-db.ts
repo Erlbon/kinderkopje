@@ -45,8 +45,13 @@ export function saveCube(db: Database, cube: Cube): void {
     const row = db.prepare("INSERT INTO result_row(classification_id, rank, rider, team, age, nation, result, points) VALUES (?,?,?,?,?,?,?,?)");
     for (const r of cube.raceResults ?? []) {
       race.run([r.uciId, r.year, r.name, r.class ?? null, r.classText ?? null, r.dates ?? null, r.country ?? null, r.capturedAt ?? null, r.contributor ?? null]);
+      const used = new Set<string>();
       for (const c of r.classifications) {
-        cls.run([r.uciId, c.label, c.title, c.totalRows, c.eventId ?? null]);
+        // a race's classifications must differ in label or title; two events with the same names get their event number
+        let label = c.label;
+        if (used.has(label + "|" + c.title)) label += " [" + (c.eventId ?? used.size) + "]";
+        used.add(label + "|" + c.title);
+        cls.run([r.uciId, label, c.title, c.totalRows, c.eventId ?? null]);
         const cid = Number(db.exec("SELECT last_insert_rowid()")[0]!.values[0]![0]);
         for (const w of c.rows) row.run([cid, w.rank, w.rider, w.team, w.age, w.nation, w.result, w.points]);
       }

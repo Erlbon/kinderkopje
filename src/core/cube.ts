@@ -230,7 +230,7 @@ export function mergeEventResult(cube: Cube, e: DrEventResult): void {
     list.push(race);
   }
   race.capturedAt = new Date().toISOString();
-  const label = q?.events?.find((x) => x.id === e.eventId)?.name || heading || "Event " + e.eventId;
+  const label = q?.events?.find((x) => x.id === e.eventId)?.name || "Event " + e.eventId;
   const have = race.classifications.find((c) => c.eventId === e.eventId);
   if (!have) {
     race.classifications.push({ label, title: heading || label, eventId: e.eventId, totalRows: e.totalRows, rows: e.rows });
@@ -289,7 +289,10 @@ export function queueStatus(cube: Cube): QueueLine[] {
     const r = byId.get(q.uciId);
     const rows = r ? r.classifications.reduce((n, c) => n + c.rows.length, 0) : 0;
     const byEvent = new Map((r?.classifications ?? []).map((c) => [c.eventId, c]));
-    const scoring = (q.events ?? []).filter((e) => isScoringEvent(e.name));
+    // the events the competition page listed, plus any result captured for the competition that the list did not mention
+    const listed = (q.events ?? []).filter((e) => isScoringEvent(e.name));
+    const extra = (q.events?.length ? r?.classifications ?? [] : []).filter((c) => c.eventId !== undefined && !listed.some((e) => e.id === c.eventId) && isScoringEvent(c.label)).map((c) => ({ id: c.eventId!, name: c.label }));
+    const scoring = [...listed, ...extra];
     const have = scoring.filter((e) => byEvent.has(e.id));
     const eventsComplete = have.filter((e) => isComplete(byEvent.get(e.id)!)).length;
     const line = { ...q, captured: !!r && rows > 0, rows, classifications: r ? r.classifications.length : 0, eventsKnown: scoring.length, eventsCaptured: have.length, eventsComplete };

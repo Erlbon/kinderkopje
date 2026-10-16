@@ -105,6 +105,8 @@ describe("when an event is complete", () => {
     expect(isComplete({ rows: new Array(40).fill(0), totalRows: 40 })).toBe(false);
     expect(isComplete({ rows: new Array(40).fill(0), totalRows: 80 })).toBe(true); // the next page was read and went on past the last scoring row
     expect(isComplete({ rows: new Array(5).fill(0), totalRows: 40 })).toBe(true);
+    expect(isComplete({ rows: new Array(58).fill(0), totalRows: 58 })).toBe(true); // 40 + a short last page, everyone scored: the table ended
+    expect(isComplete({ rows: new Array(80).fill(0), totalRows: 80 })).toBe(false);
   });
   it("only the general classification and the stages count, not the jersey classifications", () => {
     for (const n of ["General Classification", "Stage 3", "Prologue", "Individual Time Trial"]) expect(isScoringEvent(n), n).toBe(true);
@@ -157,6 +159,14 @@ describe("DataRide captures in the cube", () => {
     const stage = { competitionId: 76415, eventId: 9, heading: "x", totalRows: 40, rows: [{ rank: 1, rider: "A", team: "T", age: 20, nation: "ITA", result: "x", points: 5 }] };
     addCapture(cube, { format: "racethreads-capture/1", eventResults: [stage] });
     expect(queueStatus(cube).find((l) => l.uciId === 76415)).toMatchObject({ eventsKnown: 0 });
+  });
+  it("results captured for events the competition page did not list still count", () => {
+    const cube = emptyCube();
+    addCapture(cube, { format: "racethreads-capture/1", competitions: readCompetitionList(doc(LIST)) });
+    addCapture(cube, { format: "racethreads-capture/1", competitionEvents: [{ competitionId: 76415, events: [{ id: 1, name: "Stage 5: Stage Classification" }] }] });
+    const e = (id: number, n: number) => ({ competitionId: 76415, eventId: id, heading: "Tour", totalRows: n + 10, rows: Array.from({ length: n }, (_, i) => ({ rank: i + 1, rider: "R" + i, team: "T", age: 20, nation: "ITA", result: "x", points: 5 })) });
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [e(1, 5), e(2, 5), e(3, 5)] });
+    expect(queueStatus(cube).find((l) => l.uciId === 76415)).toMatchObject({ eventsKnown: 3, eventsCaptured: 3, eventsComplete: 3 });
   });
   it("men's and women's races of the list stay apart in the queue by race", () => {
     const { races } = queueByRace(captured());

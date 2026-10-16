@@ -17,7 +17,7 @@
  * the build bundles them here.
  */
 import { expandAll, pageThrough, realEnv } from "../src/core/autopilot";
-import { mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
+import { isComplete, mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
 
 (function () {
   // The names below keep the tool's earlier name: collections already saved in your browser, and
@@ -263,7 +263,7 @@ import { mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, read
       }
       var all = null;
       for (var k = 0; k < c.eventResults.length; k++) if (c.eventResults[k].eventId === last.eventId) all = c.eventResults[k];
-      var complete = all && all.rows.length < all.totalRows;
+      var complete = all && isComplete(all);
       overlay(
         (stopped ? "Stopped. " : "") + "Captured " + (all ? all.rows.length : 0) + " point-scoring rows from " + read + " page" + (read === 1 ? "" : "s") + ". " +
           (complete

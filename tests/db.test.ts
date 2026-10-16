@@ -142,6 +142,16 @@ describe("upgrading an older database", () => {
     expect(cube.raceResults![0]).toMatchObject({ uciId: 78462, name: "Paris - Tours Elite" });
     expect(cube.raceResults![0]!.contributor).toBeUndefined();
   });
+  it("two events of one race with the same names are both saved", () => {
+    const cube = emptyCube();
+    const rows = [{ rank: 1, rider: "A", team: "T", age: 20, nation: "ITA", result: "x", points: 5 }];
+    cube.raceResults = [
+      { uciId: 77382, year: 2026, name: "AlUla Tour", classifications: [{ label: "Event 1", title: "AlUla Tour", eventId: 1, totalRows: 40, rows }, { label: "Event 1", title: "AlUla Tour", eventId: 2, totalRows: 40, rows }] },
+    ];
+    const db = openDatabase(SQL);
+    saveCube(db, cube); // used to fail with a UNIQUE constraint and lose the whole import
+    expect(loadCube(db).raceResults![0]!.classifications.map((c) => c.eventId)).toEqual([1, 2]);
+  });
   it("the contributor of a race result is kept", () => {
     const cube = emptyCube();
     cube.raceResults = [{ uciId: 1, year: 2026, name: "Some Race", contributor: "A Helper", classifications: [] }];
