@@ -46,12 +46,39 @@ describe("the intro page", () => {
       expect(html, f).toContain(nav(f));
     }
   });
-  it("states the intent, lists the three tasks, and has a sources box with named links", () => {
+  it("states the intent, lists the three tasks with their status, and describes the open database", () => {
     const html = read("src/site/index.html");
-    expect(html).toContain("AI-assisted hub for collecting information from reddit/r/peloton, UCI.org and other sources");
-    expect(html).toContain("a small database of current cycling results +/- five years");
-    expect(html).toContain("fully open source and can be downloaded by any user in a sql lite file");
-    for (const task of ["Automatic Race Thread Generation", "Automatic Race Statistics", "Automatic Team Statistics"]) expect(html, task).toContain(task);
+    expect(html).toContain("AI-assisted hub for collecting information from r/peloton, UCI.org and other sources");
+    expect(html).toContain("a small open database of cycling results, about five years back");
+    expect(html).toContain("the code here is open source (MIT)");
+    for (const task of ["Race thread generation", "Race statistics", "Team statistics"]) expect(html, task).toContain(task);
+    // what is built and what is not is said honestly
+    expect(html).toContain('<span class="tag ok">Working</span> Race thread generation');
+    expect(html).toContain('<span class="tag plan">Planned</span> Race statistics');
+    expect(html).toContain('<span class="tag ok">Working</span> Team statistics');
+    // the old typos stay out
+    for (const typo of ["raison d'etre", "pointshaul", "sql lite", "f.e.", "reddit/r/peloton"]) expect(html, typo).not.toContain(typo);
+  });
+  it("names the code, the licence, the data credits, and that it is not affiliated with UCI or Reddit", () => {
+    const html = read("src/site/index.html");
+    expect(html).toContain("https://github.com/Erlbon/pelotonic");
+    expect(html).toContain("https://github.com/Erlbon/pelotonic/issues");
+    for (const text of ["MIT licence", "CC BY-SA 4.0", "Not affiliated", "nothing is uploaded"]) expect(html, text).toContain(text);
+  });
+  it("says plainly that ProCyclingStats and FirstCycling are deliberately not scraped", () => {
+    const html = read("src/site/index.html");
+    expect(html).toContain("We deliberately do not scrape ProCyclingStats or FirstCycling");
+    expect(html).toContain("we will not work around a refusal");
+  });
+  it("has the data flow picture, with a title and description for screen readers", () => {
+    const doc = parseHTML(read("src/site/index.html")).document as unknown as Document;
+    const svg = doc.querySelector("svg.flow")!;
+    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.querySelector("title")!.textContent).toBeTruthy();
+    expect(svg.querySelector("desc")!.textContent).toContain("SQLite database");
+  });
+  it("lists its sources in a box with named links", () => {
+    const html = read("src/site/index.html");
     const doc = parseHTML(html).document as unknown as Document;
     const links = Array.from(doc.querySelectorAll("#sources + fieldset a"));
     expect(links.length).toBeGreaterThanOrEqual(8);

@@ -1,5 +1,5 @@
-:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#d9480f;--acc-text:#c2410c;--acc-soft:#fff0e6;--on-acc:#fff;--warn:#a15c00;--err:#b3261e}
-@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#ff8a4c;--acc-text:#ff8a4c;--acc-soft:#ff8a4c22;--on-acc:#1c1c1c;--warn:#f0b35a;--err:#f2b8b5}}
+:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#d9480f;--acc-text:#c2410c;--acc-soft:#fff0e6;--on-acc:#fff;--ok:#2e7d32;--warn:#a15c00;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#ff8a4c;--acc-text:#ff8a4c;--acc-soft:#ff8a4c22;--on-acc:#1c1c1c;--ok:#7bc47f;--warn:#f0b35a;--err:#f2b8b5}}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;margin:0;padding:16px}
 main{max-width:960px;margin:0 auto}
@@ -41,3 +41,13 @@ table.queue th,table.queue td{text-align:left;padding:3px 8px;border-bottom:1px 
 .drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;margin:10px 0;display:flex;flex-direction:column;gap:6px;align-items:center}
 .drop.over{border-color:var(--acc);background:var(--card)}
 kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--card);font:12px ui-monospace,Consolas,monospace}
+.tag{display:inline-block;font-size:12px;line-height:1.5;padding:0 8px;border-radius:10px;border:1px solid var(--line);margin-right:4px;white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.tag.plan{color:var(--mut)}
+.flow{width:100%;height:auto;margin:6px 0}
+.flow rect,.flow ellipse,.flow path.db{fill:var(--card);stroke:var(--line)}
+.flow ellipse.db,.flow path.db{fill:var(--acc-soft);stroke:var(--acc);stroke-width:1.5}
+.flow text{fill:var(--fg);font:13px system-ui,sans-serif}
+.flow text.sub{fill:var(--mut);font-size:12px}
+.flow .ln{stroke:var(--acc);stroke-width:1.5;fill:none}
+.flow marker path{stroke:var(--acc);fill:none;stroke-width:1.8}
