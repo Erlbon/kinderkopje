@@ -67,16 +67,15 @@ describe("the intro page", () => {
     expect(html).toContain("https://github.com/Erlbon/pelotonic/issues");
     for (const text of ["MIT licence", "CC BY-SA 4.0", "Not affiliated", "nothing is uploaded"]) expect(html, text).toContain(text);
   });
-  it("says plainly that ProCyclingStats and FirstCycling are deliberately not scraped", () => {
+  it("says plainly that FirstCycling is deliberately not scraped, and does not mention ProCyclingStats", () => {
     const html = read("src/site/index.html");
-    expect(html).toContain("We deliberately do not scrape ProCyclingStats or FirstCycling");
+    expect(html).toContain("We deliberately do not scrape FirstCycling");
     expect(html).toContain("we will not work around a refusal");
+    expect(html.toLowerCase()).not.toContain("procyclingstats");
   });
-  it("has the peloton banner, and the data flow picture, each with a text alternative", () => {
+  it("has the data flow picture with a text alternative, and no banner picture above the text", () => {
     const doc = parseHTML(read("src/site/index.html")).document as unknown as Document;
-    const hero = doc.querySelector("svg.hero")!;
-    expect(hero.getAttribute("role")).toBe("img");
-    expect(hero.querySelector("title")!.textContent).toContain("peloton");
+    expect(doc.querySelector("svg.hero")).toBeNull();
     const svg = doc.querySelector("svg.flow")!;
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.querySelector("title")!.textContent).toBeTruthy();

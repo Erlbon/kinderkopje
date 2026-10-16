@@ -11,12 +11,6 @@
 <main>
 <header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt=""><h1>Pelotonic - The R Peloton Database Project</h1></a></header>
 <nav><a class="active" href="index.html">Intro</a><a href="threads.html">Threads</a><a href="teams.html">Teams and points</a><a href="races.html">Race results</a><a href="data.html">Data</a></nav>
-<svg class="hero" viewBox="0 0 680 120" role="img" aria-labelledby="herot">
-<title id="herot">A peloton of riders in the leader jersey colours climbing a stage profile</title>
-<path class="ground" d="M0 112L90 102L160 106L230 86L300 92L370 56L440 64L510 30L580 38L640 18L680 24V120H0Z"/>
-<g class="riders"><circle cx="372" cy="40" r="7" fill="#ffd23f"/><circle cx="394" cy="46" r="7" fill="#1fa34a"/><circle cx="414" cy="50" r="7" fill="#fff"/><circle cx="434" cy="52" r="7" fill="#fff"/></g>
-<g fill="#d6282c"><circle cx="412" cy="48" r="1.5"/><circle cx="416" cy="52" r="1.5"/><circle cx="415" cy="47" r="1.2"/></g>
-</svg>
 
 <h2>Statement of intent</h2>
 <p>This project is an AI-assisted hub for collecting information from r/peloton, UCI.org and other sources (<a href="#sources">see Sources below</a>) to help create future content for r/peloton. It is built for the r/peloton moderators and is open to anyone.</p>
@@ -84,7 +78,7 @@
 <h2>How we collect data</h2>
 <ul>
   <li><b>By hand, in a browser.</b> Pages on UCI.org and DataRide are opened by a person, and the capture bookmark only reads what is on screen. The tool does not crawl.</li>
-  <li><b>We deliberately do not scrape ProCyclingStats or FirstCycling.</b> Their terms do not allow automated access, and we respect that. They are listed under Sources to be read by hand. If you want data from them in the database, ask them first; we will not work around a refusal or disguise the tool as a browser.</li>
+  <li><b>We deliberately do not scrape FirstCycling.</b> Its terms do not allow automated access, and we respect that. It is listed under Sources to be read by hand. If you want data from it in the database, ask first; we will not work around a refusal or disguise the tool as a browser.</li>
   <li><b>Wikipedia and Wikidata</b> are read through their public APIs, politely: one request at a time, with pauses.</li>
   <li><b>Open and credited.</b> Everything collected is kept in a database you can save and inspect, with its sources named.</li>
 </ul>
@@ -99,7 +93,6 @@
     <li><a href="https://dataride.uci.ch/iframe/Rankings/10/" target="_blank" rel="noopener">UCI DataRide, rankings</a>: the UCI World Ranking, including the team ranking.</li>
     <li><a href="https://inrng.com/calendar/" target="_blank" rel="noopener">INRNG calendar</a>: the race calendar, also as an iCal feed for the season draft.</li>
     <li><a href="https://inrng.com/2024/01/uci-points-rankings-2024/" target="_blank" rel="noopener">INRNG: the UCI points system since 2024</a>: how points are awarded.</li>
-    <li><a href="https://www.procyclingstats.com/" target="_blank" rel="noopener">ProCyclingStats</a>: race calendars and results, read by hand only; the site does not allow automated access.</li>
     <li><a href="https://firstcycling.com/" target="_blank" rel="noopener">FirstCycling</a>: start lists and results, read by hand for now; no automated access.</li>
     <li><a href="https://en.wikipedia.org/wiki/UCI_WorldTeam" target="_blank" rel="noopener">Wikipedia, UCI WorldTeam</a>: which teams are WorldTeams and ProTeams each season, and the stage tables of the Grand Tours.</li>
     <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>: race homepages and Wikipedia links.</li>
