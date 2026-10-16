@@ -1,5 +1,5 @@
-:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#0b57d0;--warn:#a15c00;--err:#b3261e}
-@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#8ab4f8;--warn:#f0b35a;--err:#f2b8b5}}
+:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#d9480f;--acc-text:#c2410c;--acc-soft:#fff0e6;--on-acc:#fff;--warn:#a15c00;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#ff8a4c;--acc-text:#ff8a4c;--acc-soft:#ff8a4c22;--on-acc:#1c1c1c;--warn:#f0b35a;--err:#f2b8b5}}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;margin:0;padding:16px}
 main{max-width:960px;margin:0 auto}
@@ -10,16 +10,18 @@ h1{font-size:20px;margin:0 0 4px}
 .brand h1,.brand .name{font-size:26px;font-weight:500;line-height:1.2;margin:0}
 @media (max-width:520px){.brand h1,.brand .name{font-size:19px}}
 h2{font-size:16px;margin:20px 0 6px}
+main a{color:var(--acc-text)}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;border-bottom:1px solid var(--line);padding-bottom:8px}
 nav a{padding:5px 10px;border-radius:6px;text-decoration:none;color:var(--fg);border:1px solid var(--line);background:var(--card)}
-nav a.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+nav a.active{background:var(--acc);color:var(--on-acc);border-color:var(--acc)}
 .mut{color:var(--mut);font-size:13px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0}
 .card.done{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .title{font-weight:600;flex:1 1 280px;word-break:break-word}
-button,label.btn,a.btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;text-decoration:none}
-button.ok{background:#2e7d32}
+button,label.btn,a.btn{background:transparent;color:var(--acc-text);border:1px solid var(--acc);border-radius:6px;padding:5px 9px;cursor:pointer;font:inherit;text-decoration:none}
+button:hover,label.btn:hover,a.btn:hover{background:var(--acc-soft)}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 textarea{width:100%;min-height:160px;font:12px ui-monospace,Consolas,monospace;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px}
 details pre,pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:var(--bg);padding:8px;border-radius:6px}
 .warn{color:var(--warn);font-size:13px;margin-top:4px}

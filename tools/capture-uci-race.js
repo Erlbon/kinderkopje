@@ -54,7 +54,7 @@ import { isComplete, mergeEvents, pageKind, readCompetitionEvents, readCompetiti
     var box = document.createElement("div");
     box.id = "pelotonic-overlay";
     box.style.cssText =
-      "position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;color:#111;border:2px solid #0b57d0;" +
+      "position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;color:#111;border:2px solid #ff6a2b;" +
       "border-radius:8px;padding:10px 12px;font:13px system-ui,sans-serif;max-width:400px;box-shadow:0 2px 10px rgba(0,0,0,.3)";
     msgEl = document.createElement("div");
     msgEl.textContent = msg;

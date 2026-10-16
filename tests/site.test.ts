@@ -26,3 +26,13 @@ describe("the site headline", () => {
     for (const f of ["teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Pelotonic - The R Peloton Database Project</span>'));
   });
 });
+
+describe("the colours", () => {
+  it("use orange for buttons, the current tab and links, in both modes", () => {
+    const css = read("src/site/app.css");
+    for (const orange of ["#d9480f", "#ff8a4c", "#ff6a2b"]) expect(css, orange).toContain(orange);
+    expect(css).not.toContain("#0b57d0");
+    expect(css).not.toContain("#8ab4f8");
+    expect(css).toContain("nav a.active{background:var(--acc);color:var(--on-acc)");
+  });
+});
