@@ -1,6 +1,6 @@
 import { parse as parseYaml } from "yaml";
 import { cleanHeading, isComplete, isScoringEvent, mergeEvents } from "./dataride";
-import { CATEGORY_NAMES } from "./dataride";
+import { CATEGORY_NAMES, raceKind } from "./dataride";
 import type { Category, DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
 import { slugify } from "./ical";
 import { normRaceName } from "./uci-hub";
@@ -522,6 +522,8 @@ export function chainLines(pairs: [string, string][]): string[] {
   return lines;
 }
 
+const KIND_NAMES: Record<string, string> = { road: "road race", tt: "time trial", ttt: "team time trial", relay: "relay" };
+
 /** Fold one race's editions into another's, unless both have an edition in the same year (then they are different races). */
 function mergeEditions(from: RaceEditions, into: RaceEditions): boolean {
   if (Object.keys(from.editions).some((y) => y in into.editions)) return false;
@@ -566,6 +568,7 @@ function applyAliases(map: Map<string, RaceEditions>, aliases: string): { merged
       const b = map.get(normRaceName(to) + "|" + category);
       if (!a || !b) continue;
       if (a === b) said = "already the same race";
+      else if (raceKind(from) !== raceKind(to)) said = "not joined: one is a " + KIND_NAMES[raceKind(from)] + " and the other a " + KIND_NAMES[raceKind(to)];
       else if (mergeEditions(a, b)) {
         map.delete(a.key);
         absorbed.add(a.key);
@@ -685,6 +688,7 @@ export function suggestJoins(cube: Cube, aliases = "", nojoin = ""): JoinSuggest
       const B = parts[j]!;
       if (gone.has(B.key) || B.cat !== A.cat || B.base.length <= A.base.length || !B.base.includes(A.base)) continue;
       if (rejected.has(B.base + ">" + A.base)) continue; // rejected lines read "sponsored name = core name"
+      if (raceKind(map.get(A.key)!.keyName) !== raceKind(map.get(B.key)!.keyName)) continue; // a time trial is not the road race of the same name
       const a = map.get(A.key)!;
       const b = map.get(B.key)!;
       const fromYears = Object.keys(b.editions).map(Number).sort((x, y) => x - y);

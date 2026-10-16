@@ -80,7 +80,8 @@ export function initRaces(store: Store): void {
     const internal = (r: { key: string; name: string }) => records.get(r.key)?.name ?? r.name;
     if (pendingJoins === undefined) pendingJoins = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").length;
     const pending = pendingJoins;
-    $("mergednote").textContent = (all.merged.length ? all.merged.length + " joined. " : "") + (pending ? pending + " possible join" + (pending === 1 ? "" : "s") + " to review." : "No more joins to review.");
+    const refused = all.aliasReport.filter((r) => r.includes("not joined: one is a")).length; // saved lines that joined a time trial with a road race
+    $("mergednote").textContent = (all.merged.length ? all.merged.length + " joined. " : "") + (refused ? refused + " saved join line" + (refused === 1 ? " was" : "s were") + " ignored: they joined different kinds of race (a time trial and a road race). " : "") + (pending ? pending + " possible join" + (pending === 1 ? "" : "s") + " to review." : "No more joins to review.");
     const years = all.years.filter((y) => y > 0);
     const onlyTop = $<HTMLInputElement>("queuetop").checked;
     // men's and women's races are kept apart: the page shows one category at a time

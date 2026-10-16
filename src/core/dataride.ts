@@ -25,6 +25,18 @@ export function categoryFromFilter(text: string): Category | undefined {
   return undefined;
 }
 
+/** What kind of race a name says it is. A road race (IRR) and an unmarked name are both "road"; time trials are their own races. */
+export type RaceKind = "road" | "tt" | "ttt" | "relay";
+
+export function raceKind(name: string): RaceKind {
+  const words = name.toLowerCase().split(/[^a-z]+/).filter((w) => w !== "");
+  const has = (w: string) => words.includes(w);
+  if (has("relay")) return "relay";
+  if (has("ttt") || (has("team") && (has("tt") || (has("time") && has("trial"))))) return "ttt";
+  if (has("itt") || has("tt") || (has("time") && has("trial")) || (has("contre") && has("montre")) || has("cronometro") || has("crono") || has("chrono")) return "tt";
+  return "road";
+}
+
 /** A Category filter that names some other category (Men Under 23, Women Junior ...), which is not collected. */
 export function isOtherCategory(text: string): boolean {
   const t = text.trim().toLowerCase();

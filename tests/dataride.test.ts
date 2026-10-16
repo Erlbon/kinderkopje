@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, buildRaces, chainLines, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, buildRaces, raceKind, chainLines, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube, setKv, writeRaces } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -258,6 +258,34 @@ describe("the same race under different names", () => {
     const db = openDatabase(SQL);
     saveCube(db, cube);
     expect(db.exec("SELECT COUNT(*) FROM queue_race WHERE race_id IS NULL")[0]!.values[0]![0]).toBe(0);
+  });
+  it("knows a time trial from a road race by its name; IRR is a road race", () => {
+    expect(raceKind("National Road Championships - Austria")).toBe("road");
+    expect(raceKind("National Road Championships - Guam (IRR)")).toBe("road");
+    expect(raceKind("National Road Championships - Austria (ITT)")).toBe("tt");
+    expect(raceKind("National Road Championships - Honduras - ITT")).toBe("tt");
+    expect(raceKind("National Road Championships - Chile ITT (WE)")).toBe("tt");
+    expect(raceKind("Campeonato Nacional Contrarreloj")).toBe("road"); // a word we do not know stays road: joins are reviewed anyway
+    expect(raceKind("Championnat de France Contre la Montre")).toBe("tt");
+    expect(raceKind("Caribbean Elite Road Cycling Championships - ME ITT")).toBe("tt");
+    expect(raceKind("World Championships Team Time Trial")).toBe("ttt");
+    expect(raceKind("European Championships Mixed Team Relay")).toBe("relay");
+  });
+  it("never suggests or joins a time trial with the road race of the same name, even from a saved line", () => {
+    const cube = queue(
+      comp(1, "National Road Championships - Austria", 2021), comp(2, "National Road Championships - Austria (ITT)", 2023), comp(3, "National Road Championships - Austria (IRR)", 2024),
+      comp(4, "National Road Championships - Oman", 2021), comp(5, "National Road Championships - Oman (IRR)", 2022),
+    );
+    const found = suggestJoins(cube);
+    // the IRR version is a road race and joins the plain name; the ITT version is left alone
+    expect(found.map((j) => j.fromName + " -> " + j.intoName).sort()).toEqual([
+      "National Road Championships - Austria (IRR) -> National Road Championships - Austria",
+      "National Road Championships - Oman (IRR) -> National Road Championships - Oman",
+    ]);
+    // a line saved earlier that joins them anyway is refused, and says why
+    const { races, aliasReport } = queueByRace(cube, "National Road Championships - Austria (ITT) = National Road Championships - Austria");
+    expect(races.filter((r) => /Austria/.test(r.name))).toHaveLength(3);
+    expect(aliasReport[0]).toContain("not joined: one is a time trial and the other a road race");
   });
   it("two races never share an internal name inside a category", () => {
     const cube = queue(comp(1, "Alpha Classic", 2026), comp(2, "Alpha Classic Open", 2026));
