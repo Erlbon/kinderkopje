@@ -27,7 +27,7 @@ function page(): { doc: Document; text: () => string } {
 }
 
 // a page with a small queue built from (name, year, class) lines, and a store that remembers what is saved
-function pageWith(names: [string, number, string?, ("ME" | "WE")?][]) {
+function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit?: (doc: Document) => void) {
   const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
   (globalThis as unknown as { document: Document }).document = document as unknown as Document;
@@ -38,6 +38,7 @@ function pageWith(names: [string, number, string?, ("ME" | "WE")?][]) {
   addCapture(cube, { format: "racethreads-capture/1", competitions: names.map(([n, y, c, k], i) => comp(i + 1, n, y, c, k)) });
   const texts = new Map<string, string>();
   const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: (k: string) => texts.get(k), setText: async (k: string, v: string) => void texts.set(k, v) } as unknown as Store;
+  beforeInit?.(doc);
   initRaces(store);
   const rows = () => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => c.textContent ?? "").filter((t) => t.includes("Mayenne"));
   const button = (label: string) => Array.from(doc.querySelectorAll("button")).find((b) => b.textContent === label) as HTMLButtonElement;
@@ -140,6 +141,26 @@ describe("races whose names changed", () => {
     both.button("Find joins").click();
     expect(headings(both.doc)).toEqual(["Men's elite races (1)", "Women's elite races (1)"]);
     expect(both.doc.querySelectorAll("#joinreview table")).toHaveLength(2);
+  });
+});
+
+describe("the Category box in a real browser", () => {
+  it("follows the browser's own selection, not the marker the page leaves on the first option", () => {
+    const names: [string, number, string?, ("ME" | "WE")?][] = [["Alpha Grand Prix", 2026, "1.1", "ME"], ["Beta Grand Prix", 2026, "1.WWT", "WE"]];
+    let shown = "WE"; // what the box shows: the user chose Women elite
+    const { doc } = pageWith(names, (d) => {
+      const select = d.getElementById("queuecat") as HTMLSelectElement;
+      Object.defineProperty(select, "value", { get: () => shown, configurable: true }); // a browser's select knows its value
+    });
+    // the page's own start-up marks "Men elite" with a selected attribute; that must not win over the browser's answer
+    const text = () => doc.getElementById("queueout")!.textContent ?? "";
+    expect(text()).toContain("Beta Grand Prix");
+    expect(text()).not.toContain("Alpha Grand Prix");
+    expect(text()).toContain("1 men's race hidden");
+    shown = "ME";
+    (doc.getElementById("queuecat") as HTMLSelectElement).onchange!(new Event("change"));
+    expect(text()).toContain("Alpha Grand Prix");
+    expect(text()).not.toContain("Beta Grand Prix");
   });
 });
 

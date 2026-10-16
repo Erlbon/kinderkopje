@@ -146,14 +146,16 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
     mergeRaceResult(cube, r);
     report.races++;
   }
+  const index = new Map((cube.queue ?? []).map((q) => [q.uciId, q] as [number, QueueRace])); // by id, so a big file is not searched line by line
   for (const c of file.competitions ?? []) {
-    upsertCompetition(cube, c);
+    upsertCompetition(cube, c, index);
     report.competitions = (report.competitions ?? 0) + 1;
     const name = CATEGORY_NAMES[c.category ?? "ME"];
     (report.categories ??= {})[name] = (report.categories[name] ?? 0) + 1;
   }
+  if (file.competitions?.length) cube.queue!.sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name)); // once, not for every competition
   for (const e of file.competitionEvents ?? []) {
-    const q = queueRace(cube, e.competitionId);
+    const q = queueRace(cube, e.competitionId, index);
     q.events = mergeEvents(q.events ?? [], e.events);
     report.events = (report.events ?? 0) + 1;
   }
@@ -200,21 +202,21 @@ export function addCapture(cube: Cube, file: CaptureFile): ImportReport {
 }
 
 /** The queue entry for a competition, made as a stub when only its events (or results) have been seen. */
-function queueRace(cube: Cube, id: number): QueueRace {
+function queueRace(cube: Cube, id: number, index?: Map<number, QueueRace>): QueueRace {
   const q = (cube.queue ??= []);
-  let r = q.find((x) => x.uciId === id);
+  let r = index ? index.get(id) : q.find((x) => x.uciId === id);
   if (!r) {
     r = { uciId: id, year: 0, name: "Competition " + id, start: "", end: "", country: "", hub: "DataRide" };
     q.push(r);
+    index?.set(id, r);
   }
   return r;
 }
 
 /** One line of the DataRide competition list into the queue (what a later capture knows better replaces what is there). */
-function upsertCompetition(cube: Cube, c: DrCompetition): void {
-  const r = queueRace(cube, c.id);
+function upsertCompetition(cube: Cube, c: DrCompetition, index: Map<number, QueueRace>): void {
+  const r = queueRace(cube, c.id, index);
   Object.assign(r, { year: c.year, name: c.name, start: c.start, end: c.end, country: c.country, class: c.class || undefined, category: c.category, hub: "DataRide" });
-  cube.queue!.sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
 }
 
 /**
@@ -600,31 +602,32 @@ export function suggestJoins(cube: Cube, aliases = "", nojoin = ""): JoinSuggest
   applyAliases(map, aliases);
   const rejected = new Set(parseRaceAliases(nojoin).map(([a, b]) => normRaceName(a) + ">" + normRaceName(b)));
   const out: JoinSuggestion[] = [];
-  for (let again = true; again; ) {
-    again = false;
-    const keys = [...map.keys()].sort((x, y) => x.length - y.length);
-    outer: for (const ka of keys) {
-      const [baseA, catA] = ka.split("|");
-      if (baseA!.length < MIN_PREFIX) continue;
-      for (const kb of keys) {
-        const [baseB, catB] = kb.split("|");
-        if (ka === kb || catA !== catB || baseB!.length <= baseA!.length || !baseB!.includes(baseA!)) continue;
-        const a = map.get(ka)!;
-        const b = map.get(kb)!;
-        if (rejected.has(baseB + ">" + baseA)) continue; // rejected lines read "sponsored name = core name"
-        const fromYears = Object.keys(a.editions).map(Number).sort((x, y) => x - y);
-        const intoYears = Object.keys(b.editions).map(Number).sort((x, y) => x - y);
-        const cls2 = a.editions[Math.max(...fromYears)]?.class; // the core race's newest class
-        // the shorter name is the core of the race: the longer, sponsored versions are folded into it, so that every
-        // sponsored version of the same core is found, not just the first
-        const fromName = b.name; // as shown before the join: after it the joined race carries one name
-        const intoName = a.name;
-        if (mergeEditions(b, a)) {
-          map.delete(kb);
-          out.push({ from: b.keyName, into: a.keyName, fromName, intoName, fromYears: intoYears, intoYears: fromYears, category: a.category, ...(cls2 ? { class: cls2 } : {}) });
-          again = true;
-          break outer;
-        }
+  // one pass, shortest name first: a merge only adds years to the core race, and a pair blocked by a shared year stays
+  // blocked, so nothing found later could have been found earlier. (Starting over after every merge took seconds.)
+  const parts = [...map.keys()]
+    .map((key) => {
+      const i = key.lastIndexOf("|");
+      return { key, base: key.slice(0, i), cat: key.slice(i + 1) };
+    })
+    .sort((x, y) => x.base.length - y.base.length);
+  const gone = new Set<string>();
+  for (let i = 0; i < parts.length; i++) {
+    const A = parts[i]!;
+    if (gone.has(A.key) || A.base.length < MIN_PREFIX) continue;
+    for (let j = i + 1; j < parts.length; j++) {
+      const B = parts[j]!;
+      if (gone.has(B.key) || B.cat !== A.cat || B.base.length <= A.base.length || !B.base.includes(A.base)) continue;
+      if (rejected.has(B.base + ">" + A.base)) continue; // rejected lines read "sponsored name = core name"
+      const a = map.get(A.key)!;
+      const b = map.get(B.key)!;
+      const fromYears = Object.keys(b.editions).map(Number).sort((x, y) => x - y);
+      const intoYears = Object.keys(a.editions).map(Number).sort((x, y) => x - y);
+      const cls = a.editions[Math.max(...intoYears)]?.class; // the core race's newest class
+      const fromName = b.name; // as shown before the join: after it the joined race carries one name
+      const intoName = a.name;
+      if (mergeEditions(b, a)) {
+        gone.add(B.key);
+        out.push({ from: b.keyName, into: a.keyName, fromName, intoName, fromYears, intoYears, category: a.category, ...(cls ? { class: cls } : {}) });
       }
     }
   }

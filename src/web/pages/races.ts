@@ -8,22 +8,32 @@ export function initRaces(store: Store): void {
 
   /** Choose a category in the box (through its options, which every DOM allows). */
   const chooseCategory = (value: string) => {
-    const options = Array.from($<HTMLSelectElement>("queuecat").options);
+    const select = $<HTMLSelectElement>("queuecat");
+    const options = Array.from(select.options);
     for (const o of options) o.toggleAttribute("selected", false); // clear first: choosing one may clear the others
     const target = options.find((o) => o.value === value);
     if (target) {
       target.selected = true;
       target.toggleAttribute("selected", true);
     }
+    try {
+      select.value = value; // a browser's own selection (a test DOM cannot set it)
+    } catch {
+      /* the options above carry the choice */
+    }
   };
-  /** The chosen value of a select: the selected option, the first when none is marked. */
+  /** The chosen value of a select. A browser knows it; a test DOM without select values falls back to the options. */
   const chosen = (id: string) => {
-    const options = Array.from($<HTMLSelectElement>(id).options);
+    const select = $<HTMLSelectElement>(id);
+    if (typeof select.value === "string" && select.value !== "") return select.value;
+    const options = Array.from(select.options);
     return (options.find((o) => o.selected || o.hasAttribute("selected")) ?? options[0])?.value ?? "";
   };
   const chosenCategory = () => chosen("queuecat") || "ME";
   /** WorldTour, ProSeries and championships: the classes the main interest is in. */
   const isTop = (cls?: string) => /UWT|WWT|Pro|WC|CM/i.test(cls ?? "");
+  /** How many joins wait for a decision; undefined = work it out again (it is the slow part, so only when the data changed). */
+  let pendingJoins: number | undefined;
   /** How high a UCI class ranks: WorldTour first, then ProSeries, then the rest by level. */
   const tier = (cls?: string) => (/UWT|WWT/.test(cls ?? "") ? 0 : /Pro/.test(cls ?? "") ? 1 : /[12]\.1/.test(cls ?? "") ? 2 : /[12]\.2/.test(cls ?? "") ? 3 : 4);
   /** An edition is finished when every point-giving event on its competition page has a result read to the end. Without the event list nothing is known. */
@@ -36,7 +46,8 @@ export function initRaces(store: Store): void {
 
   function draw(): void {
     const all = queueByRace(cube(), store.getText("racealiases") ?? "");
-    const pending = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").length;
+    if (pendingJoins === undefined) pendingJoins = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").length;
+    const pending = pendingJoins;
     $("mergednote").textContent = (all.merged.length ? all.merged.length + " joined. " : "") + (pending ? pending + " possible join" + (pending === 1 ? "" : "s") + " to review." : "No more joins to review.");
     const years = all.years.filter((y) => y > 0);
     const onlyTop = $<HTMLInputElement>("queuetop").checked;
@@ -140,6 +151,7 @@ export function initRaces(store: Store): void {
 
   $<HTMLInputElement>("capturefile").onchange = async (e) => {
     const lines = await importCaptureFiles(store, [...((e.target as HTMLInputElement).files ?? [])]);
+    pendingJoins = undefined;
     draw();
     $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
   };
@@ -221,6 +233,7 @@ export function initRaces(store: Store): void {
       $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
       box.replaceChildren();
       $("aliasmsg").textContent = rows.filter((r) => r.state === "same").length + " pairs joined, " + no.length + " marked as not the same (not suggested again), " + left + " left undecided.";
+      pendingJoins = undefined;
       draw();
     };
     const cancel = el("button", { textContent: "Cancel" });
@@ -249,6 +262,7 @@ export function initRaces(store: Store): void {
     } catch (e) {
       msg.textContent = "Could not save: " + (e instanceof Error ? e.message : String(e));
     }
+    pendingJoins = undefined;
     draw(); // joins what it can even when the save failed
     const report = queueByRace(cube(), $<HTMLTextAreaElement>("racealiases").value).aliasReport;
     if (msg.textContent === "Saving ...") msg.textContent = report.length ? "Saved. " + report.join(" | ") : "Saved. No alias lines to apply (write one as: old name = new name).";
@@ -263,6 +277,9 @@ export function initRaces(store: Store): void {
     tick("racecat", chosenCategory());
     draw();
   };
-  store.onChange(draw);
+  store.onChange(() => {
+    pendingJoins = undefined;
+    draw();
+  });
   draw();
 }

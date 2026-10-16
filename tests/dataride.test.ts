@@ -196,6 +196,21 @@ describe("the same race under different names", () => {
     expect(aliasReport[1]).toContain("already joined by an earlier line");
     expect(races.length).toBeGreaterThan(0);
   });
+  it("stays fast on a big queue: hundreds of pairs, found in a moment (it once took 14 seconds)", () => {
+    const many: ReturnType<typeof comp>[] = [];
+    for (let i = 0; i < 700; i++) {
+      many.push(comp(i * 2 + 1, "Grand Prix Number " + String.fromCharCode(65 + (i % 26)) + String.fromCharCode(97 + Math.floor(i / 26)) + " Classic", 2026));
+      many.push(comp(i * 2 + 2, "Sponsor " + (i % 7) + " Grand Prix Number " + String.fromCharCode(65 + (i % 26)) + String.fromCharCode(97 + Math.floor(i / 26)) + " Classic", 2025));
+    }
+    const cube = queue(...many);
+    const started = Date.now();
+    const found = suggestJoins(cube);
+    expect(found.length).toBeGreaterThan(600);
+    expect(Date.now() - started).toBeLessThan(3000);
+    const imported = Date.now();
+    queue(...many); // the import itself, too
+    expect(Date.now() - imported).toBeLessThan(1500);
+  });
   it("a longer line joins every name before the last into the last, in any order", () => {
     const cube = queue(comp(1, "Alpha Grand Prix", 2021), comp(2, "Alpha Grand Prix Open", 2022), comp(3, "Alpha GP Open Belgium", 2023), comp(4, "Alpha GP of Belgium", 2024));
     const line = "Alpha Grand Prix = Alpha Grand Prix Open = Alpha GP Open Belgium = Alpha GP of Belgium";
