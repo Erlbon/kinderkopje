@@ -62,6 +62,9 @@ describe("database schema", () => {
     const db = openDatabase(SQL);
     db.run("UPDATE meta SET value = '999' WHERE key = 'schema_version'");
     expect(() => openDatabase(SQL, db.export())).toThrow(/newer version/);
+    // and the message says what to do, and that nothing was changed
+    expect(() => openDatabase(SQL, db.export())).toThrow(/Ctrl\+F5/);
+    expect(() => openDatabase(SQL, db.export())).toThrow(/Your data has not been changed/);
   });
 });
 

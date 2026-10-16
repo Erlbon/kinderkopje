@@ -175,7 +175,7 @@ export function migrate(db: Database): void {
   const have = schemaVersion(db);
   if (have > SCHEMA_VERSION) {
     throw new Error(
-      "This database was made by a newer version of Pelotonic (schema " + have + ", this one knows " + SCHEMA_VERSION + "). Update the tool first.",
+      "This database was made by a newer version of Pelotonic (schema " + have + ", this one knows " + SCHEMA_VERSION + "). This page is running an older copy of the tool, usually a page your browser kept from before an update: reload it with Ctrl+F5 (and close other tabs of this site that are still open). Your data has not been changed.",
     );
   }
   for (let v = have + 1; v <= SCHEMA_VERSION; v++) {
