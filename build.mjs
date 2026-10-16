@@ -48,6 +48,7 @@ for (const f of readdirSync("src/site").filter((n) => n.endsWith(".html"))) {
   writeFileSync("dist/" + f, html);
 }
 copyFileSync("src/site/app.css", "dist/app.css");
+copyFileSync("src/site/favicon.svg", "dist/favicon.svg");
 
 // the data overview as downloadable files, written from the same text the Data page shows
 const dict = await build({ entryPoints: ["src/db/dictionary.ts"], bundle: true, format: "esm", platform: "node", write: false, logLevel: "warning" });
