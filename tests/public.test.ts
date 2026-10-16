@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
 import { addQueue, emptyCube } from "../src/core";
-import { PUBLIC_CREDITS, makePublicCopy, openDatabase, publicCredits, saveCube, setKv } from "../src/db";
+import { BETA_NOTE, PUBLIC_CREDITS, makePublicCopy, openDatabase, publicCredits, publicInfo, saveCube, setKv } from "../src/db";
 
 const SQL = await initSqlJs();
 
@@ -54,6 +54,19 @@ describe("public copy", () => {
     expect(names).toEqual(["Paris - Tours Elite"]);
     expect(pub.exec("SELECT COUNT(*) FROM race_name")[0]!.values[0]![0]).toBe(1);
     expect(pub.exec("SELECT race_id FROM result_row r JOIN classification c ON c.id = r.classification_id JOIN race_result q ON q.uci_id = c.uci_id")[0]!.values[0]![0]).not.toBeNull();
+  });
+  it("says it is a beta, when it was made and how much it holds, and the easy view shows the rider's age", () => {
+    const db = privateDb();
+    const pub = openDatabase(SQL, makePublicCopy(SQL, db, "Made in a test."));
+    const info = publicInfo(pub);
+    expect(info).toMatchObject({ beta: true, races: 1, editions: 1, results: 1, firstYear: 2025, lastYear: 2025 });
+    expect(info.made).toMatch(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/);
+    expect(info.note).toContain(BETA_NOTE);
+    expect(info.note).toContain("Made in a test.");
+    expect(pub.exec("SELECT race_name, rider, age FROM v_results")[0]!.values[0]).toEqual(["Paris - Tours Elite", "Per Strand HAGENES", 23]);
+  });
+  it("a file that is not a public copy says so", () => {
+    expect(publicInfo(openDatabase(SQL))).toMatchObject({ beta: false, races: 0, editions: 0, results: 0 });
   });
   it("leaves the original untouched", () => {
     const db = privateDb();

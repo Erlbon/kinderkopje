@@ -6,6 +6,7 @@
   "description": "Season overview and race-thread generator for Reddit moderators (r/xcworldcup, r/peloton). Runs entirely in the browser.",
   "scripts": {
     "build": "node build.mjs",
+    "beta": "node scripts/build-beta.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm test",

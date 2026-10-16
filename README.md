@@ -29,7 +29,23 @@ link, and a button that shows the first rows or asks an example question; *Copy 
 to paste elsewhere. The views `v_team_points` and `v_results` are the easy way in. The overview is written in
 `src/db/dictionary.ts`, and a test fails if it ever differs from the real schema (`src/db/schema.ts`).
 
-## Public dataset
+## Public beta database
+
+A SQLite file anyone can download from the Data page (`pelotonic-public.sqlite`), published with the site. It is a **beta**:
+it holds what has been collected so far (men's elite first), and says so inside the file, together with how much it holds
+and when it was built. It has the races with their internal and external names, the results with the rider's age, the
+race links, and the country and continent of every UCI code. To build a new one from capture files:
+
+```
+npm run beta -- "path/to/uci-capture.json" --note "what is different about this build"
+```
+
+It writes `data/public/pelotonic-public.sqlite`; commit that file and the site build publishes it. Optional files add the
+join lines (`--aliases`), rename lines (`--renames`), stored links (`--links`, JSON) and the race registry (`--registry`)
+saved in the browser. Without them the races are not joined. The Data page button *Save a beta file from my own data*
+builds the same file from the browser's database, with its joins, names and links, for whoever publishes it.
+
+## Public dataset (what is in it, and what is not)
 
 The Data page can **Save a public copy** of your database: the ranking and result tables with names, nations, places,
 points, team names, race names, rider ages and race facts, and nothing else (saved texts, the capture queue, contributor

@@ -57,7 +57,7 @@ describe("the intro page", () => {
     expect(status("Race thread generation")).toBe("Working");
     expect(status("Race statistics")).toBe("Planned");
     expect(status("Team statistics")).toBe("Working");
-    expect(status("Open database")).toBe("Planned");
+    expect(status("Open database")).toBe("Beta");
     // the old typos stay out
     for (const typo of ["raison d'etre", "pointshaul", "sql lite", "f.e.", "reddit/r/peloton"]) expect(html, typo).not.toContain(typo);
   });

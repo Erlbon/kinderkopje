@@ -216,7 +216,7 @@ export const DICTIONARY: TableDoc[] = [
     kind: "table",
     summary: "Facts about the database file itself.",
     columns: [
-      { name: "key", meaning: "The name; for now schema_version." },
+      { name: "key", meaning: "The name: schema_version; in a public file also public, beta, beta_note, credits, made, races, editions, results, first_year and last_year (what the file holds)." },
       { name: "value", meaning: "The value. A file whose schema version is newer than the tool's is refused." },
     ],
     example: { title: "The schema version", sql: "SELECT key, value FROM meta" },
@@ -257,6 +257,7 @@ export const DICTIONARY: TableDoc[] = [
       { name: "points", meaning: "UCI points." },
       { name: "race_id", meaning: "The race (the same in every year): race.race_id." },
       { name: "race_name", meaning: "The race's internal name, the same in every year. The column race is the external name UCI used that year." },
+      { name: "age", meaning: "The rider's age at the time of the race, as DataRide shows it." },
     ],
     example: { title: "Points per team from the race results", sql: "SELECT team, SUM(points) AS points, COUNT(DISTINCT uci_id) AS races FROM v_results GROUP BY team ORDER BY points DESC LIMIT 20" },
   },

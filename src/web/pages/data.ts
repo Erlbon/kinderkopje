@@ -1,6 +1,6 @@
 import type { Database } from "sql.js";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { DICTIONARY, dictionaryMarkdown, makePublicCopy, openDatabase, publicCredits, querySql, SCHEMA_VERSION, schemaVersion } from "../../db";
+import { DICTIONARY, dictionaryMarkdown, makePublicCopy, openDatabase, publicCredits, publicInfo, querySql, SCHEMA_VERSION, schemaVersion } from "../../db";
 import { $, copy, download, el } from "../dom";
 import type { Store } from "../store";
 
@@ -150,11 +150,46 @@ export function initData(store: Store): void {
   }
   $("sqlrun").onclick = () => runSql();
 
-  // the public dataset
+  // the public beta database
+  const describe = (i: ReturnType<typeof publicInfo>) =>
+    i.races + " races, " + i.editions + " editions and " + i.results + " results" + (i.firstYear ? ", " + i.firstYear + " to " + i.lastYear : "") + (i.made ? ", built " + i.made : "") + ".";
   $("pubsave").onclick = async () => {
     const SQL = await initSqlJs();
-    download("pelotonic-public.sqlite", makePublicCopy(SQL, store.db), "application/vnd.sqlite3");
-    $("pubmsg").textContent = "Saved. Names, nations, rider ages, places, points, team and race names and race facts only; saved texts, the queue and contributor names are left out.";
+    const bytes = makePublicCopy(SQL, store.db, "Made from the collector's own database, with its joins, names and links.");
+    download("pelotonic-public.sqlite", bytes, "application/vnd.sqlite3");
+    $("pubmsg").textContent =
+      "Saved: " + describe(publicInfo(openDatabase(SQL, bytes))) + " Put the file at data/public/pelotonic-public.sqlite in the project and publish; saved texts, the queue and contributor names are not in it.";
+  };
+  // is a beta file published on this site?
+  void (async () => {
+    const status = $("pubstatus");
+    try {
+      const res = await fetch("pelotonic-public.sqlite", { method: "HEAD" });
+      if (!res.ok) throw new Error("none");
+      const size = Number(res.headers.get("content-length") ?? 0);
+      status.textContent = "A beta file is published" + (size ? " (" + (size / 1048576).toFixed(1) + " MB)" : "") + ". Press Search it here to see what it holds.";
+    } catch {
+      status.textContent = "No beta file is published on this site yet.";
+      $("publink").style.display = "none";
+    }
+  })();
+  $("pubload").onclick = async () => {
+    const msg = $("pubmsg");
+    msg.textContent = "Loading the beta database ...";
+    try {
+      const res = await fetch("pelotonic-public.sqlite");
+      if (!res.ok) throw new Error(res.status === 404 ? "no beta file has been published on this site yet" : "HTTP " + res.status);
+      const SQL = await initSqlJs();
+      publicDb = openDatabase(SQL, new Uint8Array(await res.arrayBuffer()));
+      const info = publicInfo(publicDb);
+      msg.textContent = "Loaded: " + describe(info) + " The SQL box below now asks the beta database. " + (info.note ?? "") + " " + (publicCredits(publicDb) ?? "");
+      $("pubstatus").textContent = "Beta database: " + describe(info);
+      which.textContent = "the beta database (reload the page to go back to my database)";
+      $("sqlbox").scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (err) {
+      publicDb = undefined;
+      msg.textContent = "Could not load it: " + (err instanceof Error ? err.message : String(err));
+    }
   };
   const which = $("sqlwhich");
   $("pubload").onclick = async () => {

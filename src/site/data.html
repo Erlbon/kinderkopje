@@ -33,13 +33,17 @@
   <div id="dict" style="margin-top:8px"></div>
 </fieldset>
 
-<h2>Public dataset</h2>
+<h2>Public beta database</h2>
 <fieldset>
-  <legend class="mut">A copy of the rankings and point-scoring results that anyone can search, without capturing anything. It holds names, nations, rider ages, places, points, team names, race names, race links and race facts: no layout, no photos. It is a static file; the questions run in your own browser.</legend>
+  <legend class="mut">A SQLite file anyone can download and open in any SQLite tool: the rankings and the point-scoring results collected so far, with races (internal and external names), links, countries and continents. It holds names, nations, rider ages, places, points, team names, race names, race links and race facts: no layout, no photos. This is a <b>beta</b>: not every race is in it yet.</legend>
+  <div id="pubstatus" style="margin:2px 0 8px">Looking for the published file ...</div>
   <div class="row">
-    <button id="pubload">Search the public dataset</button>
-    <button id="pubsave" title="Strips saved texts, the queue and contributor names">Save a public copy of my database (.sqlite)</button>
-    <a href="pelotonic-public.sqlite">Download the public file</a>
+    <a id="publink" class="btn" href="pelotonic-public.sqlite" download="pelotonic-beta.sqlite">Download the beta database (.sqlite)</a>
+    <button id="pubload">Search it here</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="pubsave" title="Strips saved texts, the queue and contributor names">Save a beta file from my own data (.sqlite)</button>
+    <span class="mut">For whoever publishes the beta: it builds the file from the data in this browser, with its joins, names and links.</span>
   </div>
   <div id="pubmsg" class="mut" style="margin-top:6px"></div>
 </fieldset>
