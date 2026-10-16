@@ -31,6 +31,30 @@ export function initRaces(store: Store): void {
       : "No races in the queue yet: capture the DataRide competition list (step 2 above), one page at a time, for each year.";
     const onlyMissing = $<HTMLInputElement>("queuemissing").checked;
     const rows = onlyMissing ? races.filter((r) => Object.values(r.editions).some((e) => !finished(e))) : races;
+    // say what the two filters are hiding, with a way to show it
+    const hiddenDone = races.length - rows.length;
+    const hiddenClass = all.races.length - races.length;
+    if (hiddenDone > 0 || hiddenClass > 0) {
+      const note = el("div", { class: "mut" });
+      note.style.margin = "6px 0";
+      if (hiddenDone > 0) {
+        const show = el("button", { textContent: "Show them" });
+        show.onclick = () => {
+          $<HTMLInputElement>("queuemissing").checked = false;
+          draw();
+        };
+        note.append(hiddenDone + " finished race" + (hiddenDone === 1 ? "" : "s") + " hidden. ", show, " ");
+      }
+      if (hiddenClass > 0) {
+        const show = el("button", { textContent: "Show them" });
+        show.onclick = () => {
+          $<HTMLInputElement>("queuetop").checked = false;
+          draw();
+        };
+        note.append(hiddenClass + " race" + (hiddenClass === 1 ? "" : "s") + " in other classes hidden. ", show);
+      }
+      out.append(note);
+    }
     if (!rows.length) return;
 
     const table = el("table", { class: "queue" });
