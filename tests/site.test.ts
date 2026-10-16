@@ -36,3 +36,23 @@ describe("the colours", () => {
     expect(css).toContain("nav a.active{background:var(--acc);color:var(--on-acc)");
   });
 });
+
+describe("the intro page", () => {
+  const pages = ["intro", "index", "teams", "races", "data"];
+  it("is the first tab on every page", () => {
+    for (const f of pages) expect(read("src/site/" + f + ".html"), f).toContain('<nav>' + (f === "intro" ? '<a class="active" href="intro.html">Intro</a>' : '<a href="intro.html">Intro</a>') + '<a');
+  });
+  it("states the intent, lists the three tasks, and has a sources box with named links", () => {
+    const html = read("src/site/intro.html");
+    expect(html).toContain("AI-assisted hub for collecting information from reddit/r/peloton, UCI.org and other sources");
+    for (const task of ["Automatic Race Thread Generation", "Automatic Race Statistics", "Automatic Team Statistics"]) expect(html, task).toContain(task);
+    const doc = parseHTML(html).document as unknown as Document;
+    const links = Array.from(doc.querySelectorAll("#sources + fieldset a"));
+    expect(links.length).toBeGreaterThanOrEqual(8);
+    for (const a of links) {
+      expect(a.getAttribute("href"), a.textContent ?? "").toMatch(/^https:\/\//);
+      expect((a.textContent ?? "").trim().length).toBeGreaterThan(2);
+    }
+    expect(doc.querySelector('a[href="#sources"]')).not.toBeNull();
+  });
+});

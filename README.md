@@ -3,11 +3,12 @@
 Season YAML in, Reddit-ready race threads out. Built for the r/peloton moderators; the
 layout lives in a profile file, so other communities can reuse it.
 
-It is a small static site that runs in your browser. Nothing is uploaded. It has four pages that share one
+It is a small static site that runs in your browser. Nothing is uploaded. It has five pages that share one
 database:
 
 | Page | What it does |
 |---|---|
+| Intro | The statement of intent, the three tasks the project is for, and the sources we have found useful. |
 | Threads | Season YAML to Reddit-ready threads: calendar import, Wikipedia helpers, learning from old threads, stage tables, table layout. |
 | Teams and points | UCI team ranking snapshots: seasons side by side, season to date against last year, points per month, WorldTeams/ProTeams. |
 | Race results | The capture queue and the point-scoring results of each race, one race at a time across the years. |

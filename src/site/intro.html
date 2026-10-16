@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pelotonic: Intro</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+<header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt=""><span class="name">Pelotonic - The R Peloton Database Project</span></a></header>
+<h1>Statement of intent</h1>
+<nav><a class="active" href="intro.html">Intro</a><a href="index.html">Threads</a><a href="teams.html">Teams and points</a><a href="races.html">Race results</a><a href="data.html">Data</a></nav>
+
+<p>The raison d'etre of this project is being an AI-assisted hub for collecting information from reddit/r/peloton, UCI.org and other sources (<a href="#sources">see the sources below</a>) to assist creating future content for /r/peloton.</p>
+
+<p>The tasks we have created this project for are:</p>
+<ul>
+  <li>Automatic Race Thread Generation</li>
+  <li>Automatic Race Statistics (f.e. 5x5, most likely riders to win)</li>
+  <li>Automatic Team Statistics (current vs. previous year - pointshaul per race/month)</li>
+</ul>
+
+<h2 id="sources">Sources</h2>
+<fieldset>
+  <legend class="mut">The links we have found useful. Everything is opened by a person in a browser; the tool never fetches pages from these sites on its own, except Wikipedia and Wikidata through their public APIs.</legend>
+  <ul>
+    <li><a href="https://www.reddit.com/r/peloton/" target="_blank" rel="noopener">r/peloton</a>: where the threads are posted, and the old threads the tool learns from.</li>
+    <li><a href="https://www.uci.org/" target="_blank" rel="noopener">UCI.org</a>: competition hubs, calendars and race pages.</li>
+    <li><a href="https://dataride.uci.ch/iframe/Results/10/" target="_blank" rel="noopener">UCI DataRide, road results</a>: the competition list, with each race's class, dates and results. The capture bookmark reads these pages.</li>
+    <li><a href="https://dataride.uci.ch/iframe/Rankings/10/" target="_blank" rel="noopener">UCI DataRide, rankings</a>: the UCI World Ranking, including the team ranking.</li>
+    <li><a href="https://inrng.com/calendar/" target="_blank" rel="noopener">INRNG calendar</a>: the race calendar, also as an iCal feed for the season draft.</li>
+    <li><a href="https://inrng.com/2024/01/uci-points-rankings-2024/" target="_blank" rel="noopener">INRNG: the UCI points system since 2024</a>: how points are awarded.</li>
+    <li><a href="https://www.procyclingstats.com/races.php?s=year-calendar&amp;year=2027&amp;circuit=1&amp;class=&amp;filter=Filter" target="_blank" rel="noopener">ProCyclingStats, race calendar</a>: read by hand only; the site does not allow automated access.</li>
+    <li><a href="https://firstcycling.com/" target="_blank" rel="noopener">FirstCycling</a>: start lists and results, read by hand only; no automated access.</li>
+    <li><a href="https://en.wikipedia.org/wiki/UCI_WorldTeam" target="_blank" rel="noopener">Wikipedia, UCI WorldTeam</a>: which teams are WorldTeams and ProTeams each season, and the stage tables of the Grand Tours.</li>
+    <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>: race homepages and Wikipedia links.</li>
+  </ul>
+</fieldset>
+<p class="mut"><span>__VERSION__</span></p>
+</main>
+</body>
+</html>
