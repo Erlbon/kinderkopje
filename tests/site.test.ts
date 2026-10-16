@@ -23,7 +23,7 @@ describe("the site headline", () => {
   const brand = (inner: string) => '<header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt="">' + inner + "</a></header>";
   it("is the project name with the logo, as the title of the home page and a link back on every other page", () => {
     expect(read("src/site/index.html")).toContain(brand("<h1>Pelotonic - The R Peloton Database Project</h1>"));
-    for (const f of ["teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Pelotonic - The R Peloton Database Project</span>'));
+    for (const f of ["threads", "teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Pelotonic - The R Peloton Database Project</span>'));
   });
 });
 
@@ -38,16 +38,20 @@ describe("the colours", () => {
 });
 
 describe("the intro page", () => {
-  const pages = ["intro", "index", "teams", "races", "data"];
-  it("is the first tab on every page", () => {
-    for (const f of pages) expect(read("src/site/" + f + ".html"), f).toContain('<nav>' + (f === "intro" ? '<a class="active" href="intro.html">Intro</a>' : '<a href="intro.html">Intro</a>') + '<a');
+  const nav = (active: string) =>
+    "<nav>" + [["index", "Intro"], ["threads", "Threads"]].map(([f, t]) => '<a ' + (f === active ? 'class="active" ' : "") + 'href="' + f + '.html">' + t + "</a>").join("") + "<a";
+  it("is the front page and the first tab on every page", () => {
+    for (const f of ["index", "threads", "teams", "races", "data"]) {
+      const html = read("src/site/" + f + ".html");
+      expect(html, f).toContain(nav(f));
+    }
   });
   it("states the intent, lists the three tasks, and has a sources box with named links", () => {
-    const html = read("src/site/intro.html");
+    const html = read("src/site/index.html");
     expect(html).toContain("AI-assisted hub for collecting information from reddit/r/peloton, UCI.org and other sources");
-    for (const task of ["Automatic Race Thread Generation", "Automatic Race Statistics", "Automatic Team Statistics"]) expect(html, task).toContain(task);
     expect(html).toContain("a small database of current cycling results +/- five years");
     expect(html).toContain("fully open source and can be downloaded by any user in a sql lite file");
+    for (const task of ["Automatic Race Thread Generation", "Automatic Race Statistics", "Automatic Team Statistics"]) expect(html, task).toContain(task);
     const doc = parseHTML(html).document as unknown as Document;
     const links = Array.from(doc.querySelectorAll("#sources + fieldset a"));
     expect(links.length).toBeGreaterThanOrEqual(8);
