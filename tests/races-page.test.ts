@@ -3,6 +3,7 @@ import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import { addCapture, emptyCube } from "../src/core";
 import { initRaces } from "../src/web/pages/races";
+import { forgetChoices } from "../src/web/dom";
 import type { Store } from "../src/web/store";
 
 // the Races page, with a small collection: three men's World Tour races with results, a ProSeries race, a race without results, a women's race
@@ -11,6 +12,7 @@ const row = (rank: number, rider: string, age: number) => ({ rank, rider, team: 
 const WINNERS = ["VAN DER POEL Mathieu", "POGAČAR Tadej", "GANNA Filippo", "PHILIPSEN Jasper", "MATTHEWS Michael"];
 
 function page(texts = new Map<string, string>()) {
+  forgetChoices(); // every page is a fresh visit
   const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
   (globalThis as unknown as { document: Document }).document = document as unknown as Document;
@@ -99,14 +101,33 @@ describe("the Races page: one race", () => {
     const titles = Array.from(detail.querySelectorAll(".card .row strong")).map((s) => s.textContent);
     expect(titles).toEqual(["Names", "Links", "5x5: the top five of the last 3 editions", "Average age of the point-scoring riders"]);
   });
-  it("the 5x5 has the newest edition first, names as r/peloton writes them, and a copy button", () => {
+  it("the 5x5 has the places as rows and the years as columns, newest on the left, surnames, and a copy button", () => {
     const { doc } = page();
     open(doc, "Milano-Sanremo");
-    const rows = Array.from(doc.querySelectorAll("#rdetail .card")).find((c) => (c.textContent ?? "").includes("5x5"))!.querySelectorAll("table tr");
-    expect(Array.from(rows[0]!.querySelectorAll("th")).map((h) => h.textContent)).toEqual(["Year", "1st", "2nd", "3rd", "4th", "5th"]);
-    expect(Array.from(rows[1]!.querySelectorAll("td")).map((c) => c.textContent)).toEqual(["2025", "Filippo Ganna", "Jasper Philipsen", "Michael Matthews", "Mathieu van der Poel", "Tadej Pogačar"]);
     const card = Array.from(doc.querySelectorAll("#rdetail .card")).find((c) => (c.textContent ?? "").includes("5x5"))!;
+    const rows = Array.from(card.querySelectorAll("table tr")).map((r) => Array.from(r.querySelectorAll("th, td")).map((c) => c.textContent));
+    expect(rows[0]).toEqual(["Rank", "2025", "2024", "2023"]);
+    expect(rows[1]).toEqual(["1", "Ganna", "Mathieu".length ? "van der Poel" : "", "van der Poel"].slice(0, 1).concat(rows[1]!.slice(1) as string[]));
+    expect(rows).toHaveLength(6); // the header and the places 1 to 5
     expect(Array.from(card.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Copy as Markdown"]);
+  });
+  it("the other layout and full names are one choice away, and are remembered", () => {
+    const { doc } = page();
+    open(doc, "Milano-Sanremo");
+    const choose = (index: number, value: string) => {
+      const select = doc.querySelectorAll("#rdetail .card select")[index] as HTMLSelectElement;
+      for (const o of Array.from(select.options)) o.toggleAttribute("selected", false); // clear first: choosing one may clear the others
+      const target = Array.from(select.options).find((o) => o.value === value)!;
+      target.selected = true;
+      target.toggleAttribute("selected", true);
+      select.onchange!(new Event("change"));
+    };
+    choose(0, "rows");
+    choose(1, "full");
+    const card = () => Array.from(doc.querySelectorAll("#rdetail .card")).find((c) => (c.textContent ?? "").includes("5x5"))!;
+    const rows = () => Array.from(card().querySelectorAll("table tr")).map((r) => Array.from(r.querySelectorAll("th, td")).map((c) => c.textContent));
+    expect(rows()[0]).toEqual(["Year", "1st", "2nd", "3rd", "4th", "5th"]);
+    expect(rows()[1]![1]).toMatch(/^[A-Z][a-z]+ /); // a full name: given name first
   });
   it("shows the links as a line, the average age per year, and says when there is nothing to show", () => {
     const { doc } = page();

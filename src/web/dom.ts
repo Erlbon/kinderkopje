@@ -19,13 +19,22 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
+const remembered = new Map<string, string>(); // for a visit where the browser's storage is blocked
+
+/** Forget what was kept for this visit (tests start every page as a fresh visit). */
+export function forgetChoices(): void {
+  remembered.clear();
+}
+
 /** Small per-browser conveniences (ticks, remembered filters). Real data lives in the database. */
 export function tick(key: string, value?: string): string | null {
+  if (value !== undefined) remembered.set(key, value);
   try {
-    if (value === undefined) return localStorage.getItem(key);
+    if (value === undefined) return localStorage.getItem(key) ?? remembered.get(key) ?? null;
     localStorage.setItem(key, value);
   } catch {
-    /* storage can be blocked; the page works without it */
+    /* storage can be blocked; what was chosen is kept for this visit */
+    if (value === undefined) return remembered.get(key) ?? null;
   }
   return null;
 }

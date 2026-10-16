@@ -3,11 +3,13 @@ import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import { addCapture, emptyCube } from "../src/core";
 import { initCollect } from "../src/web/pages/collect";
+import { forgetChoices } from "../src/web/dom";
 import { fakeWikidata } from "./helpers/wikidata";
 import type { Store } from "../src/web/store";
 
 // the real page, with a queue of four races: one finished, one not, one in a class the filter leaves out, one women's
 function page(): { doc: Document; text: () => string } {
+  forgetChoices(); // every page is a fresh visit
   const html = readFileSync(new URL("../src/site/collect.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
   (globalThis as unknown as { document: Document }).document = document as unknown as Document;

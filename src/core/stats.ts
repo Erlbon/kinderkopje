@@ -57,21 +57,38 @@ export function displayName(uciName: string): string {
   return [...words.slice(i), ...surname].join(" ");
 }
 
+export interface FiveOptions {
+  yearsAsRows?: boolean; // default: the places 1 to 5 are the rows and the years the columns, newest on the left
+  fullNames?: boolean; // default: the surname only ("van der Poel"); true: "Mathieu van der Poel"
+}
+
+/** The surname of a UCI name ("VAN DER POEL Mathieu" -> "van der Poel"); the whole name when there is no clear split. */
+export function surnameOf(uciName: string): string {
+  const words = uciName.trim().split(" ").filter((w) => w !== "");
+  const isSurname = (w: string) => w === w.toUpperCase() && w !== w.toLowerCase();
+  let i = 0;
+  while (i < words.length && isSurname(words[i]!)) i++;
+  if (i === 0 || i === words.length) return displayName(uciName);
+  return displayName(words.slice(0, i).join(" ") + " X").slice(0, -2); // the surname words, written as names are
+}
+
 const ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
 
-/** The 5x5 as a Markdown table, newest edition first. A place missing from the data is shown as a dash. */
-export function fiveByFiveMarkdown(rows: FiveRow[], places = 5): string {
+/** The 5x5 as a table of text: the header row first. A place missing from the data is a dash. */
+export function fiveMatrix(rows: FiveRow[], places = 5, o: FiveOptions = {}): string[][] {
+  const name = (w: ResultRow | undefined) => (w ? (o.fullNames ? displayName(w.rider) : surnameOf(w.rider)) : "-");
+  const at = (r: FiveRow, place: number) => name(r.riders.find((x) => x.rank === place));
+  const placesList = Array.from({ length: places }, (_, i) => i + 1);
+  if (o.yearsAsRows) return [["Year", ...ORDINALS.slice(0, places)], ...rows.map((r) => [String(r.year), ...placesList.map((p) => at(r, p))])];
+  return [["Rank", ...rows.map((r) => String(r.year))], ...placesList.map((p) => [String(p), ...rows.map((r) => at(r, p))])];
+}
+
+/** The 5x5 as a Markdown table, newest edition first, written the way the threads write their tables. */
+export function fiveByFiveMarkdown(rows: FiveRow[], places = 5, o: FiveOptions = {}): string {
   const NL = String.fromCharCode(10);
-  const head = "| Year | " + ORDINALS.slice(0, places).join(" | ") + " |";
-  const rule = "|---|" + ":--|".repeat(places);
-  const body = rows.map((r) => {
-    const cells = Array.from({ length: places }, (_, i) => {
-      const w = r.riders.find((x) => x.rank === i + 1);
-      return w ? displayName(w.rider) : "-";
-    });
-    return "| " + r.year + " | " + cells.join(" | ") + " |";
-  });
-  return [head, rule, ...body].join(NL);
+  const m = fiveMatrix(rows, places, o);
+  const line = (cells: string[]) => "|" + cells.join("|") + "|";
+  return [line(m[0]!), line(m[0]!.map(() => ":-")), ...m.slice(1).map(line)].join(NL);
 }
 
 /** The average of the ages that are known, or nothing when none is. */

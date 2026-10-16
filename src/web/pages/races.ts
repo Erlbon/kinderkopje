@@ -1,5 +1,5 @@
-import { CONTINENTS, RaceRecord, ageTableMarkdown, continentOf, countryOf, displayName, fiveByFiveMarkdown, linksMarkdown, normRaceName, raceAgeByYear, topRiders, yearsWithResults, LINK_LABELS } from "../../core";
-import { $, copy, el } from "../dom";
+import { CONTINENTS, RaceRecord, ageTableMarkdown, continentOf, countryOf, fiveByFiveMarkdown, fiveMatrix, linksMarkdown, normRaceName, raceAgeByYear, topRiders, yearsWithResults, LINK_LABELS } from "../../core";
+import { $, copy, el, tick } from "../dom";
 import type { Store } from "../store";
 import { currentRaces } from "./race-links";
 
@@ -136,16 +136,43 @@ export function initRaces(store: Store): void {
     }
     out.append(box("Links", linkBox, race.links.length ? linksMarkdown(race.links) : undefined));
 
-    // the 5x5
+    // the 5x5: the places as rows and the years as columns, as the threads write their tables; the other way round on request
     const five = topRiders(cube, race);
     if (five.length) {
+      const opts = { yearsAsRows: tick("fivelayout") === "rows", fullNames: tick("fivenames") === "full" };
+      const matrix = fiveMatrix(five, 5, opts);
       const table = el("table", { class: "queue" });
-      table.append(el("tr", {}, el("th", { textContent: "Year" }), ...["1st", "2nd", "3rd", "4th", "5th"].map((h) => el("th", { textContent: h }))));
-      for (const row of five) {
-        table.append(el("tr", {}, el("td", { textContent: String(row.year) }), ...[1, 2, 3, 4, 5].map((p) => el("td", { textContent: row.riders.find((x) => x.rank === p) ? displayName(row.riders.find((x) => x.rank === p)!.rider) : "-" }))));
-      }
+      table.append(el("tr", {}, ...matrix[0]!.map((h) => el("th", { textContent: h }))));
+      for (const r of matrix.slice(1)) table.append(el("tr", {}, ...r.map((c) => el("td", { textContent: c }))));
+      const picker = (key: string, options: [string, string][], current: string) => {
+        const select = el("select");
+        for (const [value, label] of options) {
+          const o = el("option", { value, textContent: label });
+          if (value === current) {
+            o.selected = true;
+            o.setAttribute("selected", "");
+          }
+          select.append(o);
+        }
+        select.onchange = () => {
+          const options2 = Array.from(select.options);
+          const value = (typeof select.value === "string" && select.value) || (options2.find((o) => o.selected) ?? options2[0])?.value || "";
+          tick(key, value);
+          drawDetail();
+        };
+        return select;
+      };
+      const controls = el(
+        "div",
+        { class: "row" },
+        el("span", { class: "mut", textContent: "Layout" }),
+        picker("fivelayout", [["cols", "Places as rows, years as columns"], ["rows", "Years as rows"]], opts.yearsAsRows ? "rows" : "cols"),
+        el("span", { class: "mut", textContent: "Names" }),
+        picker("fivenames", [["surname", "Surnames"], ["full", "Full names"]], opts.fullNames ? "full" : "surname"),
+      );
+      const holder = el("div", {}, controls, table);
       const missing = five.filter((r) => r.missing.length).length;
-      out.append(box("5x5: the top five of the last " + five.length + " edition" + (five.length === 1 ? "" : "s"), table, fiveByFiveMarkdown(five)));
+      out.append(box("5x5: the top five of the last " + five.length + " edition" + (five.length === 1 ? "" : "s"), holder, fiveByFiveMarkdown(five, 5, opts)));
       if (missing) out.append(el("div", { class: "mut", textContent: missing + " edition" + (missing === 1 ? " lacks" : "s lack") + " some of the first five places in the data (shown as -)." }));
     } else {
       out.append(box("5x5", "No results collected for this race yet."));
