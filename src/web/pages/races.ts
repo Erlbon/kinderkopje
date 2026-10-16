@@ -1,4 +1,4 @@
-import { CATEGORY_NAMES, JoinSuggestion, normRaceName, queueByRace, suggestJoins } from "../../core";
+import { CATEGORY_NAMES, JoinSuggestion, chainLines, normRaceName, queueByRace, suggestJoins } from "../../core";
 import { importCaptureFiles } from "../capture-import";
 import { $, el, tick } from "../dom";
 import type { Store } from "../store";
@@ -177,7 +177,7 @@ export function initRaces(store: Store): void {
     noNat.onclick = () => nationals.forEach(([, t]) => (t.checked = false));
     const apply = el("button", { textContent: "Join the ticked ones" });
     apply.onclick = async () => {
-      const yes = ticks.filter(([, t]) => t.checked).map(([j]) => j.from + " = " + j.into);
+      const yes = chainLines(ticks.filter(([, t]) => t.checked).map(([j]): [string, string] => [j.from, j.into]));
       const no = ticks.filter(([, t]) => !t.checked).map(([j]) => j.from + " = " + j.into);
       const keep = (key: string, add: string[]) => [store.getText(key) ?? "", ...add].filter((x) => x !== "").join(NL);
       await store.setText("racealiases", keep("racealiases", yes));

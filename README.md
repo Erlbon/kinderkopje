@@ -123,6 +123,9 @@ sponsor added, "Strade Bianche" becoming "Strade Bianche Donne") shows as two ro
 race, different names*, **Find joins** lists the likely pairs (one name starts the other, the years never overlap) for
 you to tick or untick. Ticked pairs are written as lines `old name = name it continues as` in the box below, and
 unticked ones are remembered as rejected. Do it once after capturing a season; nothing is joined without your tick.
+A race with more than two names is one longer line, `first = second = third = name it continues as`: every name before
+the last is joined into the last. Sponsors added, dropped or changed anywhere in the name are found (a shorter name
+inside a longer one), and the plain core name is the one the sponsored versions are folded into.
 
 DataRide numbers the races itself: the number in `CompetitionResults/<id>` is the race edition's id in this tool
 (`race_result.uci_id`), and the number in `EventResults/<id>` identifies one event (`classification.event_id`).

@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, chainLines, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -150,9 +150,9 @@ describe("the same race under different names", () => {
     expect(queueByRace(cube).races).toHaveLength(2); // nothing joined without a decision
     const found = suggestJoins(cube);
     expect(found).toHaveLength(1);
-    expect(found[0]).toMatchObject({ fromYears: [2025, 2026], intoYears: [2023, 2024], category: "ME" });
+    expect(found[0]).toMatchObject({ fromYears: [2023, 2024], intoYears: [2025, 2026], category: "ME" }); // the sponsored version into the plain core
     // the names are the two as they were before the join, not the one name after it
-    expect(found[0]).toMatchObject({ fromName: "Boucles de la Mayenne", intoName: "Boucles de la Mayenne - Crédit Mutuel" });
+    expect(found[0]).toMatchObject({ fromName: "Boucles de la Mayenne - Crédit Mutuel", intoName: "Boucles de la Mayenne" });
     // accepting writes an alias line; with it the two are one race, with every year, under the newest name
     const line = found[0]!.from + " = " + found[0]!.into;
     const { races } = queueByRace(cube, line);
@@ -173,6 +173,49 @@ describe("the same race under different names", () => {
     expect(suggestJoins(cube)).toHaveLength(0);
     const short = queue(comp(3, "Giro", 2026), comp(4, "Giro del Veneto", 2025));
     expect(suggestJoins(short)).toHaveLength(0);
+  });
+  it("finds a race whose sponsor changes at the front of the name (Brugge-De Panne), men's and women's apart", () => {
+    const cube = queue(
+      comp(1, "Oxyclean Classic Brugge-De Panne", 2021), comp(2, "MINERVA CLASSIC BRUGGE - DE PANNE", 2022), comp(3, "Classic Brugge-De Panne", 2023), comp(4, "Classic Brugge-De Panne", 2024),
+      comp(5, "Oxyclean Classic Brugge-De Panne", 2021, "WE"), comp(6, "EXTERIOO CLASSIC BRUGGE - DE PANNE", 2022, "WE"), comp(7, "Classic Brugge-De Panne", 2023, "WE"),
+      comp(8, "Bredene Koksijde Classic", 2023),
+    );
+    expect(queueByRace(cube).races).toHaveLength(7);
+    const found = suggestJoins(cube);
+    expect(found.map((j) => j.category).sort()).toEqual(["ME", "ME", "WE", "WE"]);
+    const lines = chainLines(found.map((j): [string, string] => [j.from, j.into])).join(String.fromCharCode(10));
+    const { races } = queueByRace(cube, lines);
+    const brugge = races.filter((r) => /brugge/i.test(r.name));
+    expect(brugge.map((r) => [r.category, Object.keys(r.editions).length]).sort()).toEqual([["ME", 4], ["WE", 3]]);
+    expect(races.some((r) => /Bredene/.test(r.name))).toBe(true); // an unrelated race stays on its own
+  });
+  it("a name that an earlier line already joined is reported as joined, not as missing", () => {
+    const cube = queue(comp(1, "Alpha Grand Prix", 2021), comp(2, "Alpha Grand Prix Open", 2022), comp(3, "Alpha Grand Prix Open Belgium", 2023));
+    const NL = String.fromCharCode(10);
+    const { aliasReport, races } = queueByRace(cube, ["Alpha Grand Prix Open = Alpha Grand Prix", "Alpha Grand Prix Open = Alpha Grand Prix Open Belgium"].join(NL));
+    expect(aliasReport[1]).toContain("already joined by an earlier line");
+    expect(races.length).toBeGreaterThan(0);
+  });
+  it("a longer line joins every name before the last into the last, in any order", () => {
+    const cube = queue(comp(1, "Alpha Grand Prix", 2021), comp(2, "Alpha Grand Prix Open", 2022), comp(3, "Alpha GP Open Belgium", 2023), comp(4, "Alpha GP of Belgium", 2024));
+    const line = "Alpha Grand Prix = Alpha Grand Prix Open = Alpha GP Open Belgium = Alpha GP of Belgium";
+    expect(parseRaceAliases(line)).toEqual([["Alpha Grand Prix", "Alpha GP of Belgium"], ["Alpha Grand Prix Open", "Alpha GP of Belgium"], ["Alpha GP Open Belgium", "Alpha GP of Belgium"]]);
+    const { races, aliasReport } = queueByRace(cube, line);
+    expect(races).toHaveLength(1);
+    expect(Object.keys(races[0]!.editions).sort()).toEqual(["2021", "2022", "2023", "2024"]);
+    expect(aliasReport.every((r) => r.endsWith("joined"))).toBe(true);
+  });
+  it("accepted pairs that continue one another are written as one long line, whatever their order", () => {
+    expect(chainLines([["A", "B"], ["B", "C"], ["X", "Y"]])).toEqual(["A = B = C", "X = Y"]);
+    expect(chainLines([["B", "C"], ["A", "B"]])).toEqual(["B = A = C"]); // the order inside a line does not matter, the last name is the one it continues as
+    expect(chainLines([["A", "C"], ["B", "C"]])).toEqual(["A = B = C"]);
+    expect(chainLines([["A", "B"], ["B", "A"]])).toEqual(["A = B", "B = A"]); // a loop is not lost
+    const cube = queue(comp(1, "Kuurne Alpha Race", 2021), comp(2, "Kuurne Alpha Race Open", 2022), comp(3, "Kuurne Alpha Race Open Belgium", 2023));
+    const found = suggestJoins(cube);
+    expect(found).toHaveLength(2);
+    const lines = chainLines(found.map((j): [string, string] => [j.from, j.into]));
+    expect(lines).toHaveLength(1); // one line for the one race, however many names it had
+    expect(queueByRace(cube, lines.join(String.fromCharCode(10))).races).toHaveLength(1);
   });
   it("joins what an alias line says, and ignores an alias that would put two editions in one year", () => {
     const cube = queue(comp(1, "Kuurne Brussels Kuurne", 2026), comp(2, "Kuurne-Brussel-Kuurne", 2025), comp(3, "Omloop Nieuwsblad Old", 2026), comp(4, "Omloop Het Nieuwsblad Elite", 2025));

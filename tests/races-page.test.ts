@@ -57,9 +57,9 @@ describe("races whose names changed", () => {
     button("Find joins").click();
     expect(doc.querySelectorAll("#joinreview input[type=checkbox]")).toHaveLength(1);
     const cells = Array.from(doc.querySelectorAll("#joinreview tr:nth-child(2) td")).map((c) => c.textContent);
-    expect(cells.slice(1)).toEqual(["Men", "Boucles de la Mayenne", "1.1 Boucles de la Mayenne - Crédit Mutuel", "2026 and 2025"]);
+    expect(cells.slice(1)).toEqual(["Men", "Boucles de la Mayenne - Crédit Mutuel", "1.1 Boucles de la Mayenne", "2025 and 2026"]);
     await (button("Join the ticked ones").onclick as () => Promise<void>)();
-    expect(texts.get("racealiases")).toBe("Boucles de la Mayenne = Boucles de la Mayenne - Crédit Mutuel");
+    expect(texts.get("racealiases")).toBe("Boucles de la Mayenne - Crédit Mutuel = Boucles de la Mayenne");
     expect(rows()).toHaveLength(1);
     expect(doc.getElementById("joinreview")!.textContent).toBe("");
     expect(doc.getElementById("mergednote")!.textContent).toContain("No more joins to review");

@@ -464,18 +464,48 @@ export interface RaceEditions {
   editions: Record<number, QueueLine>; // by year
 }
 
-/** Alias lines, one per line: "Old name = Name it continues as". Blank lines and lines starting with # are ignored. */
+/**
+ * Alias lines, one per line: "Old name = Name it continues as". A line can list more names, "A = B = C = D": every name
+ * before the last is joined into the last one. Blank lines and lines starting with # are ignored.
+ */
 export function parseRaceAliases(text: string): [string, string][] {
   const out: [string, string][] = [];
   for (const line of text.split(String.fromCharCode(10))) {
     const t = line.trim();
     if (!t || t.startsWith("#") || !t.includes("=")) continue;
-    const i = t.indexOf("=");
-    const from = t.slice(0, i).trim();
-    const to = t.slice(i + 1).trim();
-    if (from && to) out.push([from, to]);
+    const names = t.split("=").map((n) => n.trim()).filter((n) => n !== "");
+    for (let k = 0; k < names.length - 1; k++) out.push([names[k]!, names[names.length - 1]!]);
   }
   return out;
+}
+
+/**
+ * Accepted pairs (from, into) written as alias lines, one line per race: every name that ends up in the same race is on
+ * the line, the name it continues as last. "B into A" and "C into A" become "B = C = A"; "A into B" and "B into C"
+ * become "A = B = C". The order of the pairs does not matter.
+ */
+export function chainLines(pairs: [string, string][]): string[] {
+  const next = new Map(pairs);
+  const rootOf = (name: string) => {
+    const seen = new Set<string>();
+    let cur = name;
+    while (next.has(cur) && !seen.has(cur)) {
+      seen.add(cur);
+      cur = next.get(cur)!;
+    }
+    return cur;
+  };
+  const groups = new Map<string, string[]>();
+  for (const [from] of pairs) {
+    const root = rootOf(from);
+    if (root === from) continue; // a loop: written as it is below
+    const names = groups.get(root) ?? [];
+    if (!names.includes(from)) names.push(from);
+    groups.set(root, names);
+  }
+  const lines = [...groups].map(([root, names]) => [...names, root].join(" = "));
+  for (const [from, into] of pairs) if (rootOf(from) === from) lines.push(from + " = " + into);
+  return lines;
 }
 
 /** Fold one race's editions into another's, unless both have an edition in the same year (then they are different races). */
@@ -512,6 +542,7 @@ function groupQueue(cube: Cube): Map<string, RaceEditions> {
 function applyAliases(map: Map<string, RaceEditions>, aliases: string): { merged: string[]; aliasReport: string[] } {
   const merged: string[] = [];
   const aliasReport: string[] = [];
+  const absorbed = new Set<string>(); // keys of races already folded into another by an earlier line
   for (const [from, to] of parseRaceAliases(aliases)) {
     let said = "";
     for (const category of ["ME", "WE"] as const) {
@@ -521,13 +552,15 @@ function applyAliases(map: Map<string, RaceEditions>, aliases: string): { merged
       if (a === b) said = "already the same race";
       else if (mergeEditions(a, b)) {
         map.delete(a.key);
+        absorbed.add(a.key);
         merged.push(a.name + " -> " + b.name);
         said = "joined";
       } else said = "not joined: both have an edition in the same year";
     }
     if (!said) {
       const known = (n: string) => ["ME", "WE"].some((c) => map.has(normRaceName(n) + "|" + c));
-      said = !known(from) ? 'not joined: no race named "' + from + '" in the queue' : !known(to) ? 'not joined: no race named "' + to + '" in the queue' : "not joined: the two races are in different categories";
+      const before = (n: string) => ["ME", "WE"].some((c) => absorbed.has(normRaceName(n) + "|" + c));
+      said = before(from) ? "already joined by an earlier line" : !known(from) ? 'not joined: no race named "' + from + '" in the queue' : !known(to) ? 'not joined: no race named "' + to + '" in the queue' : "not joined: the two races are in different categories";
     }
     aliasReport.push(from + " = " + to + ": " + said);
   }
@@ -575,18 +608,20 @@ export function suggestJoins(cube: Cube, aliases = "", nojoin = ""): JoinSuggest
       if (baseA!.length < MIN_PREFIX) continue;
       for (const kb of keys) {
         const [baseB, catB] = kb.split("|");
-        if (ka === kb || catA !== catB || baseB!.length <= baseA!.length || !baseB!.startsWith(baseA!)) continue;
+        if (ka === kb || catA !== catB || baseB!.length <= baseA!.length || !baseB!.includes(baseA!)) continue;
         const a = map.get(ka)!;
         const b = map.get(kb)!;
-        if (rejected.has(baseA + ">" + baseB)) continue;
+        if (rejected.has(baseB + ">" + baseA)) continue; // rejected lines read "sponsored name = core name"
         const fromYears = Object.keys(a.editions).map(Number).sort((x, y) => x - y);
         const intoYears = Object.keys(b.editions).map(Number).sort((x, y) => x - y);
-        const cls = b.editions[Math.max(...intoYears)]?.class;
-        const fromName = a.name; // as shown before the join: after it the joined race carries one name
-        const intoName = b.name;
-        if (mergeEditions(a, b)) {
-          map.delete(ka);
-          out.push({ from: a.keyName, into: b.keyName, fromName, intoName, fromYears, intoYears, category: b.category, ...(cls ? { class: cls } : {}) });
+        const cls2 = a.editions[Math.max(...fromYears)]?.class; // the core race's newest class
+        // the shorter name is the core of the race: the longer, sponsored versions are folded into it, so that every
+        // sponsored version of the same core is found, not just the first
+        const fromName = b.name; // as shown before the join: after it the joined race carries one name
+        const intoName = a.name;
+        if (mergeEditions(b, a)) {
+          map.delete(kb);
+          out.push({ from: b.keyName, into: a.keyName, fromName, intoName, fromYears: intoYears, intoYears: fromYears, category: a.category, ...(cls2 ? { class: cls2 } : {}) });
           again = true;
           break outer;
         }
