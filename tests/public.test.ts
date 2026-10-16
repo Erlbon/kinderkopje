@@ -47,6 +47,14 @@ describe("public copy", () => {
     const text = new TextDecoder("latin1").decode(bytes);
     for (const secret of ["Secret Helper Name", "private season text", "Queued Race", "2026-10-01T10"]) expect(text.includes(secret), secret).toBe(false);
   });
+  it("keeps the races that have results, with their names, and leaves out races that are only in the queue", () => {
+    const db = privateDb();
+    const pub = openDatabase(SQL, makePublicCopy(SQL, db));
+    const names = pub.exec("SELECT name FROM race")[0]?.values.map((v) => v[0]) ?? [];
+    expect(names).toEqual(["Paris - Tours Elite"]);
+    expect(pub.exec("SELECT COUNT(*) FROM race_name")[0]!.values[0]![0]).toBe(1);
+    expect(pub.exec("SELECT race_id FROM result_row r JOIN classification c ON c.id = r.classification_id JOIN race_result q ON q.uci_id = c.uci_id")[0]!.values[0]![0]).not.toBeNull();
+  });
   it("leaves the original untouched", () => {
     const db = privateDb();
     makePublicCopy(SQL, db);

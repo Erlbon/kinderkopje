@@ -129,6 +129,13 @@ A race with more than two names is one longer line, `first = second = third = na
 the last is joined into the last. Sponsors added, dropped or changed anywhere in the name are found (a shorter name
 inside a longer one), and the plain core name is the one the sponsored versions are folded into.
 
+**Internal and external race names.** Every race has an internal name, what this project and the database call it
+(by default the shortest name UCI has used, without sponsors, for example `Classic Brugge-De Panne`), and external names:
+how UCI wrote it in each year, kept with the years. Under *Same race, different names* the **Race names** part finds a
+race by any of its names and lets you change the internal name (a line `any external name = Internal name` is saved).
+The database has them as `race` (one row per race, men's and women's elite apart) and `race_name` (its external names),
+and every edition and result carries a `race_id`, so one race has the same id in every year whatever it was called.
+
 DataRide numbers the races itself: the number in `CompetitionResults/<id>` is the race edition's id in this tool
 (`race_result.uci_id`), and the number in `EventResults/<id>` identifies one event (`classification.event_id`).
 A page saved with *Save as* does not work, and uci.org race pages are not used: UCI loads the results when a section

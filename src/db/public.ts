@@ -18,6 +18,8 @@ export function makePublicCopy(SQL: { Database: new (data?: ArrayLike<number>) =
   const copy = openDatabase(SQL, db.export());
   try {
     copy.exec("DELETE FROM kv; DELETE FROM queue_race; UPDATE race_result SET contributor = NULL, captured_at = NULL; UPDATE result_row SET age = NULL;");
+    // only the races that have results: a race that is only in the capture queue is left out, with its names
+    copy.exec("DELETE FROM race_name WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL); DELETE FROM race WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL);");
     copy.run("INSERT OR REPLACE INTO meta(key, value) VALUES ('public', '1')");
     copy.run("INSERT OR REPLACE INTO meta(key, value) VALUES ('credits', ?)", [PUBLIC_CREDITS]);
     copy.run("INSERT OR REPLACE INTO meta(key, value) VALUES ('made', ?)", [new Date().toISOString().slice(0, 10)]);

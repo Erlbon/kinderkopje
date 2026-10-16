@@ -1,7 +1,7 @@
 import type { Database } from "sql.js";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
 import type { Cube } from "../core";
-import { deleteKv, getKv, loadCube, openDatabase, saveCube, setKv } from "../db";
+import { deleteKv, getKv, loadCube, openDatabase, saveCube, setKv, writeRaces } from "../db";
 
 /**
  * The shared store of all pages: one SQLite database kept in the browser (IndexedDB) and exchanged as a
@@ -129,6 +129,7 @@ export async function openStore(): Promise<Store> {
     getText: (key) => getKv(db, key),
     async setText(key, value) {
       setKv(db, key, value);
+      if (key === "racealiases" || key === "racenames") writeRaces(db, cube); // the races follow the join and rename lines
       await persist();
     },
     async deleteText(key) {

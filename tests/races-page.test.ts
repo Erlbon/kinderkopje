@@ -175,6 +175,54 @@ describe("which events are missing", () => {
   });
 });
 
+describe("internal and external race names", () => {
+  const NAMES: [string, number, string?][] = [["Classic Brugge-De Panne", 2024], ["MINERVA CLASSIC BRUGGE - DE PANNE", 2022], ["Oxyclean Classic Brugge-De Panne", 2021]];
+  const firstCells = (doc: Document) => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => c as HTMLElement);
+
+  it("the queue shows the internal name, and the external names UCI used on hover, once the names are joined", async () => {
+    const { doc, texts, button } = pageWith(NAMES);
+    button("Find joins").click();
+    button("Mark all as the same race").click();
+    await (button("Save my decisions").onclick as () => Promise<void>)();
+    expect(texts.get("racealiases")).toContain("=");
+    const cells = firstCells(doc).filter((c) => /Brugge/i.test(c.textContent ?? ""));
+    expect(cells).toHaveLength(1);
+    expect(cells[0]!.textContent).toContain("Classic Brugge-De Panne");
+    expect(cells[0]!.textContent).not.toContain("MINERVA");
+    expect(cells[0]!.title).toContain("MINERVA CLASSIC BRUGGE - DE PANNE (2022)");
+    expect(cells[0]!.title).toContain("Oxyclean Classic Brugge-De Panne (2021)");
+  });
+  it("finding a race by any of its names shows its internal name and its external names", () => {
+    const { doc } = pageWith(NAMES);
+    const find = doc.getElementById("racefind") as HTMLInputElement;
+    find.value = "minerva";
+    find.oninput!(new Event("input") as unknown as InputEvent);
+    const card = doc.querySelector("#racenamelist .card")!;
+    expect(card.textContent).toContain("Internal name");
+    expect(card.textContent).toContain("External names: MINERVA CLASSIC BRUGGE - DE PANNE (2022)");
+  });
+  it("saving a new internal name writes a rename line and the queue shows it; saving the default name removes the line again", async () => {
+    const { doc, texts, button } = pageWith(NAMES);
+    button("Find joins").click();
+    button("Mark all as the same race").click();
+    await (button("Save my decisions").onclick as () => Promise<void>)();
+    const find = doc.getElementById("racefind") as HTMLInputElement;
+    find.value = "oxyclean";
+    find.oninput!(new Event("input") as unknown as InputEvent);
+    const field = doc.querySelector("#racenamelist input[type=text]") as HTMLInputElement;
+    field.value = "Brugge - De Panne";
+    await (button("Save name").onclick as () => Promise<void>)();
+    expect(texts.get("racenames")).toContain("= Brugge - De Panne");
+    expect(firstCells(doc).some((c) => (c.textContent ?? "").includes("Brugge - De Panne") && !(c.textContent ?? "").includes("Classic"))).toBe(true);
+    // back to the default name: the rename line is removed
+    find.oninput!(new Event("input") as unknown as InputEvent);
+    const again = doc.querySelector("#racenamelist input[type=text]") as HTMLInputElement;
+    again.value = "Classic Brugge-De Panne";
+    await (button("Save name").onclick as () => Promise<void>)();
+    expect(texts.get("racenames")).toBe("");
+  });
+});
+
 describe("the Category box in a real browser", () => {
   it("follows the browser's own selection, not the marker the page leaves on the first option", () => {
     const names: [string, number, string?, ("ME" | "WE")?][] = [["Alpha Grand Prix", 2026, "1.1", "ME"], ["Beta Grand Prix", 2026, "1.WWT", "WE"]];

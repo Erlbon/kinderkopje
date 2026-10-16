@@ -1,4 +1,4 @@
-import { CATEGORY_NAMES, JoinSuggestion, QueueLine, chainLines, normRaceName, queueByRace, suggestJoins } from "../../core";
+import { CATEGORY_NAMES, JoinSuggestion, QueueLine, buildRaces, chainLines, normRaceName, parseRaceAliases, queueByRace, suggestJoins } from "../../core";
 import { importCaptureFiles } from "../capture-import";
 import { $, el, tick } from "../dom";
 import type { Store } from "../store";
@@ -75,6 +75,9 @@ export function initRaces(store: Store): void {
 
   function draw(): void {
     const all = queueByRace(cube(), store.getText("racealiases") ?? "");
+    // each race with its internal name and its external names
+    const records = new Map(buildRaces(cube(), store.getText("racealiases") ?? "", store.getText("racenames") ?? "", all.races).map((x) => [x.key, x]));
+    const internal = (r: { key: string; name: string }) => records.get(r.key)?.name ?? r.name;
     if (pendingJoins === undefined) pendingJoins = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").length;
     const pending = pendingJoins;
     $("mergednote").textContent = (all.merged.length ? all.merged.length + " joined. " : "") + (pending ? pending + " possible join" + (pending === 1 ? "" : "s") + " to review." : "No more joins to review.");
@@ -97,11 +100,11 @@ export function initRaces(store: Store): void {
     let rows = onlyMissing ? races.filter((r) => unfinished(r) > 0) : races;
     // search by name (accents, case and punctuation do not matter), then sort
     const q = normRaceName($<HTMLInputElement>("queuesearch").value);
-    if (q) rows = rows.filter((r) => normRaceName(r.name).includes(q) || normRaceName(r.keyName).includes(q));
+    if (q) rows = rows.filter((r) => normRaceName(r.name).includes(q) || normRaceName(r.keyName).includes(q) || normRaceName(internal(r)).includes(q) || (records.get(r.key)?.names ?? []).some((n) => normRaceName(n.name).includes(q)));
     const newestClass = (r: (typeof races)[number]) => Object.values(r.editions).reduce((a, b) => (b.year > a.year ? b : a)).class;
     const sort = chosen("queuesort");
     rows = [...rows].sort((a, b) =>
-      sort === "class" ? tier(newestClass(a)) - tier(newestClass(b)) || a.name.localeCompare(b.name) : sort === "todo" ? unfinished(b) - unfinished(a) || a.name.localeCompare(b.name) : 0,
+      sort === "class" ? tier(newestClass(a)) - tier(newestClass(b)) || internal(a).localeCompare(internal(b)) : sort === "todo" ? unfinished(b) - unfinished(a) || internal(a).localeCompare(internal(b)) : internal(a).localeCompare(internal(b)),
     );
     // say what the two filters are hiding, with a way to show it
     const hiddenDone = races.length - rows.length;
@@ -153,7 +156,9 @@ export function initRaces(store: Store): void {
         if (changed) tag.title = eds.sort((a, b) => b.year - a.year).map((e) => e.year + ": " + (e.class ?? "?")).join(", ");
         nameCell.append(tag);
       }
-      nameCell.append(r.name + (r.category === "ME" ? "" : " (" + CATEGORY_NAMES[r.category].toLowerCase() + ")"));
+      nameCell.append(internal(r) + (r.category === "ME" ? "" : " (" + CATEGORY_NAMES[r.category].toLowerCase() + ")"));
+      const rec = records.get(r.key);
+      if (rec && (rec.names.length > 1 || rec.names[0]?.name !== rec.name)) nameCell.title = "External names: " + rec.names.map((n) => n.name + " (" + (n.years.length > 1 ? n.years[0] + "-" + n.years[n.years.length - 1] : n.years[0]) + ")").join("; ");
       const tr = el("tr", {}, nameCell, el("td", { textContent: eds.filter(finished).length + "/" + eds.length }));
       if (eds.some((e) => e.missingEvents.length || e.waitingEvents.length)) {
         // a twist in front of the name opens the list of what is missing under the row
@@ -197,6 +202,49 @@ export function initRaces(store: Store): void {
   };
   const NL = String.fromCharCode(10);
   const years = (ys: number[]) => (ys.length === 1 ? String(ys[0]) : ys[0] + "-" + ys[ys.length - 1]);
+
+  /** Race names: find a race by any of its names, change its internal name, see its external names. */
+  function renderNames(message = ""): void {
+    const list = $("racenamelist");
+    list.replaceChildren();
+    const q = normRaceName($<HTMLInputElement>("racefind").value);
+    if (message) list.append(el("p", { class: "mut", textContent: message }));
+    if (q.length < 2) return;
+    const aliases = store.getText("racealiases") ?? "";
+    const renames = store.getText("racenames") ?? "";
+    const matches = buildRaces(cube(), aliases, renames).filter((r) => normRaceName(r.name).includes(q) || r.names.some((n) => normRaceName(n.name).includes(q)));
+    if (!matches.length) {
+      list.append(el("p", { class: "mut", textContent: "No race with that name." }));
+      return;
+    }
+    for (const race of matches.slice(0, 8)) {
+      const input = el("input", { type: "text", value: race.name, spellcheck: false });
+      input.style.width = "300px";
+      const save = el("button", { textContent: "Save name", type: "button" });
+      save.onclick = async () => {
+        const name = input.value.trim();
+        if (!name) return;
+        const external = new Set(race.names.map((n) => normRaceName(n.name)));
+        // the race's earlier rename line goes; a new one is written only when the name differs from the default
+        const kept = renames.split(NL).filter((line) => !parseRaceAliases(line).some(([ext]) => external.has(normRaceName(ext))));
+        const byDefault = buildRaces(cube(), aliases, kept.join(NL)).find((x) => x.key === race.key)?.name;
+        const next = (name === byDefault ? kept : [...kept, race.names[0]!.name + " = " + name]).filter((x) => x.trim() !== "").join(NL);
+        await store.setText("racenames", next);
+        draw();
+        renderNames('"' + name + '" saved.');
+      };
+      const years = (ys: number[]) => (ys.length > 1 ? ys[0] + "-" + ys[ys.length - 1] : String(ys[0]));
+      list.append(
+        el(
+          "div",
+          { class: "card" },
+          el("div", { class: "row" }, el("b", { textContent: "Internal name" }), input, save, el("span", { class: "mut", textContent: (race.category === "WE" ? "women's elite" : "men's elite") + ", " + years(race.years) })),
+          el("div", { class: "mut", textContent: "External names: " + race.names.map((n) => n.name + " (" + years(n.years) + ")").join("; ") }),
+        ),
+      );
+    }
+  }
+  $("racefind").oninput = () => renderNames();
 
   /**
    * The one-time review: every likely pair gets a decision. "Same race" is written as an alias line, "Not the same" is

@@ -5,7 +5,7 @@ import type { Database } from "sql.js";
  * team ranking snapshots, race results, the capture queue, team levels and the settings texts.
  * Bump SCHEMA_VERSION and add a step to MIGRATIONS when a table changes.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 const V1 = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -112,8 +112,38 @@ CREATE TABLE queue_event (
 );
 `;
 
+// 4: races with an internal name and the external names UCI used for them; every edition points to its race
+const V4 = `
+CREATE TABLE race (
+  race_id INTEGER PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,        -- follows the race when it is joined with others
+  name TEXT NOT NULL,              -- the internal name
+  slug TEXT NOT NULL,
+  category TEXT NOT NULL,          -- ME = men's elite, WE = women's elite
+  first_year INTEGER,
+  last_year INTEGER
+);
+CREATE TABLE race_name (
+  race_id INTEGER NOT NULL REFERENCES race(race_id) ON DELETE CASCADE,
+  name TEXT NOT NULL,              -- an external name: how a source wrote it
+  source TEXT NOT NULL,
+  first_year INTEGER,
+  last_year INTEGER,
+  PRIMARY KEY (race_id, name, source)
+);
+ALTER TABLE queue_race ADD COLUMN race_id INTEGER;
+ALTER TABLE race_result ADD COLUMN race_id INTEGER;
+DROP VIEW v_results;
+CREATE VIEW v_results AS
+  SELECT q.uci_id, q.year, q.name AS race, q.class, c.label, c.title, w.rank, w.rider, w.team, w.nation, w.result, w.points, q.race_id, r.name AS race_name
+  FROM result_row w
+  JOIN classification c ON c.id = w.classification_id
+  JOIN race_result q ON q.uci_id = c.uci_id
+  LEFT JOIN race r ON r.race_id = q.race_id;
+`;
+
 /** Step n creates schema version n from n-1. Exported so tests can build an old database. */
-export const MIGRATIONS: Record<number, string> = { 1: V1, 2: V2, 3: V3 };
+export const MIGRATIONS: Record<number, string> = { 1: V1, 2: V2, 3: V3, 4: V4 };
 
 export function schemaVersion(db: Database): number {
   const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='meta'");

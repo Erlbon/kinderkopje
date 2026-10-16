@@ -2,6 +2,7 @@ import { parse as parseYaml } from "yaml";
 import { cleanHeading, isComplete, isScoringEvent, mergeEvents } from "./dataride";
 import { CATEGORY_NAMES } from "./dataride";
 import type { Category, DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
+import { slugify } from "./ical";
 import { normRaceName } from "./uci-hub";
 
 /**
@@ -293,7 +294,12 @@ export interface QueueLine extends QueueRace {
 /** The queue with what has been captured for each race. */
 export function queueStatus(cube: Cube): QueueLine[] {
   const byId = new Map((cube.raceResults ?? []).map((r) => [r.uciId, r]));
-  return (cube.queue ?? []).map((q) => {
+  // a race whose results were captured without its line in the queue still belongs in it: results are never left without a race
+  const inQueue = new Set((cube.queue ?? []).map((q) => q.uciId));
+  const orphans: QueueRace[] = (cube.raceResults ?? [])
+    .filter((r) => !inQueue.has(r.uciId))
+    .map((r) => ({ uciId: r.uciId, year: r.year, name: r.name, start: "", end: "", country: r.country ?? "", hub: "captured results", ...(r.class ? { class: r.class } : {}) }));
+  return [...(cube.queue ?? []), ...orphans].map((q) => {
     const r = byId.get(q.uciId);
     const rows = r ? r.classifications.reduce((n, c) => n + c.rows.length, 0) : 0;
     const byEvent = new Map((r?.classifications ?? []).map((c) => [c.eventId, c]));
@@ -469,6 +475,7 @@ export interface RaceEditions {
   name: string;
   category: Category;
   editions: Record<number, QueueLine>; // by year
+  others: number[]; // competition ids listed for the same year under the same name (one edition is shown per year)
 }
 
 /**
@@ -519,6 +526,7 @@ export function chainLines(pairs: [string, string][]): string[] {
 function mergeEditions(from: RaceEditions, into: RaceEditions): boolean {
   if (Object.keys(from.editions).some((y) => y in into.editions)) return false;
   Object.assign(into.editions, from.editions);
+  into.others.push(...from.others);
   const newest = Math.max(...Object.keys(into.editions).map(Number));
   into.name = cleanRaceName(into.editions[newest]!.name); // the newest name wins
   return true;
@@ -535,11 +543,12 @@ function groupQueue(cube: Cube): Map<string, RaceEditions> {
     const key = normRaceName(l.name) + "|" + category;
     let r = map.get(key);
     if (!r) {
-      r = { key, keyName: l.name, name: cleanRaceName(l.name), category, editions: {} };
+      r = { key, keyName: l.name, name: cleanRaceName(l.name), category, editions: {}, others: [] };
       map.set(key, r);
     }
     const newest = Math.max(l.year, ...Object.keys(r.editions).map(Number));
     if (l.year >= newest) r.name = cleanRaceName(l.name); // the newest name wins
+    if (r.editions[l.year] && r.editions[l.year]!.uciId !== l.uciId) r.others.push(r.editions[l.year]!.uciId);
     r.editions[l.year] = l;
   }
   return map;
@@ -584,6 +593,59 @@ export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races:
   const { merged, aliasReport } = applyAliases(map, aliases);
   const years = [...new Set([...map.values()].flatMap((r) => Object.keys(r.editions).map(Number)))].sort((a, b) => b - a);
   return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)), merged, aliasReport };
+}
+
+/** One name a race has been called, by one source, with the years it was used. */
+export interface ExternalName {
+  name: string;
+  years: number[];
+}
+
+/**
+ * A race as the database knows it. `name` is the internal name (what we call it, and what the database shows first);
+ * `names` are the external names: how UCI wrote it in each year. Internal names are unique within a category.
+ */
+export interface RaceRecord {
+  key: string; // stays with the race when it is joined with others; what the database id follows
+  name: string;
+  slug: string;
+  category: Category;
+  names: ExternalName[];
+  years: number[];
+  uciIds: number[]; // DataRide competition ids of its editions
+}
+
+/** The core of a race's names: the shortest once sponsors and the like are stripped; the newest edition's wins a tie. */
+function coreName(names: ExternalName[]): string {
+  return [...names].sort((a, b) => normRaceName(a.name).length - normRaceName(b.name).length || Math.max(...b.years) - Math.max(...a.years))[0]!.name;
+}
+
+/**
+ * The races of the queue, each with its internal name and its external names. The internal name is the one written in
+ * `renames` (lines "any external name = Internal name"), otherwise the core name. `grouped` can be passed when the
+ * caller has already grouped the queue (queueByRace) so that it is not done twice.
+ */
+export function buildRaces(cube: Cube, aliases = "", renames = "", grouped?: RaceEditions[]): RaceRecord[] {
+  const races = grouped ?? queueByRace(cube, aliases).races;
+  const overrides = parseRaceAliases(renames).map(([external, internal]) => [normRaceName(external), internal] as [string, string]);
+  const taken = new Set<string>();
+  const slugs = new Set<string>();
+  const out: RaceRecord[] = [];
+  for (const r of races) {
+    const eds = Object.values(r.editions);
+    const byName = new Map<string, number[]>();
+    for (const e of eds) byName.set(e.name, [...(byName.get(e.name) ?? []), e.year]);
+    const names: ExternalName[] = [...byName].map(([name, years]) => ({ name, years: years.sort((a, b) => a - b) })).sort((a, b) => a.years[0]! - b.years[0]!);
+    const override = overrides.find(([k]) => names.some((n) => normRaceName(n.name) === k))?.[1];
+    let name = override ?? cleanRaceName(coreName(names));
+    for (let n = 2; taken.has(r.category + "|" + name.toLowerCase()); n++) name = name.replace(/ \([0-9]+\)$/, "") + " (" + n + ")";
+    taken.add(r.category + "|" + name.toLowerCase());
+    let slug = slugify(name) + (r.category === "WE" ? "-women" : "");
+    for (let n = 2; slugs.has(slug); n++) slug = slug.replace(/-[0-9]+$/, "") + "-" + n;
+    slugs.add(slug);
+    out.push({ key: r.key, name, slug, category: r.category, names, years: eds.map((e) => e.year).sort((a, b) => a - b), uciIds: [...eds.map((e) => e.uciId), ...r.others] });
+  }
+  return out;
 }
 
 export interface JoinSuggestion {

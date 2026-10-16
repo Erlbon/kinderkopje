@@ -1,8 +1,8 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, chainLines, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
-import { loadCube, openDatabase, saveCube } from "../src/db";
+import { Cube, addCapture, buildRaces, chainLines, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { loadCube, openDatabase, saveCube, setKv, writeRaces } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
 const SQL = await initSqlJs();
@@ -226,6 +226,66 @@ describe("the same race under different names", () => {
     expect(line.missingEvents.map((e) => e.id)).toEqual([3]); // the final classification; the jersey event is not counted
     expect(line.waitingEvents.map((e) => e.id)).toEqual([2]);
     expect(line).toMatchObject({ eventsKnown: 3, eventsCaptured: 2, eventsComplete: 1 });
+  });
+  it("a race has an internal name (the core name) and keeps every name UCI used as an external name, with its years", () => {
+    const cube = queue(
+      comp(1, "Oxyclean Classic Brugge-De Panne", 2021), comp(2, "MINERVA CLASSIC BRUGGE - DE PANNE", 2022), comp(3, "Classic Brugge-De Panne", 2023), comp(4, "Classic Brugge-De Panne", 2024),
+      comp(5, "Classic Brugge-De Panne", 2023, "WE"),
+    );
+    const NL = String.fromCharCode(10);
+    const aliases = ["Oxyclean Classic Brugge-De Panne = MINERVA CLASSIC BRUGGE - DE PANNE = Classic Brugge-De Panne"].join(NL);
+    const races = buildRaces(cube, aliases);
+    expect(races).toHaveLength(2); // the men's race (four editions, three names) and the women's
+    const men = races.find((r) => r.category === "ME")!;
+    expect(men.name).toBe("Classic Brugge-De Panne"); // the shortest name without sponsors
+    expect(men.slug).toBe("classic-brugge-de-panne");
+    expect(men.names.map((n) => [n.name, n.years.join("/")])).toEqual([["Oxyclean Classic Brugge-De Panne", "2021"], ["MINERVA CLASSIC BRUGGE - DE PANNE", "2022"], ["Classic Brugge-De Panne", "2023/2024"]]);
+    expect(men.years).toEqual([2021, 2022, 2023, 2024]);
+    // the women's race has the same internal name, apart by category and slug
+    const women = races.find((r) => r.category === "WE")!;
+    expect(women.name).toBe("Classic Brugge-De Panne");
+    expect(women.slug).toBe("classic-brugge-de-panne-women");
+    // a rename line (any external name = internal name) sets the internal name
+    const renamed = buildRaces(cube, aliases, "MINERVA CLASSIC BRUGGE - DE PANNE = Brugge-De Panne");
+    expect(renamed.find((r) => r.category === "ME")!.name).toBe("Brugge-De Panne");
+    expect(renamed.find((r) => r.category === "WE")!.name).toBe("Classic Brugge-De Panne");
+  });
+  it("a competition listed twice in a year under the same name still belongs to its race", () => {
+    const cube = queue(comp(1, "National Road Championships - India", 2024, "WE"), comp(2, "National Road Championships - India", 2024, "WE"), comp(3, "National Road Championships - India", 2025, "WE"));
+    const races = buildRaces(cube);
+    expect(races).toHaveLength(1);
+    expect(races[0]!.uciIds.sort()).toEqual([1, 2, 3]);
+    const db = openDatabase(SQL);
+    saveCube(db, cube);
+    expect(db.exec("SELECT COUNT(*) FROM queue_race WHERE race_id IS NULL")[0]!.values[0]![0]).toBe(0);
+  });
+  it("two races never share an internal name inside a category", () => {
+    const cube = queue(comp(1, "Alpha Classic", 2026), comp(2, "Alpha Classic Open", 2026));
+    const races = buildRaces(cube, "", "Alpha Classic Open = Alpha Classic");
+    expect(new Set(races.map((r) => r.name)).size).toBe(2);
+    expect(new Set(races.map((r) => r.slug)).size).toBe(2);
+  });
+  it("the races are in the database, every edition and result points to its race, and a race keeps its id", () => {
+    const cube = queue(comp(1, "Boucles de la Mayenne", 2022), comp(2, "Boucles de la Mayenne - Crédit Mutuel", 2025), comp(3, "Other Race Here", 2025));
+    addCapture(cube, { format: "racethreads-capture/1", eventResults: [{ competitionId: 2, eventId: 9, heading: "x", totalRows: 40, rows: [{ rank: 1, rider: "A B", team: "T", age: 30, nation: "FRA", result: "x", points: 5 }] }] });
+    const db = openDatabase(SQL);
+    saveCube(db, cube);
+    setKv(db, "racealiases", "Boucles de la Mayenne - Crédit Mutuel = Boucles de la Mayenne");
+    writeRaces(db, cube);
+    const one = (sql: string) => db.exec(sql)[0]?.values[0]?.[0];
+    expect(one("SELECT COUNT(*) FROM race")).toBe(2);
+    expect(one("SELECT name FROM race WHERE name LIKE 'Boucles%'")).toBe("Boucles de la Mayenne");
+    expect(one("SELECT COUNT(*) FROM race_name n JOIN race r ON r.race_id = n.race_id WHERE r.name LIKE 'Boucles%'")).toBe(2); // two external names
+    expect(one("SELECT COUNT(DISTINCT race_id) FROM queue_race WHERE name LIKE 'Boucles%'")).toBe(1); // both editions: one race
+    expect(one("SELECT race_name FROM v_results LIMIT 1")).toBe("Boucles de la Mayenne");
+    const id = one("SELECT race_id FROM race WHERE name LIKE 'Boucles%'");
+    saveCube(db, cube); // saving again keeps the id
+    expect(one("SELECT race_id FROM race WHERE name LIKE 'Boucles%'")).toBe(id);
+    // renaming changes the internal name, not the id and not the external names
+    setKv(db, "racenames", "Boucles de la Mayenne = Mayenne Tour");
+    writeRaces(db, cube);
+    expect(one("SELECT name FROM race WHERE race_id = " + id)).toBe("Mayenne Tour");
+    expect(one("SELECT COUNT(*) FROM race_name WHERE race_id = " + id)).toBe(2);
   });
   it("a Grand Tour is counted as its stages plus the general classification, whatever else DataRide lists for each stage", () => {
     // the names DataRide really lists for a 21-stage race (Giro d'Italia 2026): 165 events, 22 of them count
