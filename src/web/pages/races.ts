@@ -146,70 +146,96 @@ export function initRaces(store: Store): void {
   const NL = String.fromCharCode(10);
   const years = (ys: number[]) => (ys.length === 1 ? String(ys[0]) : ys[0] + "-" + ys[ys.length - 1]);
 
-  /** The one-time review: every likely pair with a tick; ticked ones become alias lines, the rest are remembered as rejected. */
+  /**
+   * The one-time review: every likely pair gets a decision. "Same race" is written as an alias line, "Not the same" is
+   * remembered as rejected, and "Don't know" does nothing, so the pair comes back next time. Men's and women's pairs are
+   * listed apart, for the category chosen at the top of the page (both, in two tables, when "Both" is chosen).
+   */
   function review(): void {
     const box = $("joinreview");
     box.replaceChildren();
     const isNational = (j: JoinSuggestion) => /national road/i.test(j.fromName);
-    // national championships are many and alike: they go last, and can be marked together
-    const found = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").sort((a, b) => Number(isNational(a)) - Number(isNational(b)));
-    if (!found.length) {
-      box.append(el("p", { class: "mut", textContent: "No likely joins found." }));
+    const cat = chosenCategory();
+    const sections: ("ME" | "WE")[] = cat === "all" ? ["ME", "WE"] : [cat === "WE" ? "WE" : "ME"];
+    const every = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "");
+    const mine = every.filter((j) => sections.includes(j.category));
+    if (!mine.length) {
+      const other = every.length - mine.length;
+      const where = cat === "all" ? "." : " for " + CATEGORY_NAMES[sections[0]!].toLowerCase() + (other ? " (" + other + " for the other category: choose it, or Both, in the Category box above)." : ".");
+      box.append(el("p", { class: "mut", textContent: "No likely joins found" + where }));
       return;
     }
-    // every row is decided: "same race" (the default) or "different races"; a different pair is struck through at once
-    type Row = { j: JoinSuggestion; same: HTMLInputElement; diff: HTMLInputElement; tr: HTMLElement };
+    type Decision = "same" | "diff" | "unknown";
+    type Row = { j: JoinSuggestion; state: Decision; tr: HTMLElement; buttons: Record<Decision, HTMLButtonElement> };
     const rows: Row[] = [];
-    const decide = (r: Row, same: boolean) => {
-      r.same.checked = same;
-      r.diff.checked = !same;
-      r.tr.classList.toggle("rejected", !same);
+    const decide = (r: Row, state: Decision) => {
+      r.state = state;
+      r.tr.classList.toggle("rejected", state === "diff");
+      for (const k of ["same", "diff", "unknown"] as const) {
+        r.buttons[k].classList.toggle("on", k === state);
+        r.buttons[k].setAttribute("aria-pressed", String(k === state));
+      }
     };
-    const table = el("table", { class: "queue" });
-    table.append(el("tr", {}, el("th", { textContent: "Your decision" }), el("th", { textContent: "Category" }), el("th", { textContent: "One name" }), el("th", { textContent: "The other name" }), el("th", { textContent: "Years of each" })));
-    found.forEach((j, i) => {
-      const same = el("input", { type: "radio", name: "pair" + i, checked: true });
-      const diff = el("input", { type: "radio", name: "pair" + i });
-      const tr = el(
-        "tr",
-        {},
-        el("td", {}, el("label", {}, same, " same race "), el("label", {}, diff, " different races")),
-        el("td", { textContent: j.category === "WE" ? "Women" : "Men" }),
-        el("td", { textContent: j.fromName }),
-        el("td", { textContent: (j.class ? j.class + " " : "") + j.intoName }),
-        el("td", { textContent: years(j.fromYears) + " and " + years(j.intoYears) }),
-      );
-      const row: Row = { j, same, diff, tr };
-      same.onchange = () => decide(row, true);
-      diff.onchange = () => decide(row, false);
-      rows.push(row);
-      table.append(tr);
-    });
-    const allSame = el("button", { textContent: "Mark all as the same race" });
-    allSame.onclick = () => rows.forEach((r) => decide(r, true));
-    const allDiff = el("button", { textContent: "Mark all as different races" });
-    allDiff.onclick = () => rows.forEach((r) => decide(r, false));
-    const nationals = rows.filter((r) => isNational(r.j));
-    const noNat = el("button", { textContent: "Mark national championships as different (" + nationals.length + ")" });
-    noNat.onclick = () => nationals.forEach((r) => decide(r, false));
+    box.append(el("p", { class: "mut", textContent: mine.length + " likely joins. Decide each pair; the ones you leave as Don't know come back next time. A joined race is shown under its newest name." }));
+    for (const section of sections) {
+      const list = mine.filter((j) => j.category === section).sort((x, y) => Number(isNational(x)) - Number(isNational(y))); // national championships go last
+      if (!list.length) continue;
+      box.append(el("h3", { textContent: (section === "WE" ? "Women's elite races" : "Men's elite races") + " (" + list.length + ")" }));
+      const table = el("table", { class: "queue" });
+      table.append(el("tr", {}, el("th", { textContent: "Your decision" }), el("th", { textContent: "One name" }), el("th", { textContent: "The other name" }), el("th", { textContent: "Years of each" })));
+      for (const j of list) {
+        const mk = (label: string, cls: string) => el("button", { textContent: label, class: "seg-" + cls, type: "button" });
+        const buttons = { same: mk("Same race", "same"), diff: mk("Not the same", "diff"), unknown: mk("Don't know", "unknown") };
+        const tr = el(
+          "tr",
+          {},
+          el("td", { class: "seg" }, buttons.same, buttons.diff, buttons.unknown),
+          el("td", { textContent: j.fromName }),
+          el("td", { textContent: (j.class ? j.class + " " : "") + j.intoName }),
+          el("td", { textContent: years(j.fromYears) + " and " + years(j.intoYears) }),
+        );
+        const row: Row = { j, state: "unknown", tr, buttons };
+        buttons.same.onclick = () => decide(row, "same");
+        buttons.diff.onclick = () => decide(row, "diff");
+        buttons.unknown.onclick = () => decide(row, "unknown");
+        decide(row, "unknown");
+        rows.push(row);
+        table.append(tr);
+      }
+      box.append(table);
+    }
+    const bulk = (label: string, state: Decision, only: (r: Row) => boolean = () => true) => {
+      const b = el("button", { textContent: label });
+      b.onclick = () => rows.filter(only).forEach((r) => decide(r, state));
+      return b;
+    };
+    const nationals = rows.filter((r) => isNational(r.j)).length;
     const apply = el("button", { textContent: "Save my decisions" });
     apply.onclick = async () => {
-      const yes = chainLines(rows.filter((r) => r.same.checked).map((r): [string, string] => [r.j.from, r.j.into]));
-      const no = rows.filter((r) => !r.same.checked).map((r) => r.j.from + " = " + r.j.into);
+      const yes = chainLines(rows.filter((r) => r.state === "same").map((r): [string, string] => [r.j.from, r.j.into]));
+      const no = rows.filter((r) => r.state === "diff").map((r) => r.j.from + " = " + r.j.into);
+      const left = rows.filter((r) => r.state === "unknown").length;
       const keep = (key: string, add: string[]) => [store.getText(key) ?? "", ...add].filter((x) => x !== "").join(NL);
       await store.setText("racealiases", keep("racealiases", yes));
       await store.setText("racenojoin", keep("racenojoin", no));
       $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
       box.replaceChildren();
-      $("aliasmsg").textContent = rows.length - no.length + " pairs joined, " + no.length + " marked as different races (they will not be suggested again).";
+      $("aliasmsg").textContent = rows.filter((r) => r.state === "same").length + " pairs joined, " + no.length + " marked as not the same (not suggested again), " + left + " left undecided.";
       draw();
     };
     const cancel = el("button", { textContent: "Cancel" });
     cancel.onclick = () => box.replaceChildren();
     box.append(
-      el("p", { class: "mut", textContent: found.length + " likely joins. Each pair is the same race unless you mark it as different races: those are struck through and not suggested again. A joined race is shown under its newest name." }),
-      table,
-      el("div", { class: "row" }, allSame, allDiff, ...(nationals.length ? [noNat] : []), apply, cancel),
+      el(
+        "div",
+        { class: "row" },
+        bulk("Mark all as the same race", "same"),
+        bulk("Mark all as not the same", "diff"),
+        ...(nationals ? [bulk("Mark national championships as not the same (" + nationals + ")", "diff", (r) => isNational(r.j))] : []),
+        bulk("Clear all (don't know)", "unknown"),
+        apply,
+        cancel,
+      ),
     );
   }
   $("joinfind").onclick = review;

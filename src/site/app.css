@@ -1,5 +1,5 @@
-:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#d9480f;--acc-text:#c2410c;--acc-soft:#fff0e6;--on-acc:#fff;--ok:#2e7d32;--warn:#a15c00;--err:#b3261e}
-@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#ff8a4c;--acc-text:#ff8a4c;--acc-soft:#ff8a4c22;--on-acc:#1c1c1c;--ok:#7bc47f;--warn:#f0b35a;--err:#f2b8b5}}
+:root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#d9480f;--acc-text:#c2410c;--acc-soft:#fff0e6;--on-acc:#fff;--ok:#2e7d32;--on-ok:#fff;--on-err:#fff;--on-mut:#fff;--warn:#a15c00;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#ff8a4c;--acc-text:#ff8a4c;--acc-soft:#ff8a4c22;--on-acc:#1c1c1c;--ok:#7bc47f;--on-ok:#1c1c1c;--on-err:#1c1c1c;--on-mut:#1c1c1c;--warn:#f0b35a;--err:#f2b8b5}}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;margin:0;padding:16px}
 main{max-width:960px;margin:0 auto}
@@ -42,6 +42,14 @@ table.queue th,table.queue td{text-align:left;padding:3px 8px;border-bottom:1px 
 .drop.over{border-color:var(--acc);background:var(--card)}
 kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--card);font:12px ui-monospace,Consolas,monospace}
 tr.rejected td{opacity:.5;text-decoration:line-through}
+tr.rejected td.seg{opacity:1;text-decoration:none}
+td.seg{white-space:nowrap}
+td.seg button{border-radius:0;padding:3px 9px;font-size:13px;margin-left:-1px;color:var(--fg);border-color:var(--line)}
+td.seg button:first-child{border-radius:6px 0 0 6px;margin-left:0}
+td.seg button:last-child{border-radius:0 6px 6px 0}
+td.seg button.on.seg-same{background:var(--ok);color:var(--on-ok);border-color:var(--ok)}
+td.seg button.on.seg-diff{background:var(--err);color:var(--on-err);border-color:var(--err)}
+td.seg button.on.seg-unknown{background:var(--mut);color:var(--on-mut);border-color:var(--mut)}
 .tag{display:inline-block;font-size:12px;line-height:1.5;padding:0 8px;border-radius:10px;border:1px solid var(--line);margin-right:4px;white-space:nowrap}
 .tag.ok{color:var(--ok);border-color:var(--ok)}
 .tag.plan{color:var(--mut)}

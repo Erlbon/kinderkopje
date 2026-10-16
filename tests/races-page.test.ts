@@ -27,15 +27,15 @@ function page(): { doc: Document; text: () => string } {
 }
 
 // a page with a small queue built from (name, year, class) lines, and a store that remembers what is saved
-function pageWith(names: [string, number, string?][]) {
+function pageWith(names: [string, number, string?, ("ME" | "WE")?][]) {
   const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
   (globalThis as unknown as { document: Document }).document = document as unknown as Document;
   const doc = document as unknown as Document;
   for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = false;
   const cube = emptyCube();
-  const comp = (id: number, name: string, year: number, cls = "1.1") => ({ id, name, start: year + "-06-01", end: year + "-06-01", year, country: "FRA", class: cls, inProgress: false, category: "ME" as const });
-  addCapture(cube, { format: "racethreads-capture/1", competitions: names.map(([n, y, c], i) => comp(i + 1, n, y, c)) });
+  const comp = (id: number, name: string, year: number, cls = "1.1", category: "ME" | "WE" = "ME") => ({ id, name, start: year + "-06-01", end: year + "-06-01", year, country: "FRA", class: cls, inProgress: false, category });
+  addCapture(cube, { format: "racethreads-capture/1", competitions: names.map(([n, y, c, k], i) => comp(i + 1, n, y, c, k)) });
   const texts = new Map<string, string>();
   const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: (k: string) => texts.get(k), setText: async (k: string, v: string) => void texts.set(k, v) } as unknown as Store;
   initRaces(store);
@@ -46,48 +46,100 @@ function pageWith(names: [string, number, string?][]) {
 
 describe("races whose names changed", () => {
   const MAYENNE: [string, number][] = [["Boucles de la Mayenne", 2026], ["Boucles de la Mayenne - Crédit Mutuel", 2025]];
+  const choices = (doc: Document) => Array.from(doc.querySelectorAll("#joinreview td.seg button")) as HTMLButtonElement[];
+  const choice = (doc: Document, label: string, row = 0) => choices(doc).filter((b) => b.textContent === label)[row]!;
+  const save = (button: (l: string) => HTMLButtonElement) => (button("Save my decisions").onclick as () => Promise<void>)();
 
   it("stay two rows until you review, and the page says how many joins wait", () => {
     const { doc, rows } = pageWith(MAYENNE);
     expect(rows()).toHaveLength(2);
     expect(doc.getElementById("mergednote")!.textContent).toContain("1 possible join to review");
   });
-  it("Find joins lists them with ticks, and joining the ticked ones writes the lines and joins the races", async () => {
+  it("Find joins gives each pair three clear choices, and decides nothing until you do", () => {
+    const { doc, button } = pageWith(MAYENNE);
+    button("Find joins").click();
+    expect(choices(doc).map((b) => b.textContent)).toEqual(["Same race", "Not the same", "Don't know"]);
+    expect(choice(doc, "Don't know").classList.contains("on")).toBe(true); // nothing is decided yet
+    expect(choice(doc, "Same race").classList.contains("on")).toBe(false);
+    const cells = Array.from(doc.querySelectorAll("#joinreview tr:nth-child(2) td")).map((c) => c.textContent);
+    expect(cells.slice(1)).toEqual(["Boucles de la Mayenne - Crédit Mutuel", "1.1 Boucles de la Mayenne", "2025 and 2026"]);
+    choice(doc, "Same race").click();
+    expect(choice(doc, "Same race").classList.contains("on")).toBe(true);
+    expect(choice(doc, "Don't know").classList.contains("on")).toBe(false);
+  });
+  it("Same race writes the alias line and joins the two", async () => {
     const { doc, texts, rows, button } = pageWith(MAYENNE);
     button("Find joins").click();
-    expect(doc.querySelectorAll("#joinreview input[type=radio]")).toHaveLength(2); // same race / different races
-    const cells = Array.from(doc.querySelectorAll("#joinreview tr:nth-child(2) td")).map((c) => c.textContent);
-    expect(cells.slice(1)).toEqual(["Men", "Boucles de la Mayenne - Crédit Mutuel", "1.1 Boucles de la Mayenne", "2025 and 2026"]);
-    await (button("Save my decisions").onclick as () => Promise<void>)();
+    choice(doc, "Same race").click();
+    await save(button);
     expect(texts.get("racealiases")).toBe("Boucles de la Mayenne - Crédit Mutuel = Boucles de la Mayenne");
     expect(rows()).toHaveLength(1);
     expect(doc.getElementById("joinreview")!.textContent).toBe("");
     expect(doc.getElementById("mergednote")!.textContent).toContain("No more joins to review");
+    expect(doc.getElementById("aliasmsg")!.textContent).toContain("1 pairs joined");
   });
-  it("Mark all as different races rejects every pair at once", async () => {
+  it("Not the same is struck through at once, remembered, and not suggested again", async () => {
     const { doc, texts, rows, button } = pageWith(MAYENNE);
     button("Find joins").click();
-    button("Mark all as different races").click();
-    expect(doc.querySelectorAll("#joinreview tr.rejected")).toHaveLength(1);
-    await (button("Save my decisions").onclick as () => Promise<void>)();
-    expect(texts.get("racenojoin")).toContain("Boucles de la Mayenne");
-    expect(rows()).toHaveLength(2);
-    expect(doc.getElementById("aliasmsg")!.textContent).toContain("1 marked as different races");
-  });
-  it("a pair marked as different races is remembered and not suggested again", async () => {
-    const { doc, texts, rows, button } = pageWith(MAYENNE);
-    button("Find joins").click();
-    const radios = Array.from(doc.querySelectorAll("#joinreview input[type=radio]")) as HTMLInputElement[];
-    const different = radios[1]!;
-    different.checked = true;
-    radios[0]!.checked = false;
-    different.onchange!(new Event("change"));
-    expect(doc.querySelector("#joinreview tr.rejected")).not.toBeNull(); // struck through at once
-    await (button("Save my decisions").onclick as () => Promise<void>)();
+    choice(doc, "Not the same").click();
+    expect(doc.querySelector("#joinreview tr.rejected")).not.toBeNull();
+    await save(button);
     expect(texts.get("racenojoin")).toContain("Boucles de la Mayenne");
     expect(texts.get("racealiases")).toBe("");
     expect(rows()).toHaveLength(2);
     expect(doc.getElementById("mergednote")!.textContent).toContain("No more joins to review");
+  });
+  it("Don't know stores nothing, and the pair comes back next time", async () => {
+    const { doc, texts, rows, button } = pageWith(MAYENNE);
+    button("Find joins").click();
+    await save(button); // saved without deciding
+    expect(texts.get("racealiases")).toBe("");
+    expect(texts.get("racenojoin")).toBe("");
+    expect(rows()).toHaveLength(2);
+    expect(doc.getElementById("aliasmsg")!.textContent).toContain("1 left undecided");
+    expect(doc.getElementById("mergednote")!.textContent).toContain("1 possible join to review");
+    button("Find joins").click();
+    expect(choices(doc)).toHaveLength(3); // there it is again
+  });
+  it("Mark all as not the same rejects every pair at once", async () => {
+    const { doc, texts, rows, button } = pageWith(MAYENNE);
+    button("Find joins").click();
+    button("Mark all as not the same").click();
+    expect(doc.querySelectorAll("#joinreview tr.rejected")).toHaveLength(1);
+    await save(button);
+    expect(texts.get("racenojoin")).toContain("Boucles de la Mayenne");
+    expect(rows()).toHaveLength(2);
+    expect(doc.getElementById("aliasmsg")!.textContent).toContain("1 marked as not the same");
+  });
+  it("men's and women's pairs are never in the same table", () => {
+    const names: [string, number, string?, ("ME" | "WE")?][] = [
+      ["Alpha Grand Prix", 2026, "1.1", "ME"], ["Alpha Grand Prix Open", 2025, "1.1", "ME"],
+      ["Beta Grand Prix", 2026, "1.WWT", "WE"], ["Beta Grand Prix Open", 2025, "1.WWT", "WE"],
+    ];
+    const headings = (doc: Document) => Array.from(doc.querySelectorAll("#joinreview h3")).map((h) => h.textContent);
+    const pick = (doc: Document, value: string) => {
+      const sel = doc.getElementById("queuecat") as HTMLSelectElement;
+      for (const o of Array.from(sel.options)) o.toggleAttribute("selected", false);
+      const target = Array.from(sel.options).find((o) => o.value === value)!;
+      target.selected = true;
+      target.toggleAttribute("selected", true);
+    };
+    const men = pageWith(names);
+    men.button("Find joins").click();
+    expect(headings(men.doc)).toEqual(["Men's elite races (1)"]);
+    expect(men.doc.getElementById("joinreview")!.textContent).not.toContain("Beta");
+
+    const women = pageWith(names);
+    pick(women.doc, "WE");
+    women.button("Find joins").click();
+    expect(headings(women.doc)).toEqual(["Women's elite races (1)"]);
+    expect(women.doc.getElementById("joinreview")!.textContent).not.toContain("Alpha");
+
+    const both = pageWith(names);
+    pick(both.doc, "all");
+    both.button("Find joins").click();
+    expect(headings(both.doc)).toEqual(["Men's elite races (1)", "Women's elite races (1)"]);
+    expect(both.doc.querySelectorAll("#joinreview table")).toHaveLength(2);
   });
 });
 
