@@ -117,6 +117,13 @@ per race and year how many events are captured, and can be limited to WorldTour,
 Every result row keeps the team the rider
 rode for at the time, which is what the monthly team comparison needs.
 
+The queue has a category chooser (men's elite is the default, women's elite, or both: only those two are collected),
+a name search, and a sort by name, by class (WorldTour first) or by most to do. A race that changed its name (a
+sponsor added, "Strade Bianche" becoming "Strade Bianche Donne") shows as two rows until you join them: under *Same
+race, different names*, **Find joins** lists the likely pairs (one name starts the other, the years never overlap) for
+you to tick or untick. Ticked pairs are written as lines `old name = name it continues as` in the box below, and
+unticked ones are remembered as rejected. Do it once after capturing a season; nothing is joined without your tick.
+
 DataRide numbers the races itself: the number in `CompetitionResults/<id>` is the race edition's id in this tool
 (`race_result.uci_id`), and the number in `EventResults/<id>` identifies one event (`classification.event_id`).
 A page saved with *Save as* does not work, and uci.org race pages are not used: UCI loads the results when a section

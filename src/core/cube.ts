@@ -458,15 +458,12 @@ export function cleanRaceName(name: string): string {
 
 export interface RaceEditions {
   key: string;
+  keyName: string; // a name as UCI wrote it that makes this key: the start of an alias line
   name: string;
   category: Category;
   editions: Record<number, QueueLine>; // by year
 }
 
-/**
- * The queue grouped by race: one row per race, one edition per year. The ids differ from year to year, so
- * the editions are matched by race name, and men's and women's hubs stay apart.
- */
 /** Alias lines, one per line: "Old name = Name it continues as". Blank lines and lines starting with # are ignored. */
 export function parseRaceAliases(text: string): [string, string][] {
   const out: [string, string][] = [];
@@ -493,23 +490,28 @@ function mergeEditions(from: RaceEditions, into: RaceEditions): boolean {
 /** Shorter names must be at least this long (after cleaning) to be taken for the start of a longer one. */
 const MIN_PREFIX = 8;
 
-export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races: RaceEditions[]; merged: string[]; aliasReport: string[] } {
+/** The queue grouped by race, before any joining. */
+function groupQueue(cube: Cube): Map<string, RaceEditions> {
   const map = new Map<string, RaceEditions>();
   for (const l of queueStatus(cube)) {
     const category: Category = l.category ?? (/women/i.test(l.hub) ? "WE" : "ME");
     const key = normRaceName(l.name) + "|" + category;
     let r = map.get(key);
     if (!r) {
-      r = { key, name: cleanRaceName(l.name), category, editions: {} };
+      r = { key, keyName: l.name, name: cleanRaceName(l.name), category, editions: {} };
       map.set(key, r);
     }
     const newest = Math.max(l.year, ...Object.keys(r.editions).map(Number));
     if (l.year >= newest) r.name = cleanRaceName(l.name); // the newest name wins
     r.editions[l.year] = l;
   }
+  return map;
+}
+
+/** Apply the alias lines the user wrote down (or accepted), each with an account of what it did. */
+function applyAliases(map: Map<string, RaceEditions>, aliases: string): { merged: string[]; aliasReport: string[] } {
   const merged: string[] = [];
   const aliasReport: string[] = [];
-  // 1. the aliases the user wrote down, each with an account of what it did
   for (const [from, to] of parseRaceAliases(aliases)) {
     let said = "";
     for (const category of ["ME", "WE"] as const) {
@@ -529,7 +531,42 @@ export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races:
     }
     aliasReport.push(from + " = " + to + ": " + said);
   }
-  // 2. the same race with a sponsor added or dropped: one cleaned name starts the other, and the years never overlap
+  return { merged, aliasReport };
+}
+
+/**
+ * The queue grouped by race: one row per race, one edition per year. The ids differ from year to year, so
+ * the editions are matched by race name, and men's and women's races stay apart. Races whose names changed are
+ * joined only where an alias line says so (see suggestJoins for finding them).
+ */
+export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races: RaceEditions[]; merged: string[]; aliasReport: string[] } {
+  const map = groupQueue(cube);
+  const { merged, aliasReport } = applyAliases(map, aliases);
+  const years = [...new Set([...map.values()].flatMap((r) => Object.keys(r.editions).map(Number)))].sort((a, b) => b - a);
+  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)), merged, aliasReport };
+}
+
+export interface JoinSuggestion {
+  from: string; // a name of the race that would be joined (an alias line starts with it)
+  into: string; // the race it would be joined into
+  fromName: string; // as shown
+  intoName: string;
+  fromYears: number[];
+  intoYears: number[];
+  category: Category;
+  class?: string;
+}
+
+/**
+ * Pairs that look like the same race under two names: one cleaned name starts the other (a sponsor added or dropped),
+ * the shorter is long enough to mean something, and the years never overlap. Joins already made by `aliases` and
+ * pairs the user rejected (`nojoin`, in the alias line format) are left out. Nothing is joined here: the user decides.
+ */
+export function suggestJoins(cube: Cube, aliases = "", nojoin = ""): JoinSuggestion[] {
+  const map = groupQueue(cube);
+  applyAliases(map, aliases);
+  const rejected = new Set(parseRaceAliases(nojoin).map(([a, b]) => normRaceName(a) + ">" + normRaceName(b)));
+  const out: JoinSuggestion[] = [];
   for (let again = true; again; ) {
     again = false;
     const keys = [...map.keys()].sort((x, y) => x.length - y.length);
@@ -541,17 +578,22 @@ export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races:
         if (ka === kb || catA !== catB || baseB!.length <= baseA!.length || !baseB!.startsWith(baseA!)) continue;
         const a = map.get(ka)!;
         const b = map.get(kb)!;
+        if (rejected.has(baseA + ">" + baseB)) continue;
+        const fromYears = Object.keys(a.editions).map(Number).sort((x, y) => x - y);
+        const intoYears = Object.keys(b.editions).map(Number).sort((x, y) => x - y);
+        const cls = b.editions[Math.max(...intoYears)]?.class;
+        const fromName = a.name; // as shown before the join: after it the joined race carries one name
+        const intoName = b.name;
         if (mergeEditions(a, b)) {
           map.delete(ka);
-          merged.push(a.name + " -> " + b.name);
+          out.push({ from: a.keyName, into: b.keyName, fromName, intoName, fromYears, intoYears, category: b.category, ...(cls ? { class: cls } : {}) });
           again = true;
           break outer;
         }
       }
     }
   }
-  const years = [...new Set([...map.values()].flatMap((r) => Object.keys(r.editions).map(Number)))].sort((a, b) => b - a);
-  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)), merged, aliasReport };
+  return out;
 }
 
 export interface SeasonColumn {

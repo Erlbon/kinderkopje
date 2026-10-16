@@ -24,13 +24,16 @@
   <div class="row">
     <label class="btn">Open captured files<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
     <label>Category <select id="queuecat"><option value="ME">Men elite</option><option value="WE">Women elite</option><option value="all">Both</option></select></label>
+    <label>Search <input id="queuesearch" type="search" placeholder="race name" style="width:150px"></label>
+    <label>Sort <select id="queuesort"><option value="name">Name</option><option value="class">Class, then name</option><option value="todo">Most to do first</option></select></label>
     <label><input id="queuemissing" type="checkbox" checked> Only races with events still to capture</label>
     <label><input id="queuetop" type="checkbox" checked> Only WorldTour, ProSeries and championships</label>
   </div>
   <details style="margin:6px 0">
     <summary>Same race, different names</summary>
-    <p class="mut" style="margin:6px 0">A race that gained or dropped a sponsor in its name is joined automatically when one name starts the other and the years do not overlap. Anything else you can join by hand: one line per race, <code>old name = name it continues as</code>. Lines starting with # are notes.</p>
-    <div id="mergednote" class="mut"></div>
+    <p class="mut" style="margin:6px 0">A race that gained or dropped a sponsor in its name shows as two rows. <b>Find joins</b> lists the likely pairs (one name starts the other, and the years do not overlap) for you to tick or untick; do it once after capturing a season. What you accept is written as lines in the box below, what you reject is remembered. You can also write a line yourself: <code>old name = name it continues as</code>. Lines starting with # are notes.</p>
+    <div class="row"><button id="joinfind">Find joins</button><span id="mergednote" class="mut"></span></div>
+    <div id="joinreview"></div>
     <textarea id="racealiases" spellcheck="false" style="min-height:70px" placeholder="Boucles de la Mayenne = Boucles de la Mayenne - Crédit Mutuel"></textarea>
     <div class="row" style="margin-top:6px"><button id="racealiasessave">Save and join</button></div>
     <div id="aliasmsg" class="mut" style="margin-top:6px"></div>

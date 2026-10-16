@@ -26,21 +26,53 @@ function page(): { doc: Document; text: () => string } {
   return { doc, text: () => doc.getElementById("queueout")!.textContent ?? "" };
 }
 
+// a page with a small queue built from (name, year, class) lines, and a store that remembers what is saved
+function pageWith(names: [string, number, string?][]) {
+  const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
+  const { document } = parseHTML(html);
+  (globalThis as unknown as { document: Document }).document = document as unknown as Document;
+  const doc = document as unknown as Document;
+  for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = false;
+  const cube = emptyCube();
+  const comp = (id: number, name: string, year: number, cls = "1.1") => ({ id, name, start: year + "-06-01", end: year + "-06-01", year, country: "FRA", class: cls, inProgress: false, category: "ME" as const });
+  addCapture(cube, { format: "racethreads-capture/1", competitions: names.map(([n, y, c], i) => comp(i + 1, n, y, c)) });
+  const texts = new Map<string, string>();
+  const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: (k: string) => texts.get(k), setText: async (k: string, v: string) => void texts.set(k, v) } as unknown as Store;
+  initRaces(store);
+  const rows = () => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => c.textContent ?? "").filter((t) => t.includes("Mayenne"));
+  const button = (label: string) => Array.from(doc.querySelectorAll("button")).find((b) => b.textContent === label) as HTMLButtonElement;
+  return { doc, texts, rows, button };
+}
+
 describe("races whose names changed", () => {
-  it("are joined on the page, and the page says so", () => {
-    const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
-    const { document } = parseHTML(html);
-    (globalThis as unknown as { document: Document }).document = document as unknown as Document;
-    const doc = document as unknown as Document;
-    for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = false;
-    const cube = emptyCube();
-    const comp = (id: number, name: string, year: number) => ({ id, name, start: year + "-06-01", end: year + "-06-01", year, country: "FRA", class: "1.1", inProgress: false, category: "ME" as const });
-    addCapture(cube, { format: "racethreads-capture/1", competitions: [comp(1, "Boucles de la Mayenne", 2026), comp(2, "Boucles de la Mayenne - Crédit Mutuel", 2025)] });
-    const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: () => undefined, setText: async () => undefined } as unknown as Store;
-    initRaces(store);
-    const rows = Array.from(doc.querySelectorAll("#queueout table tr")).filter((r) => (r.textContent ?? "").includes("Mayenne"));
-    expect(rows).toHaveLength(1);
-    expect(doc.getElementById("mergednote")!.textContent).toContain("Joined: ");
+  const MAYENNE: [string, number][] = [["Boucles de la Mayenne", 2026], ["Boucles de la Mayenne - Crédit Mutuel", 2025]];
+
+  it("stay two rows until you review, and the page says how many joins wait", () => {
+    const { doc, rows } = pageWith(MAYENNE);
+    expect(rows()).toHaveLength(2);
+    expect(doc.getElementById("mergednote")!.textContent).toContain("1 possible join to review");
+  });
+  it("Find joins lists them with ticks, and joining the ticked ones writes the lines and joins the races", async () => {
+    const { doc, texts, rows, button } = pageWith(MAYENNE);
+    button("Find joins").click();
+    expect(doc.querySelectorAll("#joinreview input[type=checkbox]")).toHaveLength(1);
+    const cells = Array.from(doc.querySelectorAll("#joinreview tr:nth-child(2) td")).map((c) => c.textContent);
+    expect(cells.slice(1)).toEqual(["Men", "Boucles de la Mayenne", "1.1 Boucles de la Mayenne - Crédit Mutuel", "2026 and 2025"]);
+    await (button("Join the ticked ones").onclick as () => Promise<void>)();
+    expect(texts.get("racealiases")).toBe("Boucles de la Mayenne = Boucles de la Mayenne - Crédit Mutuel");
+    expect(rows()).toHaveLength(1);
+    expect(doc.getElementById("joinreview")!.textContent).toBe("");
+    expect(doc.getElementById("mergednote")!.textContent).toContain("No more joins to review");
+  });
+  it("an unticked pair is remembered as rejected and not suggested again", async () => {
+    const { doc, texts, rows, button } = pageWith(MAYENNE);
+    button("Find joins").click();
+    (doc.querySelector("#joinreview input[type=checkbox]") as HTMLInputElement).checked = false;
+    await (button("Join the ticked ones").onclick as () => Promise<void>)();
+    expect(texts.get("racenojoin")).toContain("Boucles de la Mayenne");
+    expect(texts.get("racealiases")).toBe("");
+    expect(rows()).toHaveLength(2);
+    expect(doc.getElementById("mergednote")!.textContent).toContain("No more joins to review");
   });
 });
 
@@ -64,7 +96,7 @@ describe("the Save and join button", () => {
     await (doc.getElementById("racealiasessave")!.onclick as () => Promise<void>)();
     expect(rows().filter((r) => /Dauphin|Auvergne/.test(r ?? ""))).toHaveLength(1);
     expect(texts.get("racealiases")).toContain("Dauphiné");
-    expect(doc.getElementById("mergednote")!.textContent).toContain("Joined: ");
+    expect(doc.getElementById("mergednote")!.textContent).toContain("1 joined");
     expect(doc.getElementById("aliasmsg")!.textContent).toContain("joined");
   });
   it("says why a line did nothing", async () => {
@@ -135,6 +167,33 @@ describe("the race queue page", () => {
     expect(finished.textContent).toBe("1.UWTFinished Classic");
     const waiting = cells.find((c) => c.textContent?.includes("Waiting Classic"))!;
     expect(waiting.firstElementChild?.textContent).toBe("1.Pro");
+  });
+  it("searches by name, ignoring case and accents", () => {
+    const { doc, text } = page();
+    (doc.getElementById("queuemissing") as HTMLInputElement).checked = false;
+    const box = doc.getElementById("queuesearch") as HTMLInputElement;
+    box.value = "FINISHED";
+    box.oninput!(new Event("input") as unknown as InputEvent);
+    expect(text()).toContain("Finished Classic");
+    expect(text()).not.toContain("Waiting Classic");
+  });
+  it("sorts by class, WorldTour first, or by name", () => {
+    const { doc } = pageWith([["Alpha Classic", 2026, "1.1"], ["Zeta Classic", 2026, "1.UWT"], ["Middle Classic", 2026, "1.Pro"]]);
+    const order = () => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => (c.textContent ?? "").replace(/^[0-9A-Za-z.]*(?=[A-Z][a-z]+ Classic)/, ""));
+    const sort = doc.getElementById("queuesort") as HTMLSelectElement;
+    const choose = (v: string) => {
+      for (const o of Array.from(sort.options)) o.toggleAttribute("selected", false);
+      const target = Array.from(sort.options).find((o) => o.value === v)!;
+      target.selected = true;
+      target.toggleAttribute("selected", true);
+      sort.onchange!(new Event("change"));
+    };
+    choose("name");
+    expect(order().filter((t) => /Classic/.test(t)).map((t) => t.slice(-14))).toHaveLength(3);
+    const names = () => order().filter((t) => /Classic/.test(t)).map((t) => (/Alpha|Zeta|Middle/.exec(t) ?? [""])[0]);
+    expect(names()).toEqual(["Alpha", "Middle", "Zeta"]);
+    choose("class");
+    expect(names()).toEqual(["Zeta", "Middle", "Alpha"]); // UWT, then Pro, then 1.1
   });
   it("shows the finished race when the filter is switched off", () => {
     const { doc, text } = page();

@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, parseRaceAliases, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, parseRaceAliases, suggestJoins, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -145,23 +145,34 @@ describe("the same race under different names", () => {
     return cube;
   };
 
-  it("joins a race that gained a sponsor in its name, when the years do not overlap", () => {
+  it("suggests joining a race that gained a sponsor in its name, but joins nothing by itself", () => {
     const cube = queue(comp(1, "Boucles de la Mayenne", 2026), comp(2, "Boucles de la Mayenne", 2025), comp(3, "Boucles de la Mayenne - Crédit Mutuel", 2024), comp(4, "Boucles de la Mayenne - Crédit Mutuel", 2023));
-    const { races, merged } = queueByRace(cube);
+    expect(queueByRace(cube).races).toHaveLength(2); // nothing joined without a decision
+    const found = suggestJoins(cube);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ fromYears: [2025, 2026], intoYears: [2023, 2024], category: "ME" });
+    // the names are the two as they were before the join, not the one name after it
+    expect(found[0]).toMatchObject({ fromName: "Boucles de la Mayenne", intoName: "Boucles de la Mayenne - Crédit Mutuel" });
+    // accepting writes an alias line; with it the two are one race, with every year, under the newest name
+    const line = found[0]!.from + " = " + found[0]!.into;
+    const { races } = queueByRace(cube, line);
     expect(races).toHaveLength(1);
     expect(Object.keys(races[0]!.editions).sort()).toEqual(["2023", "2024", "2025", "2026"]);
-    expect(races[0]!.name).toBe("Boucles de la Mayenne"); // the newest edition's name
-    expect(merged).toHaveLength(1);
+    expect(races[0]!.name).toBe("Boucles de la Mayenne");
+    // once accepted it is not suggested again, and a rejected pair stays rejected
+    expect(suggestJoins(cube, line)).toHaveLength(0);
+    expect(suggestJoins(cube, "", line)).toHaveLength(0);
   });
   it("keeps two races apart when both have an edition in the same year", () => {
     const cube = queue(comp(1, "Tour de Something Long", 2026), comp(2, "Tour de Something Long - Grand Prix", 2026));
+    expect(suggestJoins(cube)).toHaveLength(0);
     expect(queueByRace(cube).races).toHaveLength(2);
   });
   it("does not join men's and women's races, or short names", () => {
     const cube = queue(comp(1, "Boucles de la Mayenne", 2026, "ME"), comp(2, "Boucles de la Mayenne - Crédit Mutuel", 2025, "WE"));
-    expect(queueByRace(cube).races).toHaveLength(2);
+    expect(suggestJoins(cube)).toHaveLength(0);
     const short = queue(comp(3, "Giro", 2026), comp(4, "Giro del Veneto", 2025));
-    expect(queueByRace(short).races).toHaveLength(2);
+    expect(suggestJoins(short)).toHaveLength(0);
   });
   it("joins what an alias line says, and ignores an alias that would put two editions in one year", () => {
     const cube = queue(comp(1, "Kuurne Brussels Kuurne", 2026), comp(2, "Kuurne-Brussel-Kuurne", 2025), comp(3, "Omloop Nieuwsblad Old", 2026), comp(4, "Omloop Het Nieuwsblad Elite", 2025));

@@ -1,4 +1,4 @@
-import { CATEGORY_NAMES, queueByRace } from "../../core";
+import { CATEGORY_NAMES, JoinSuggestion, normRaceName, queueByRace, suggestJoins } from "../../core";
 import { importCaptureFiles } from "../capture-import";
 import { $, el, tick } from "../dom";
 import type { Store } from "../store";
@@ -16,13 +16,16 @@ export function initRaces(store: Store): void {
       target.toggleAttribute("selected", true);
     }
   };
-  /** The chosen category: the selected option, men's elite when none is marked. */
-  const chosenCategory = () => {
-    const options = Array.from($<HTMLSelectElement>("queuecat").options);
-    return (options.find((o) => o.selected || o.hasAttribute("selected")) ?? options[0])?.value ?? "ME";
+  /** The chosen value of a select: the selected option, the first when none is marked. */
+  const chosen = (id: string) => {
+    const options = Array.from($<HTMLSelectElement>(id).options);
+    return (options.find((o) => o.selected || o.hasAttribute("selected")) ?? options[0])?.value ?? "";
   };
+  const chosenCategory = () => chosen("queuecat") || "ME";
   /** WorldTour, ProSeries and championships: the classes the main interest is in. */
   const isTop = (cls?: string) => /UWT|WWT|Pro|WC|CM/i.test(cls ?? "");
+  /** How high a UCI class ranks: WorldTour first, then ProSeries, then the rest by level. */
+  const tier = (cls?: string) => (/UWT|WWT/.test(cls ?? "") ? 0 : /Pro/.test(cls ?? "") ? 1 : /[12]\.1/.test(cls ?? "") ? 2 : /[12]\.2/.test(cls ?? "") ? 3 : 4);
   /** An edition is finished when every point-giving event on its competition page has a result read to the end. Without the event list nothing is known. */
   const finished = (e: { eventsKnown: number; eventsComplete: number }) => e.eventsKnown > 0 && e.eventsComplete >= e.eventsKnown;
   function status(e: { captured: boolean; rows: number; eventsKnown: number; eventsCaptured: number; eventsComplete: number }): [string, string] {
@@ -33,7 +36,8 @@ export function initRaces(store: Store): void {
 
   function draw(): void {
     const all = queueByRace(cube(), store.getText("racealiases") ?? "");
-    $("mergednote").textContent = all.merged.length ? "Joined: " + all.merged.join("; ") : "Nothing was joined.";
+    const pending = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").length;
+    $("mergednote").textContent = (all.merged.length ? all.merged.length + " joined. " : "") + (pending ? pending + " possible join" + (pending === 1 ? "" : "s") + " to review." : "No more joins to review.");
     const years = all.years.filter((y) => y > 0);
     const onlyTop = $<HTMLInputElement>("queuetop").checked;
     // men's and women's races are kept apart: the page shows one category at a time
@@ -49,7 +53,16 @@ export function initRaces(store: Store): void {
       ? done + " of " + editions.length + " editions finished, " + races.length + " races, " + results + " races with results in the database."
       : "No races in the queue yet: capture the DataRide competition list (step 2 above), one page at a time, for each year.";
     const onlyMissing = $<HTMLInputElement>("queuemissing").checked;
-    const rows = onlyMissing ? races.filter((r) => Object.values(r.editions).some((e) => !finished(e))) : races;
+    const unfinished = (r: (typeof races)[number]) => Object.values(r.editions).filter((e) => !finished(e)).length;
+    let rows = onlyMissing ? races.filter((r) => unfinished(r) > 0) : races;
+    // search by name (accents, case and punctuation do not matter), then sort
+    const q = normRaceName($<HTMLInputElement>("queuesearch").value);
+    if (q) rows = rows.filter((r) => normRaceName(r.name).includes(q) || normRaceName(r.keyName).includes(q));
+    const newestClass = (r: (typeof races)[number]) => Object.values(r.editions).reduce((a, b) => (b.year > a.year ? b : a)).class;
+    const sort = chosen("queuesort");
+    rows = [...rows].sort((a, b) =>
+      sort === "class" ? tier(newestClass(a)) - tier(newestClass(b)) || a.name.localeCompare(b.name) : sort === "todo" ? unfinished(b) - unfinished(a) || a.name.localeCompare(b.name) : 0,
+    );
     // say what the two filters are hiding, with a way to show it
     const hiddenDone = races.length - rows.length;
     const hiddenClass = inCategory.length - races.length;
@@ -130,6 +143,56 @@ export function initRaces(store: Store): void {
     draw();
     $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
   };
+  const NL = String.fromCharCode(10);
+  const years = (ys: number[]) => (ys.length === 1 ? String(ys[0]) : ys[0] + "-" + ys[ys.length - 1]);
+
+  /** The one-time review: every likely pair with a tick; ticked ones become alias lines, the rest are remembered as rejected. */
+  function review(): void {
+    const box = $("joinreview");
+    box.replaceChildren();
+    const isNational = (j: JoinSuggestion) => /national road/i.test(j.fromName);
+    // national championships are many and alike: they go last, and can be unticked together
+    const found = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").sort((a, b) => Number(isNational(a)) - Number(isNational(b)));
+    if (!found.length) {
+      box.append(el("p", { class: "mut", textContent: "No likely joins found." }));
+      return;
+    }
+    const ticks: [JoinSuggestion, HTMLInputElement][] = [];
+    const table = el("table", { class: "queue" });
+    table.append(el("tr", {}, el("th", { textContent: "Join" }), el("th", { textContent: "Category" }), el("th", { textContent: "One name" }), el("th", { textContent: "The other name" }), el("th", { textContent: "Years of each" })));
+    for (const j of found) {
+      const box1 = el("input", { type: "checkbox", checked: true });
+      ticks.push([j, box1]);
+      table.append(
+        el("tr", {}, el("td", {}, box1), el("td", { textContent: j.category === "WE" ? "Women" : "Men" }), el("td", { textContent: j.fromName }), el("td", { textContent: (j.class ? j.class + " " : "") + j.intoName }), el("td", { textContent: years(j.fromYears) + " and " + years(j.intoYears) })),
+      );
+    }
+    const setAll = (on: boolean) => ticks.forEach(([, t]) => (t.checked = on));
+    const all = el("button", { textContent: "Tick all" });
+    all.onclick = () => setAll(true);
+    const none = el("button", { textContent: "Untick all" });
+    none.onclick = () => setAll(false);
+    const nationals = ticks.filter(([j]) => isNational(j));
+    const noNat = el("button", { textContent: "Untick national championships (" + nationals.length + ")" });
+    noNat.onclick = () => nationals.forEach(([, t]) => (t.checked = false));
+    const apply = el("button", { textContent: "Join the ticked ones" });
+    apply.onclick = async () => {
+      const yes = ticks.filter(([, t]) => t.checked).map(([j]) => j.from + " = " + j.into);
+      const no = ticks.filter(([, t]) => !t.checked).map(([j]) => j.from + " = " + j.into);
+      const keep = (key: string, add: string[]) => [store.getText(key) ?? "", ...add].filter((x) => x !== "").join(NL);
+      await store.setText("racealiases", keep("racealiases", yes));
+      await store.setText("racenojoin", keep("racenojoin", no));
+      $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
+      box.replaceChildren();
+      $("aliasmsg").textContent = yes.length + " joined, " + no.length + " rejected (they will not be suggested again).";
+      draw();
+    };
+    const cancel = el("button", { textContent: "Cancel" });
+    cancel.onclick = () => box.replaceChildren();
+    box.append(el("p", { class: "mut", textContent: found.length + " likely joins. Untick any that are different races. A joined race is shown under its newest name." }), table, el("div", { class: "row" }, all, none, ...(nationals.length ? [noNat] : []), apply, cancel));
+  }
+  $("joinfind").onclick = review;
+
   $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
   $("racealiasessave").onclick = async () => {
     const msg = $("aliasmsg");
@@ -145,6 +208,8 @@ export function initRaces(store: Store): void {
   };
   $("queuemissing").onchange = draw;
   $("queuetop").onchange = draw;
+  $("queuesearch").oninput = draw;
+  $("queuesort").onchange = draw;
   const catBox = $<HTMLSelectElement>("queuecat");
   chooseCategory(tick("racecat") ?? "ME");
   catBox.onchange = () => {
