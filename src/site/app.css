@@ -41,6 +41,7 @@ table.queue th,table.queue td{text-align:left;padding:3px 8px;border-bottom:1px 
 .drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;margin:10px 0;display:flex;flex-direction:column;gap:6px;align-items:center}
 .drop.over{border-color:var(--acc);background:var(--card)}
 kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--card);font:12px ui-monospace,Consolas,monospace}
+tr.rejected td{opacity:.5;text-decoration:line-through}
 .tag{display:inline-block;font-size:12px;line-height:1.5;padding:0 8px;border-radius:10px;border:1px solid var(--line);margin-right:4px;white-space:nowrap}
 .tag.ok{color:var(--ok);border-color:var(--ok)}
 .tag.plan{color:var(--mut)}

@@ -151,45 +151,66 @@ export function initRaces(store: Store): void {
     const box = $("joinreview");
     box.replaceChildren();
     const isNational = (j: JoinSuggestion) => /national road/i.test(j.fromName);
-    // national championships are many and alike: they go last, and can be unticked together
+    // national championships are many and alike: they go last, and can be marked together
     const found = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").sort((a, b) => Number(isNational(a)) - Number(isNational(b)));
     if (!found.length) {
       box.append(el("p", { class: "mut", textContent: "No likely joins found." }));
       return;
     }
-    const ticks: [JoinSuggestion, HTMLInputElement][] = [];
+    // every row is decided: "same race" (the default) or "different races"; a different pair is struck through at once
+    type Row = { j: JoinSuggestion; same: HTMLInputElement; diff: HTMLInputElement; tr: HTMLElement };
+    const rows: Row[] = [];
+    const decide = (r: Row, same: boolean) => {
+      r.same.checked = same;
+      r.diff.checked = !same;
+      r.tr.classList.toggle("rejected", !same);
+    };
     const table = el("table", { class: "queue" });
-    table.append(el("tr", {}, el("th", { textContent: "Join" }), el("th", { textContent: "Category" }), el("th", { textContent: "One name" }), el("th", { textContent: "The other name" }), el("th", { textContent: "Years of each" })));
-    for (const j of found) {
-      const box1 = el("input", { type: "checkbox", checked: true });
-      ticks.push([j, box1]);
-      table.append(
-        el("tr", {}, el("td", {}, box1), el("td", { textContent: j.category === "WE" ? "Women" : "Men" }), el("td", { textContent: j.fromName }), el("td", { textContent: (j.class ? j.class + " " : "") + j.intoName }), el("td", { textContent: years(j.fromYears) + " and " + years(j.intoYears) })),
+    table.append(el("tr", {}, el("th", { textContent: "Your decision" }), el("th", { textContent: "Category" }), el("th", { textContent: "One name" }), el("th", { textContent: "The other name" }), el("th", { textContent: "Years of each" })));
+    found.forEach((j, i) => {
+      const same = el("input", { type: "radio", name: "pair" + i, checked: true });
+      const diff = el("input", { type: "radio", name: "pair" + i });
+      const tr = el(
+        "tr",
+        {},
+        el("td", {}, el("label", {}, same, " same race "), el("label", {}, diff, " different races")),
+        el("td", { textContent: j.category === "WE" ? "Women" : "Men" }),
+        el("td", { textContent: j.fromName }),
+        el("td", { textContent: (j.class ? j.class + " " : "") + j.intoName }),
+        el("td", { textContent: years(j.fromYears) + " and " + years(j.intoYears) }),
       );
-    }
-    const setAll = (on: boolean) => ticks.forEach(([, t]) => (t.checked = on));
-    const all = el("button", { textContent: "Tick all" });
-    all.onclick = () => setAll(true);
-    const none = el("button", { textContent: "Untick all" });
-    none.onclick = () => setAll(false);
-    const nationals = ticks.filter(([j]) => isNational(j));
-    const noNat = el("button", { textContent: "Untick national championships (" + nationals.length + ")" });
-    noNat.onclick = () => nationals.forEach(([, t]) => (t.checked = false));
-    const apply = el("button", { textContent: "Join the ticked ones" });
+      const row: Row = { j, same, diff, tr };
+      same.onchange = () => decide(row, true);
+      diff.onchange = () => decide(row, false);
+      rows.push(row);
+      table.append(tr);
+    });
+    const allSame = el("button", { textContent: "Mark all as the same race" });
+    allSame.onclick = () => rows.forEach((r) => decide(r, true));
+    const allDiff = el("button", { textContent: "Mark all as different races" });
+    allDiff.onclick = () => rows.forEach((r) => decide(r, false));
+    const nationals = rows.filter((r) => isNational(r.j));
+    const noNat = el("button", { textContent: "Mark national championships as different (" + nationals.length + ")" });
+    noNat.onclick = () => nationals.forEach((r) => decide(r, false));
+    const apply = el("button", { textContent: "Save my decisions" });
     apply.onclick = async () => {
-      const yes = chainLines(ticks.filter(([, t]) => t.checked).map(([j]): [string, string] => [j.from, j.into]));
-      const no = ticks.filter(([, t]) => !t.checked).map(([j]) => j.from + " = " + j.into);
+      const yes = chainLines(rows.filter((r) => r.same.checked).map((r): [string, string] => [r.j.from, r.j.into]));
+      const no = rows.filter((r) => !r.same.checked).map((r) => r.j.from + " = " + r.j.into);
       const keep = (key: string, add: string[]) => [store.getText(key) ?? "", ...add].filter((x) => x !== "").join(NL);
       await store.setText("racealiases", keep("racealiases", yes));
       await store.setText("racenojoin", keep("racenojoin", no));
       $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
       box.replaceChildren();
-      $("aliasmsg").textContent = yes.length + " joined, " + no.length + " rejected (they will not be suggested again).";
+      $("aliasmsg").textContent = rows.length - no.length + " pairs joined, " + no.length + " marked as different races (they will not be suggested again).";
       draw();
     };
     const cancel = el("button", { textContent: "Cancel" });
     cancel.onclick = () => box.replaceChildren();
-    box.append(el("p", { class: "mut", textContent: found.length + " likely joins. Untick any that are different races. A joined race is shown under its newest name." }), table, el("div", { class: "row" }, all, none, ...(nationals.length ? [noNat] : []), apply, cancel));
+    box.append(
+      el("p", { class: "mut", textContent: found.length + " likely joins. Each pair is the same race unless you mark it as different races: those are struck through and not suggested again. A joined race is shown under its newest name." }),
+      table,
+      el("div", { class: "row" }, allSame, allDiff, ...(nationals.length ? [noNat] : []), apply, cancel),
+    );
   }
   $("joinfind").onclick = review;
 

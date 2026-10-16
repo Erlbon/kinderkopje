@@ -121,8 +121,8 @@ The queue has a category chooser (men's elite is the default, women's elite, or 
 a name search, and a sort by name, by class (WorldTour first) or by most to do. A race that changed its name (a
 sponsor added, "Strade Bianche" becoming "Strade Bianche Donne") shows as two rows until you join them: under *Same
 race, different names*, **Find joins** lists the likely pairs (one name starts the other, the years never overlap) for
-you to tick or untick. Ticked pairs are written as lines `old name = name it continues as` in the box below, and
-unticked ones are remembered as rejected. Do it once after capturing a season; nothing is joined without your tick.
+you to decide: the same race, or different races. Pairs called the same race are written as lines `old name = name it
+continues as` in the box below, and pairs called different races are remembered and not suggested again. Do it once after capturing a season; nothing is joined without your tick.
 A race with more than two names is one longer line, `first = second = third = name it continues as`: every name before
 the last is joined into the last. Sponsors added, dropped or changed anywhere in the name are found (a shorter name
 inside a longer one), and the plain core name is the one the sponsored versions are folded into.

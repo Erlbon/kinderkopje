@@ -55,20 +55,35 @@ describe("races whose names changed", () => {
   it("Find joins lists them with ticks, and joining the ticked ones writes the lines and joins the races", async () => {
     const { doc, texts, rows, button } = pageWith(MAYENNE);
     button("Find joins").click();
-    expect(doc.querySelectorAll("#joinreview input[type=checkbox]")).toHaveLength(1);
+    expect(doc.querySelectorAll("#joinreview input[type=radio]")).toHaveLength(2); // same race / different races
     const cells = Array.from(doc.querySelectorAll("#joinreview tr:nth-child(2) td")).map((c) => c.textContent);
     expect(cells.slice(1)).toEqual(["Men", "Boucles de la Mayenne - Crédit Mutuel", "1.1 Boucles de la Mayenne", "2025 and 2026"]);
-    await (button("Join the ticked ones").onclick as () => Promise<void>)();
+    await (button("Save my decisions").onclick as () => Promise<void>)();
     expect(texts.get("racealiases")).toBe("Boucles de la Mayenne - Crédit Mutuel = Boucles de la Mayenne");
     expect(rows()).toHaveLength(1);
     expect(doc.getElementById("joinreview")!.textContent).toBe("");
     expect(doc.getElementById("mergednote")!.textContent).toContain("No more joins to review");
   });
-  it("an unticked pair is remembered as rejected and not suggested again", async () => {
+  it("Mark all as different races rejects every pair at once", async () => {
     const { doc, texts, rows, button } = pageWith(MAYENNE);
     button("Find joins").click();
-    (doc.querySelector("#joinreview input[type=checkbox]") as HTMLInputElement).checked = false;
-    await (button("Join the ticked ones").onclick as () => Promise<void>)();
+    button("Mark all as different races").click();
+    expect(doc.querySelectorAll("#joinreview tr.rejected")).toHaveLength(1);
+    await (button("Save my decisions").onclick as () => Promise<void>)();
+    expect(texts.get("racenojoin")).toContain("Boucles de la Mayenne");
+    expect(rows()).toHaveLength(2);
+    expect(doc.getElementById("aliasmsg")!.textContent).toContain("1 marked as different races");
+  });
+  it("a pair marked as different races is remembered and not suggested again", async () => {
+    const { doc, texts, rows, button } = pageWith(MAYENNE);
+    button("Find joins").click();
+    const radios = Array.from(doc.querySelectorAll("#joinreview input[type=radio]")) as HTMLInputElement[];
+    const different = radios[1]!;
+    different.checked = true;
+    radios[0]!.checked = false;
+    different.onchange!(new Event("change"));
+    expect(doc.querySelector("#joinreview tr.rejected")).not.toBeNull(); // struck through at once
+    await (button("Save my decisions").onclick as () => Promise<void>)();
     expect(texts.get("racenojoin")).toContain("Boucles de la Mayenne");
     expect(texts.get("racealiases")).toBe("");
     expect(rows()).toHaveLength(2);
