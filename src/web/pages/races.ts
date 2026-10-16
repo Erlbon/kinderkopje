@@ -32,7 +32,8 @@ export function initRaces(store: Store): void {
   }
 
   function draw(): void {
-    const all = queueByRace(cube());
+    const all = queueByRace(cube(), store.getText("racealiases") ?? "");
+    $("mergednote").textContent = all.merged.length ? "Joined: " + all.merged.join("; ") : "Nothing was joined.";
     const years = all.years.filter((y) => y > 0);
     const onlyTop = $<HTMLInputElement>("queuetop").checked;
     // men's and women's races are kept apart: the page shows one category at a time
@@ -118,6 +119,11 @@ export function initRaces(store: Store): void {
     const lines = await importCaptureFiles(store, [...((e.target as HTMLInputElement).files ?? [])]);
     draw();
     $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
+  };
+  $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
+  $("racealiasessave").onclick = async () => {
+    await store.setText("racealiases", $<HTMLTextAreaElement>("racealiases").value);
+    draw();
   };
   $("queuemissing").onchange = draw;
   $("queuetop").onchange = draw;

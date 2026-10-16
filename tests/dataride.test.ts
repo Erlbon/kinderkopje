@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { Cube, addCapture, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
+import { Cube, addCapture, parseRaceAliases, categoryFromFilter, cleanHeading, emptyCube, isComplete, isOtherCategory, isScoringEvent, mergeEvents, pageKind, queueByRace, queueStatus, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core";
 import { loadCube, openDatabase, saveCube } from "../src/db";
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;
@@ -134,6 +134,43 @@ describe("when an event is complete", () => {
   it("only the general classification and the stages count, not the jersey classifications", () => {
     for (const n of ["General Classification", "Stage 3", "Prologue", "Individual Time Trial"]) expect(isScoringEvent(n), n).toBe(true);
     for (const n of ["Points Classification", "Youth Classification", "Mountains Classification", "Teams Classification"]) expect(isScoringEvent(n), n).toBe(false);
+  });
+});
+
+describe("the same race under different names", () => {
+  const comp = (id: number, name: string, year: number, category: "ME" | "WE" = "ME") => ({ id, name, start: year + "-06-01", end: year + "-06-01", year, country: "FRA", class: "1.1", inProgress: false, category });
+  const queue = (...c: ReturnType<typeof comp>[]) => {
+    const cube = emptyCube();
+    addCapture(cube, { format: "racethreads-capture/1", competitions: c });
+    return cube;
+  };
+
+  it("joins a race that gained a sponsor in its name, when the years do not overlap", () => {
+    const cube = queue(comp(1, "Boucles de la Mayenne", 2026), comp(2, "Boucles de la Mayenne", 2025), comp(3, "Boucles de la Mayenne - Crédit Mutuel", 2024), comp(4, "Boucles de la Mayenne - Crédit Mutuel", 2023));
+    const { races, merged } = queueByRace(cube);
+    expect(races).toHaveLength(1);
+    expect(Object.keys(races[0]!.editions).sort()).toEqual(["2023", "2024", "2025", "2026"]);
+    expect(races[0]!.name).toBe("Boucles de la Mayenne"); // the newest edition's name
+    expect(merged).toHaveLength(1);
+  });
+  it("keeps two races apart when both have an edition in the same year", () => {
+    const cube = queue(comp(1, "Tour de Something Long", 2026), comp(2, "Tour de Something Long - Grand Prix", 2026));
+    expect(queueByRace(cube).races).toHaveLength(2);
+  });
+  it("does not join men's and women's races, or short names", () => {
+    const cube = queue(comp(1, "Boucles de la Mayenne", 2026, "ME"), comp(2, "Boucles de la Mayenne - Crédit Mutuel", 2025, "WE"));
+    expect(queueByRace(cube).races).toHaveLength(2);
+    const short = queue(comp(3, "Giro", 2026), comp(4, "Giro del Veneto", 2025));
+    expect(queueByRace(short).races).toHaveLength(2);
+  });
+  it("joins what an alias line says, and ignores an alias that would put two editions in one year", () => {
+    const cube = queue(comp(1, "Kuurne Brussels Kuurne", 2026), comp(2, "Kuurne-Brussel-Kuurne", 2025), comp(3, "Omloop Nieuwsblad Old", 2026), comp(4, "Omloop Het Nieuwsblad Elite", 2025));
+    const NL = String.fromCharCode(10);
+    const aliases = ["# names that changed", "Omloop Nieuwsblad Old = Omloop Het Nieuwsblad Elite", "Kuurne Brussels Kuurne = Kuurne-Brussel-Kuurne"].join(NL);
+    expect(queueByRace(cube, aliases).races).toHaveLength(2);
+    expect(parseRaceAliases(["a = b", "", "# note", "no equals", " c=d "].join(NL))).toEqual([["a", "b"], ["c", "d"]]);
+    const clash = queue(comp(5, "Race One", 2026), comp(6, "Race Two", 2026));
+    expect(queueByRace(clash, "Race One = Race Two").races).toHaveLength(2);
   });
 });
 

@@ -27,6 +27,13 @@
     <label><input id="queuemissing" type="checkbox" checked> Only races with events still to capture</label>
     <label><input id="queuetop" type="checkbox" checked> Only WorldTour, ProSeries and championships</label>
   </div>
+  <details style="margin:6px 0">
+    <summary>Same race, different names</summary>
+    <p class="mut" style="margin:6px 0">A race that gained or dropped a sponsor in its name is joined automatically when one name starts the other and the years do not overlap. Anything else you can join by hand: one line per race, <code>old name = name it continues as</code>. Lines starting with # are notes.</p>
+    <div id="mergednote" class="mut"></div>
+    <textarea id="racealiases" spellcheck="false" style="min-height:70px" placeholder="Boucles de la Mayenne = Boucles de la Mayenne - Crédit Mutuel"></textarea>
+    <div class="row" style="margin-top:6px"><button id="racealiasessave">Save and join</button></div>
+  </details>
   <div id="queuemsg" class="mut" style="margin:6px 0"></div>
   <div id="queueout"></div>
 </fieldset>

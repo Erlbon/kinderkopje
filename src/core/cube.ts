@@ -467,7 +467,33 @@ export interface RaceEditions {
  * The queue grouped by race: one row per race, one edition per year. The ids differ from year to year, so
  * the editions are matched by race name, and men's and women's hubs stay apart.
  */
-export function queueByRace(cube: Cube): { years: number[]; races: RaceEditions[] } {
+/** Alias lines, one per line: "Old name = Name it continues as". Blank lines and lines starting with # are ignored. */
+export function parseRaceAliases(text: string): [string, string][] {
+  const out: [string, string][] = [];
+  for (const line of text.split(String.fromCharCode(10))) {
+    const t = line.trim();
+    if (!t || t.startsWith("#") || !t.includes("=")) continue;
+    const i = t.indexOf("=");
+    const from = t.slice(0, i).trim();
+    const to = t.slice(i + 1).trim();
+    if (from && to) out.push([from, to]);
+  }
+  return out;
+}
+
+/** Fold one race's editions into another's, unless both have an edition in the same year (then they are different races). */
+function mergeEditions(from: RaceEditions, into: RaceEditions): boolean {
+  if (Object.keys(from.editions).some((y) => y in into.editions)) return false;
+  Object.assign(into.editions, from.editions);
+  const newest = Math.max(...Object.keys(into.editions).map(Number));
+  into.name = cleanRaceName(into.editions[newest]!.name); // the newest name wins
+  return true;
+}
+
+/** Shorter names must be at least this long (after cleaning) to be taken for the start of a longer one. */
+const MIN_PREFIX = 8;
+
+export function queueByRace(cube: Cube, aliases = ""): { years: number[]; races: RaceEditions[]; merged: string[] } {
   const map = new Map<string, RaceEditions>();
   for (const l of queueStatus(cube)) {
     const category: Category = l.category ?? (/women/i.test(l.hub) ? "WE" : "ME");
@@ -481,8 +507,41 @@ export function queueByRace(cube: Cube): { years: number[]; races: RaceEditions[
     if (l.year >= newest) r.name = cleanRaceName(l.name); // the newest name wins
     r.editions[l.year] = l;
   }
+  const merged: string[] = [];
+  // 1. the aliases the user wrote down
+  for (const [from, to] of parseRaceAliases(aliases)) {
+    for (const category of ["ME", "WE"] as const) {
+      const a = map.get(normRaceName(from) + "|" + category);
+      const b = map.get(normRaceName(to) + "|" + category);
+      if (a && b && a !== b && mergeEditions(a, b)) {
+        map.delete(a.key);
+        merged.push(a.name + " -> " + b.name);
+      }
+    }
+  }
+  // 2. the same race with a sponsor added or dropped: one cleaned name starts the other, and the years never overlap
+  for (let again = true; again; ) {
+    again = false;
+    const keys = [...map.keys()].sort((x, y) => x.length - y.length);
+    outer: for (const ka of keys) {
+      const [baseA, catA] = ka.split("|");
+      if (baseA!.length < MIN_PREFIX) continue;
+      for (const kb of keys) {
+        const [baseB, catB] = kb.split("|");
+        if (ka === kb || catA !== catB || baseB!.length <= baseA!.length || !baseB!.startsWith(baseA!)) continue;
+        const a = map.get(ka)!;
+        const b = map.get(kb)!;
+        if (mergeEditions(a, b)) {
+          map.delete(ka);
+          merged.push(a.name + " -> " + b.name);
+          again = true;
+          break outer;
+        }
+      }
+    }
+  }
   const years = [...new Set([...map.values()].flatMap((r) => Object.keys(r.editions).map(Number)))].sort((a, b) => b - a);
-  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)) };
+  return { years, races: [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category)), merged };
 }
 
 export interface SeasonColumn {

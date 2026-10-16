@@ -26,6 +26,24 @@ function page(): { doc: Document; text: () => string } {
   return { doc, text: () => doc.getElementById("queueout")!.textContent ?? "" };
 }
 
+describe("races whose names changed", () => {
+  it("are joined on the page, and the page says so", () => {
+    const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
+    const { document } = parseHTML(html);
+    (globalThis as unknown as { document: Document }).document = document as unknown as Document;
+    const doc = document as unknown as Document;
+    for (const id of ["queuemissing", "queuetop"]) (doc.getElementById(id) as HTMLInputElement).checked = false;
+    const cube = emptyCube();
+    const comp = (id: number, name: string, year: number) => ({ id, name, start: year + "-06-01", end: year + "-06-01", year, country: "FRA", class: "1.1", inProgress: false, category: "ME" as const });
+    addCapture(cube, { format: "racethreads-capture/1", competitions: [comp(1, "Boucles de la Mayenne", 2026), comp(2, "Boucles de la Mayenne - Crédit Mutuel", 2025)] });
+    const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: () => undefined, setText: async () => undefined } as unknown as Store;
+    initRaces(store);
+    const rows = Array.from(doc.querySelectorAll("#queueout table tr")).filter((r) => (r.textContent ?? "").includes("Mayenne"));
+    expect(rows).toHaveLength(1);
+    expect(doc.getElementById("mergednote")!.textContent).toContain("Joined: ");
+  });
+});
+
 describe("men's and women's races", () => {
   it("shows men's elite by default and says how many women's races are hidden", () => {
     const { text, doc } = page();
