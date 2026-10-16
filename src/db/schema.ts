@@ -5,7 +5,7 @@ import type { Database } from "sql.js";
  * team ranking snapshots, race results, the capture queue, team levels and the settings texts.
  * Bump SCHEMA_VERSION and add a step to MIGRATIONS when a table changes.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 const V1 = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -142,8 +142,26 @@ CREATE VIEW v_results AS
   LEFT JOIN race r ON r.race_id = q.race_id;
 `;
 
+// 5: countries with their continent (for filtering), and the links of each race (site, Wikipedia, social media, FirstCycling)
+const V5 = `
+CREATE TABLE country (
+  code TEXT PRIMARY KEY,           -- the code UCI uses (IOC style): ITA, GER, SUI ...
+  name TEXT NOT NULL,
+  continent TEXT NOT NULL,
+  confederation TEXT NOT NULL      -- UCI's: Europe, Asia, Africa, Pan America, Oceania
+);
+CREATE TABLE race_link (
+  race_id INTEGER NOT NULL REFERENCES race(race_id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,              -- website, wikipedia, wikidata, x, instagram, facebook, youtube, tiktok, firstcycling, other
+  label TEXT NOT NULL,
+  url TEXT NOT NULL,
+  source TEXT NOT NULL,            -- registry, wikidata or manual
+  PRIMARY KEY (race_id, kind, url)
+);
+`;
+
 /** Step n creates schema version n from n-1. Exported so tests can build an old database. */
-export const MIGRATIONS: Record<number, string> = { 1: V1, 2: V2, 3: V3, 4: V4 };
+export const MIGRATIONS: Record<number, string> = { 1: V1, 2: V2, 3: V3, 4: V4, 5: V5 };
 
 export function schemaVersion(db: Database): number {
   const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='meta'");

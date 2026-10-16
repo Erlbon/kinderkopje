@@ -1,9 +1,10 @@
+import { FinderOptions, currentRaces, initLinkFinder, linksBlock } from "./race-links";
 import { CATEGORY_NAMES, JoinSuggestion, QueueLine, buildRaces, chainLines, normRaceName, parseRaceAliases, queueByRace, suggestJoins } from "../../core";
 import { importCaptureFiles } from "../capture-import";
 import { $, el, tick } from "../dom";
 import type { Store } from "../store";
 
-export function initRaces(store: Store): void {
+export function initRaces(store: Store, options: FinderOptions = {}): void {
   const cube = () => store.cube;
 
   /** Choose a category in the box (through its options, which every DOM allows). */
@@ -213,7 +214,7 @@ export function initRaces(store: Store): void {
     if (q.length < 2) return;
     const aliases = store.getText("racealiases") ?? "";
     const renames = store.getText("racenames") ?? "";
-    const matches = buildRaces(cube(), aliases, renames).filter((r) => normRaceName(r.name).includes(q) || r.names.some((n) => normRaceName(n.name).includes(q)));
+    const matches = currentRaces(store).filter((r) => normRaceName(r.name).includes(q) || r.names.some((n) => normRaceName(n.name).includes(q)));
     if (!matches.length) {
       list.append(el("p", { class: "mut", textContent: "No race with that name." }));
       return;
@@ -241,11 +242,22 @@ export function initRaces(store: Store): void {
           { class: "card" },
           el("div", { class: "row" }, el("b", { textContent: "Internal name" }), input, save, el("span", { class: "mut", textContent: (race.category === "WE" ? "women's elite" : "men's elite") + ", " + years(race.years) })),
           el("div", { class: "mut", textContent: "External names: " + race.names.map((n) => n.name + " (" + years(n.years) + ")").join("; ") }),
+          linksBlock(store, race, () => {
+            draw();
+            renderNames();
+          }),
         ),
       );
     }
   }
   $("racefind").oninput = () => renderNames();
+  initLinkFinder(store, options, {
+    category: chosenCategory,
+    changed: () => {
+      draw();
+      renderNames();
+    },
+  });
 
   /**
    * The one-time review: every likely pair gets a decision. "Same race" is written as an alias line, "Not the same" is

@@ -1,0 +1,813 @@
+{
+ "_note": "Responses of the Wikidata API (CC0) for the five monuments, 2026-10-16, trimmed to what the tool reads.",
+ "search": {
+  "Il Lombardia": [
+   {
+    "id": "Q34032",
+    "title": "Q34032",
+    "pageid": 36832,
+    "concepturi": "http://www.wikidata.org/entity/Q34032",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q34032",
+    "display": {
+     "label": {
+      "value": "Giro di Lombardia",
+      "language": "en"
+     },
+     "description": {
+      "value": "Italian one-day cycling race, one of the five monuments",
+      "language": "en"
+     }
+    },
+    "label": "Giro di Lombardia",
+    "description": "Italian one-day cycling race, one of the five monuments",
+    "match": {
+     "type": "alias",
+     "language": "en",
+     "text": "Il Lombardia"
+    },
+    "aliases": [
+     "Il Lombardia"
+    ]
+   },
+   {
+    "id": "Q3533389",
+    "title": "Q3533389",
+    "pageid": 3363984,
+    "concepturi": "http://www.wikidata.org/entity/Q3533389",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q3533389",
+    "display": {
+     "label": {
+      "value": "Il Lombardia Under 23",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "Il Lombardia Under 23",
+    "description": "cycling race",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Il Lombardia Under 23"
+    }
+   },
+   {
+    "id": "Q57245454",
+    "title": "Q57245454",
+    "pageid": 57162830,
+    "concepturi": "http://www.wikidata.org/entity/Q57245454",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q57245454",
+    "display": {
+     "label": {
+      "value": "2019 Giro di Lombardia",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "2019 Giro di Lombardia",
+    "description": "cycling race",
+    "match": {
+     "type": "label",
+     "language": "nb",
+     "text": "Il Lombardia 2019"
+    },
+    "aliases": [
+     "Il Lombardia 2019"
+    ]
+   },
+   {
+    "id": "Q126737372",
+    "title": "Q126737372",
+    "pageid": 120750144,
+    "concepturi": "http://www.wikidata.org/entity/Q126737372",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q126737372",
+    "display": {
+     "label": {
+      "value": "2025 Il Lombardia",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "2025 Il Lombardia",
+    "description": "cycling race",
+    "match": {
+     "type": "alias",
+     "language": "ca",
+     "text": "Il Lombardia"
+    },
+    "aliases": [
+     "Il Lombardia"
+    ]
+   }
+  ],
+  "Liège-Bastogne-Liège": [
+   {
+    "id": "Q2380805",
+    "title": "Q2380805",
+    "pageid": 2300057,
+    "concepturi": "http://www.wikidata.org/entity/Q2380805",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q2380805",
+    "display": {
+     "label": {
+      "value": "Liège–Bastogne–Liège U23",
+      "language": "en"
+     },
+     "description": {
+      "value": "Belgian one-day road cycling race",
+      "language": "en"
+     }
+    },
+    "label": "Liège–Bastogne–Liège U23",
+    "description": "Belgian one-day road cycling race",
+    "match": {
+     "type": "alias",
+     "language": "en",
+     "text": "Liège-Bastogne-Liège espoirs"
+    },
+    "aliases": [
+     "Liège-Bastogne-Liège espoirs"
+    ]
+   },
+   {
+    "id": "Q27538455",
+    "title": "Q27538455",
+    "pageid": 29260217,
+    "concepturi": "http://www.wikidata.org/entity/Q27538455",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q27538455",
+    "display": {
+     "label": {
+      "value": "Liège–Bastogne–Liège Femmes",
+      "language": "en"
+     },
+     "description": {
+      "value": "Belgian one-day women's cycling race",
+      "language": "en"
+     }
+    },
+    "label": "Liège–Bastogne–Liège Femmes",
+    "description": "Belgian one-day women's cycling race",
+    "match": {
+     "type": "label",
+     "language": "mul",
+     "text": "Liège-Bastogne-Liège féminin"
+    },
+    "aliases": [
+     "Liège-Bastogne-Liège féminin"
+    ]
+   },
+   {
+    "id": "Q83815117",
+    "title": "Q83815117",
+    "pageid": 83124363,
+    "concepturi": "http://www.wikidata.org/entity/Q83815117",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q83815117",
+    "display": {
+     "label": {
+      "value": "2020 Liège–Bastogne–Liège",
+      "language": "en"
+     },
+     "description": {
+      "value": "106th edition of a cycling race in Belgium",
+      "language": "en"
+     }
+    },
+    "label": "2020 Liège–Bastogne–Liège",
+    "description": "106th edition of a cycling race in Belgium",
+    "match": {
+     "type": "alias",
+     "language": "en",
+     "text": "Liège-Bastogne-Liège 2020"
+    },
+    "aliases": [
+     "Liège-Bastogne-Liège 2020"
+    ]
+   },
+   {
+    "id": "Q34009",
+    "title": "Q34009",
+    "pageid": 36810,
+    "concepturi": "http://www.wikidata.org/entity/Q34009",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q34009",
+    "display": {
+     "label": {
+      "value": "Liège–Bastogne–Liège",
+      "language": "en"
+     },
+     "description": {
+      "value": "Belgian one-day cycling race",
+      "language": "en"
+     }
+    },
+    "label": "Liège–Bastogne–Liège",
+    "description": "Belgian one-day cycling race",
+    "match": {
+     "type": "label",
+     "language": "ro",
+     "text": "Liège-Bastogne-Liège"
+    },
+    "aliases": [
+     "Liège-Bastogne-Liège"
+    ]
+   }
+  ],
+  "Milano-Sanremo": [
+   {
+    "id": "Q33951",
+    "title": "Q33951",
+    "pageid": 36758,
+    "concepturi": "http://www.wikidata.org/entity/Q33951",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q33951",
+    "display": {
+     "label": {
+      "value": "Milan - San Remo",
+      "language": "en"
+     },
+     "description": {
+      "value": "Italian one-day cycling race, one of the five monuments",
+      "language": "en"
+     }
+    },
+    "label": "Milan - San Remo",
+    "description": "Italian one-day cycling race, one of the five monuments",
+    "match": {
+     "type": "label",
+     "language": "sv",
+     "text": "Milano-Sanremo"
+    },
+    "aliases": [
+     "Milano-Sanremo"
+    ]
+   },
+   {
+    "id": "Q131784810",
+    "title": "Q131784810",
+    "pageid": 125675324,
+    "concepturi": "http://www.wikidata.org/entity/Q131784810",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q131784810",
+    "display": {
+     "label": {
+      "value": "Milano-Sanremo Donne",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "Milano-Sanremo Donne",
+    "description": "cycling race",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Milano-Sanremo Donne"
+    }
+   },
+   {
+    "id": "Q20111975",
+    "title": "Q20111975",
+    "pageid": 21784755,
+    "concepturi": "http://www.wikidata.org/entity/Q20111975",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q20111975",
+    "display": {
+     "label": {
+      "value": "2016 Milan–San Remo",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "2016 Milan–San Remo",
+    "description": "cycling race",
+    "match": {
+     "type": "label",
+     "language": "da",
+     "text": "Milano-Sanremo 2016"
+    },
+    "aliases": [
+     "Milano-Sanremo 2016"
+    ]
+   },
+   {
+    "id": "Q47008032",
+    "title": "Q47008032",
+    "pageid": 48117149,
+    "concepturi": "http://www.wikidata.org/entity/Q47008032",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q47008032",
+    "display": {
+     "label": {
+      "value": "2018 Milan–San Remo",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "2018 Milan–San Remo",
+    "description": "cycling race",
+    "match": {
+     "type": "label",
+     "language": "da",
+     "text": "Milano-Sanremo 2018"
+    },
+    "aliases": [
+     "Milano-Sanremo 2018"
+    ]
+   }
+  ],
+  "Paris-Roubaix": [
+   {
+    "id": "Q546831",
+    "title": "Q546831",
+    "pageid": 515182,
+    "concepturi": "http://www.wikidata.org/entity/Q546831",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q546831",
+    "display": {
+     "label": {
+      "value": "Paris-Roubaix Juniors",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "Paris-Roubaix Juniors",
+    "description": "cycling race",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Paris-Roubaix Juniors"
+    }
+   },
+   {
+    "id": "Q33992",
+    "title": "Q33992",
+    "pageid": 36794,
+    "concepturi": "http://www.wikidata.org/entity/Q33992",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q33992",
+    "display": {
+     "label": {
+      "value": "Paris–Roubaix",
+      "language": "en"
+     },
+     "description": {
+      "value": "French one-day cycling race, one of the five monuments",
+      "language": "en"
+     }
+    },
+    "label": "Paris–Roubaix",
+    "description": "French one-day cycling race, one of the five monuments",
+    "match": {
+     "type": "label",
+     "language": "ca",
+     "text": "París-Roubaix"
+    },
+    "aliases": [
+     "París-Roubaix"
+    ]
+   },
+   {
+    "id": "Q51880006",
+    "title": "Q51880006",
+    "pageid": 52789842,
+    "concepturi": "http://www.wikidata.org/entity/Q51880006",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q51880006",
+    "display": {
+     "label": {
+      "value": "Paris-Roubaix Juniors 2018",
+      "language": "en"
+     }
+    },
+    "label": "Paris-Roubaix Juniors 2018",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Paris-Roubaix Juniors 2018"
+    }
+   },
+   {
+    "id": "Q111584855",
+    "title": "Q111584855",
+    "pageid": 106529266,
+    "concepturi": "http://www.wikidata.org/entity/Q111584855",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q111584855",
+    "display": {
+     "label": {
+      "value": "Paris-Roubaix Juniors 2019",
+      "language": "en"
+     }
+    },
+    "label": "Paris-Roubaix Juniors 2019",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Paris-Roubaix Juniors 2019"
+    }
+   }
+  ],
+  "Tour of Flanders": [
+   {
+    "id": "Q33970",
+    "title": "Q33970",
+    "pageid": 36775,
+    "concepturi": "http://www.wikidata.org/entity/Q33970",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q33970",
+    "display": {
+     "label": {
+      "value": "Tour of Flanders",
+      "language": "en"
+     },
+     "description": {
+      "value": "Belgian one-day cycling race for men, one of the five monuments",
+      "language": "en"
+     }
+    },
+    "label": "Tour of Flanders",
+    "description": "Belgian one-day cycling race for men, one of the five monuments",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Tour of Flanders"
+    }
+   },
+   {
+    "id": "Q1637189",
+    "title": "Q1637189",
+    "pageid": 1571485,
+    "concepturi": "http://www.wikidata.org/entity/Q1637189",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q1637189",
+    "display": {
+     "label": {
+      "value": "Tour of Flanders",
+      "language": "en"
+     },
+     "description": {
+      "value": "women's cycling competition",
+      "language": "en"
+     }
+    },
+    "label": "Tour of Flanders",
+    "description": "women's cycling competition",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Tour of Flanders"
+    }
+   },
+   {
+    "id": "Q116631391",
+    "title": "Q116631391",
+    "pageid": 111394904,
+    "concepturi": "http://www.wikidata.org/entity/Q116631391",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q116631391",
+    "display": {
+     "label": {
+      "value": "2023 Tour of Flanders",
+      "language": "en"
+     },
+     "description": {
+      "value": "cycling race",
+      "language": "en"
+     }
+    },
+    "label": "2023 Tour of Flanders",
+    "description": "cycling race",
+    "match": {
+     "type": "alias",
+     "language": "en",
+     "text": "Tour of Flanders 2023"
+    },
+    "aliases": [
+     "Tour of Flanders 2023"
+    ]
+   },
+   {
+    "id": "Q3533648",
+    "title": "Q3533648",
+    "pageid": 3364222,
+    "concepturi": "http://www.wikidata.org/entity/Q3533648",
+    "repository": "wikidata",
+    "url": "//www.wikidata.org/wiki/Q3533648",
+    "display": {
+     "label": {
+      "value": "Tour of Flanders (juniors)",
+      "language": "en"
+     }
+    },
+    "label": "Tour of Flanders (juniors)",
+    "match": {
+     "type": "label",
+     "language": "en",
+     "text": "Tour of Flanders (juniors)"
+    }
+   }
+  ]
+ },
+ "entities": {
+  "Q33951": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "http://www.milanosanremo.it/"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Milan%E2%80%93San_Remo"
+    }
+   }
+  },
+  "Q33970": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "http://www.rvv.be/en"
+       }
+      }
+     }
+    ],
+    "P2003": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "rondevanvlaanderenofficial"
+       }
+      }
+     }
+    ],
+    "P2013": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "rondevanvlaanderen"
+       }
+      }
+     }
+    ],
+    "P2002": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "rondevlaanderen"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Tour_of_Flanders_(men%27s_race)"
+    }
+   }
+  },
+  "Q33992": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "https://www.paris-roubaix.fr/"
+       }
+      }
+     }
+    ],
+    "P2003": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "parisroubaixcourse"
+       }
+      }
+     }
+    ],
+    "P2013": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "ParisRoubaix"
+       }
+      }
+     }
+    ],
+    "P2002": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "Paris_Roubaix"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Paris%E2%80%93Roubaix"
+    }
+   }
+  },
+  "Q34009": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "http://www.liege-bastogne-liege.be/"
+       }
+      }
+     }
+    ],
+    "P2003": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "classiquesardennes"
+       }
+      }
+     }
+    ],
+    "P2013": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "liegebastogneliege"
+       }
+      }
+     }
+    ],
+    "P2002": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "LiegeBastogneL"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Li%C3%A8ge%E2%80%93Bastogne%E2%80%93Li%C3%A8ge"
+    }
+   }
+  },
+  "Q34032": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "http://www.ilombardia.it"
+       }
+      }
+     }
+    ],
+    "P2003": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "ilombardia"
+       }
+      }
+     }
+    ],
+    "P2013": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "il.lombardia"
+       }
+      }
+     }
+    ],
+    "P2002": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "Il_Lombardia"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Giro_di_Lombardia"
+    }
+   }
+  },
+  "Q131784810": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "https://www.milanosanremo.it/"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {}
+  },
+  "Q1637189": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "https://www.rondevanvlaanderen.be/nl/rvv/elite-vrouwen"
+       }
+      }
+     }
+    ],
+    "P2003": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "rondevanvlaanderenofficial"
+       }
+      }
+     }
+    ],
+    "P2013": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "rondevanvlaanderen"
+       }
+      }
+     }
+    ],
+    "P2002": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "rondevlaanderen"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Tour_of_Flanders_(women%27s_race)"
+    }
+   }
+  },
+  "Q27538455": {
+   "claims": {
+    "P856": [
+     {
+      "mainsnak": {
+       "datavalue": {
+        "value": "https://www.liege-bastogne-liege-femmes.be/en"
+       }
+      }
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "url": "https://en.wikipedia.org/wiki/Li%C3%A8ge%E2%80%93Bastogne%E2%80%93Li%C3%A8ge_Femmes"
+    }
+   }
+  }
+ }
+}

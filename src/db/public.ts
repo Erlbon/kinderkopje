@@ -5,7 +5,7 @@ import { openDatabase } from "./cube-db";
 export const TAKEDOWN_URL = "https://github.com/Erlbon/pelotonic/issues";
 
 export const PUBLIC_CREDITS =
-  "Rankings and race results are published by the Union Cycliste Internationale (UCI) on uci.org and dataride.uci.ch; team levels come from Wikipedia (CC BY-SA 4.0). " +
+  "Rankings and race results are published by the Union Cycliste Internationale (UCI) on uci.org and dataride.uci.ch; team levels come from Wikipedia (CC BY-SA 4.0); the links of a race (official site, Wikipedia, social media) come from Wikidata (CC0) after a person checked the match, from the race registry, or were typed in. " +
   "Only names, nations, rider ages (as DataRide shows them at the race), places, points, team names, race names and race facts are included: no layout, no photos. " +
   "To have something removed, open an issue at " + TAKEDOWN_URL + ".";
 
@@ -19,7 +19,7 @@ export function makePublicCopy(SQL: { Database: new (data?: ArrayLike<number>) =
   try {
     copy.exec("DELETE FROM kv; DELETE FROM queue_race; UPDATE race_result SET contributor = NULL, captured_at = NULL;");
     // only the races that have results: a race that is only in the capture queue is left out, with its names
-    copy.exec("DELETE FROM race_name WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL); DELETE FROM race WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL);");
+    copy.exec("DELETE FROM race_link WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL); DELETE FROM race_name WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL); DELETE FROM race WHERE race_id NOT IN (SELECT race_id FROM race_result WHERE race_id IS NOT NULL);");
     copy.run("INSERT OR REPLACE INTO meta(key, value) VALUES ('public', '1')");
     copy.run("INSERT OR REPLACE INTO meta(key, value) VALUES ('credits', ?)", [PUBLIC_CREDITS]);
     copy.run("INSERT OR REPLACE INTO meta(key, value) VALUES ('made', ?)", [new Date().toISOString().slice(0, 10)]);

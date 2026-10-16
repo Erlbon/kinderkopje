@@ -144,6 +144,33 @@ export const DICTIONARY: TableDoc[] = [
     example: { title: "Every name each race has had", sql: "SELECT r.name AS race, n.name AS external_name, n.first_year, n.last_year FROM race_name n JOIN race r ON r.race_id = n.race_id ORDER BY r.name, n.first_year" },
   },
   {
+    name: "race_link",
+    kind: "table",
+    summary: "Where each race lives on the web: official site, Wikipedia, social media and FirstCycling. ProCyclingStats is left out on purpose.",
+    columns: [
+      { name: "race_id", meaning: "Which race: race.race_id." },
+      { name: "kind", meaning: "website, wikipedia, wikidata, x, instagram, facebook, youtube, tiktok, firstcycling or other." },
+      { name: "label", meaning: "The name to show for the link, for example Instagram." },
+      { name: "url", meaning: "The address." },
+      { name: "source", meaning: "Where it came from: registry (the race registry of the Threads tab), wikidata (a match you checked) or manual (typed in)." },
+    ],
+    links: "race_id -> race.race_id",
+    example: { title: "The links of every race that has any", sql: "SELECT r.name, l.label, l.url FROM race_link l JOIN race r ON r.race_id = l.race_id ORDER BY r.name, l.kind" },
+  },
+  {
+    name: "country",
+    kind: "table",
+    summary: "Every country code UCI uses, with its continent and UCI confederation, for filtering races, riders and teams by continent.",
+    columns: [
+      { name: "code", meaning: "The code UCI uses (IOC style): ITA, GER, SUI ... It is the value in queue_race.country, result_row.nation and team_rank.nation." },
+      { name: "name", meaning: "The country's name." },
+      { name: "continent", meaning: "Europe, Asia, Africa, North America (with Central America and the Caribbean), South America or Oceania." },
+      { name: "confederation", meaning: "UCI's continental confederation: Europe, Asia, Africa, Pan America or Oceania." },
+    ],
+    links: "country.code = queue_race.country, result_row.nation, team_rank.nation",
+    example: { title: "Races captured per continent", sql: "SELECT c.continent, COUNT(*) AS races FROM queue_race q JOIN country c ON c.code = q.country GROUP BY c.continent ORDER BY races DESC" },
+  },
+  {
     name: "queue_race",
     kind: "table",
     summary: "The competitions to capture, taken from the DataRide competition list pages you captured.",

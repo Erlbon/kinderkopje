@@ -3,6 +3,7 @@ import { cleanHeading, isComplete, isScoringEvent, mergeEvents } from "./datarid
 import { CATEGORY_NAMES, raceKind } from "./dataride";
 import type { Category, DrCompetition, DrCompetitionEvents, DrEventResult } from "./dataride";
 import { slugify } from "./ical";
+import { LinkStore, RaceLink, linksFor } from "./links";
 import { normRaceName } from "./uci-hub";
 
 /**
@@ -616,6 +617,8 @@ export interface RaceRecord {
   names: ExternalName[];
   years: number[];
   uciIds: number[]; // DataRide competition ids of its editions
+  class?: string; // the newest edition's UCI class
+  links: RaceLink[]; // official site, Wikipedia, social media, FirstCycling (see links.ts)
 }
 
 /** The core of a race's names: the shortest once sponsors and the like are stripped; the newest edition's wins a tie. */
@@ -628,7 +631,7 @@ function coreName(names: ExternalName[]): string {
  * `renames` (lines "any external name = Internal name"), otherwise the core name. `grouped` can be passed when the
  * caller has already grouped the queue (queueByRace) so that it is not done twice.
  */
-export function buildRaces(cube: Cube, aliases = "", renames = "", grouped?: RaceEditions[]): RaceRecord[] {
+export function buildRaces(cube: Cube, aliases = "", renames = "", grouped?: RaceEditions[], linkStores: LinkStore[] = []): RaceRecord[] {
   const races = grouped ?? queueByRace(cube, aliases).races;
   const overrides = parseRaceAliases(renames).map(([external, internal]) => [normRaceName(external), internal] as [string, string]);
   const taken = new Set<string>();
@@ -636,6 +639,7 @@ export function buildRaces(cube: Cube, aliases = "", renames = "", grouped?: Rac
   const out: RaceRecord[] = [];
   for (const r of races) {
     const eds = Object.values(r.editions);
+    const newestEdition = eds.reduce<QueueLine | undefined>((a, b) => (!a || b.year > a.year ? b : a), undefined);
     const byName = new Map<string, number[]>();
     for (const e of eds) byName.set(e.name, [...(byName.get(e.name) ?? []), e.year]);
     const names: ExternalName[] = [...byName].map(([name, years]) => ({ name, years: years.sort((a, b) => a - b) })).sort((a, b) => a.years[0]! - b.years[0]!);
@@ -646,7 +650,7 @@ export function buildRaces(cube: Cube, aliases = "", renames = "", grouped?: Rac
     let slug = slugify(name) + (r.category === "WE" ? "-women" : "");
     for (let n = 2; slugs.has(slug); n++) slug = slug.replace(/-[0-9]+$/, "") + "-" + n;
     slugs.add(slug);
-    out.push({ key: r.key, name, slug, category: r.category, names, years: eds.map((e) => e.year).sort((a, b) => a - b), uciIds: [...eds.map((e) => e.uciId), ...r.others] });
+    out.push({ key: r.key, name, slug, category: r.category, names, years: eds.map((e) => e.year).sort((a, b) => a - b), uciIds: [...eds.map((e) => e.uciId), ...r.others], ...(newestEdition?.class ? { class: newestEdition.class } : {}), links: linksFor({ name, category: r.category, names }, ...linkStores) });
   }
   return out;
 }

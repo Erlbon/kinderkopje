@@ -2,12 +2,15 @@ import type { Database } from "sql.js";
 import type { Category } from "../core/dataride";
 import type { Cube, QueueRace, RaceResult, ResultClassification, TeamSnapshot } from "../core/cube";
 import { buildRaces } from "../core/cube";
+import { COUNTRIES } from "../core/countries";
+import { LINK_LABELS, linksFromRegistry, parseLinkStore } from "../core/links";
 import { migrate } from "./schema";
 
 /** Open a database from file bytes (or an empty one) and bring it to the current schema. */
 export function openDatabase(SQL: { Database: new (data?: ArrayLike<number>) => Database }, bytes?: Uint8Array): Database {
   const db = new SQL.Database(bytes);
   migrate(db);
+  writeCountries(db);
   return db;
 }
 
@@ -78,26 +81,47 @@ export function saveCube(db: Database, cube: Cube): void {
   writeRaces(db, cube);
 }
 
+/** The country table (code, name, continent, confederation) is reference data: kept equal to the table in the code. */
+export function writeCountries(db: Database): void {
+  const have = Number(db.exec("SELECT COUNT(*) FROM country")[0]?.values[0]?.[0] ?? 0);
+  if (have === COUNTRIES.length) return;
+  db.exec("BEGIN");
+  try {
+    db.exec("DELETE FROM country");
+    const insert = db.prepare("INSERT INTO country(code, name, continent, confederation) VALUES (?,?,?,?)");
+    for (const c of COUNTRIES) insert.run([c.code, c.name, c.continent, c.confederation]);
+    insert.free();
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
 /**
  * Write the races: one row per race with its internal name, its external names, and the race id on every queue entry
  * and result. They are worked out from the queue, the join lines and the rename lines saved with the data, so this is
  * run after any of those change. A race keeps its id when it is saved again.
  */
 export function writeRaces(db: Database, cube: Cube): void {
-  const races = buildRaces(cube, getKv(db, "racealiases") ?? "", getKv(db, "racenames") ?? "");
+  // links come from the registry of the Threads tab and from the ones stored here (Wikidata, typed by hand)
+  const stores = [linksFromRegistry(getKv(db, "registry")), parseLinkStore(getKv(db, "racelinks"))];
+  const races = buildRaces(cube, getKv(db, "racealiases") ?? "", getKv(db, "racenames") ?? "", undefined, stores);
   const ids = new Map(all(db, "SELECT race_id, key FROM race").map((r) => [r.key as string, r.race_id as number]));
   let next = Math.max(0, ...ids.values()) + 1;
   db.exec("BEGIN");
   try {
-    db.exec("DELETE FROM race_name; DELETE FROM race; UPDATE queue_race SET race_id = NULL; UPDATE race_result SET race_id = NULL;");
+    db.exec("DELETE FROM race_link; DELETE FROM race_name; DELETE FROM race; UPDATE queue_race SET race_id = NULL; UPDATE race_result SET race_id = NULL;");
     const insert = db.prepare("INSERT INTO race(race_id, key, name, slug, category, first_year, last_year) VALUES (?,?,?,?,?,?,?)");
     const insertName = db.prepare("INSERT INTO race_name(race_id, name, source, first_year, last_year) VALUES (?,?,?,?,?)");
+    const insertLink = db.prepare("INSERT OR IGNORE INTO race_link(race_id, kind, label, url, source) VALUES (?,?,?,?,?)");
     const q = db.prepare("UPDATE queue_race SET race_id = ? WHERE uci_id = ?");
     const r = db.prepare("UPDATE race_result SET race_id = ? WHERE uci_id = ?");
     for (const race of races) {
       const id = ids.get(race.key) ?? next++;
       insert.run([id, race.key, race.name, race.slug, race.category, race.years[0] ?? null, race.years[race.years.length - 1] ?? null]);
       for (const n of race.names) insertName.run([id, n.name, "uci", n.years[0] ?? null, n.years[n.years.length - 1] ?? null]);
+      for (const l of race.links) insertLink.run([id, l.kind, l.label ?? LINK_LABELS[l.kind], l.url, l.source]);
       for (const uciId of race.uciIds) {
         q.run([id, uciId]);
         r.run([id, uciId]);
@@ -105,6 +129,7 @@ export function writeRaces(db: Database, cube: Cube): void {
     }
     insert.free();
     insertName.free();
+    insertLink.free();
     q.free();
     r.free();
     db.exec("COMMIT");

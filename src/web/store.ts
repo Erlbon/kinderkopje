@@ -129,7 +129,7 @@ export async function openStore(): Promise<Store> {
     getText: (key) => getKv(db, key),
     async setText(key, value) {
       setKv(db, key, value);
-      if (key === "racealiases" || key === "racenames") writeRaces(db, cube); // the races follow the join and rename lines
+      if (key === "racealiases" || key === "racenames" || key === "racelinks" || key === "registry") writeRaces(db, cube); // the races follow the join, rename and link lines
       await persist();
     },
     async deleteText(key) {

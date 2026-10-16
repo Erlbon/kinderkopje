@@ -3,6 +3,7 @@ import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import { addCapture, emptyCube } from "../src/core";
 import { initRaces } from "../src/web/pages/races";
+import { fakeWikidata } from "./helpers/wikidata";
 import type { Store } from "../src/web/store";
 
 // the real page, with a queue of four races: one finished, one not, one in a class the filter leaves out, one women's
@@ -27,7 +28,7 @@ function page(): { doc: Document; text: () => string } {
 }
 
 // a page with a small queue built from (name, year, class) lines, and a store that remembers what is saved
-function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit?: (doc: Document) => void, prepare?: (cube: ReturnType<typeof emptyCube>) => void) {
+function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit?: (doc: Document) => void, prepare?: (cube: ReturnType<typeof emptyCube>) => void, options?: { fetch?: typeof fetch; pause?: number }) {
   const html = readFileSync(new URL("../src/site/races.html", import.meta.url), "utf8");
   const { document } = parseHTML(html);
   (globalThis as unknown as { document: Document }).document = document as unknown as Document;
@@ -40,7 +41,7 @@ function pageWith(names: [string, number, string?, ("ME" | "WE")?][], beforeInit
   const store = { cube, onChange: () => undefined, saveCube: async () => undefined, getText: (k: string) => texts.get(k), setText: async (k: string, v: string) => void texts.set(k, v) } as unknown as Store;
   prepare?.(cube);
   beforeInit?.(doc);
-  initRaces(store);
+  initRaces(store, options);
   const rows = () => Array.from(doc.querySelectorAll("#queueout table tr td:first-child")).map((c) => c.textContent ?? "").filter((t) => t.includes("Mayenne"));
   const button = (label: string) => Array.from(doc.querySelectorAll("button")).find((b) => b.textContent === label) as HTMLButtonElement;
   return { doc, texts, rows, button };
@@ -220,6 +221,105 @@ describe("internal and external race names", () => {
     again.value = "Classic Brugge-De Panne";
     await (button("Save name").onclick as () => Promise<void>)();
     expect(texts.get("racenames")).toBe("");
+  });
+});
+
+describe("race links", () => {
+  const MONUMENTS: [string, number, string?][] = [["Milano-Sanremo", 2025, "1.UWT"], ["Tour of Flanders", 2025, "1.UWT"], ["Paris-Roubaix", 2025, "1.UWT"], ["Liège-Bastogne-Liège", 2025, "1.UWT"], ["Il Lombardia", 2025, "1.UWT"], ["Small Local Race", 2025, "1.2"]];
+  const find = (doc: Document) => (doc.getElementById("linkfind")!.onclick as () => Promise<void>)();
+  const saveDecisions = (doc: Document) => (Array.from(doc.querySelectorAll("#linkreview button")).find((b) => b.textContent === "Save my decisions") as HTMLButtonElement).onclick as () => Promise<void>;
+
+  it("Find links asks Wikidata about the World Tour races only, and shows each match to decide on", async () => {
+    const asked: string[] = [];
+    const { doc, texts } = pageWith(MONUMENTS, undefined, undefined, { fetch: fakeWikidata(asked), pause: 0 });
+    await find(doc);
+    expect(asked.sort()).toEqual(["Il Lombardia", "Liège-Bastogne-Liège", "Milano-Sanremo", "Paris-Roubaix", "Tour of Flanders"]); // not the small local race
+    expect(doc.querySelectorAll("#linkreview tr.rejected").length).toBe(0);
+    const rows = Array.from(doc.querySelectorAll("#linkreview td.seg")).map((c) => c.parentElement!.textContent ?? "");
+    expect(rows).toHaveLength(5);
+    expect(rows.find((r) => r.includes("Milano-Sanremo"))).toContain("Milan - San Remo (Q33951)");
+    expect(rows.find((r) => r.includes("Il Lombardia"))).toContain("Giro di Lombardia (Q34032)"); // UCI's name and Wikidata's differ
+    expect(doc.getElementById("linkreview")!.textContent).toContain("Instagram, Facebook, X, Wikidata"); // what Flanders would add
+    expect(texts.get("racelinks")).toBeUndefined(); // nothing saved until you decide
+  });
+  it("saving the clear matches stores the links, and they show on the race's card", async () => {
+    const { doc, texts } = pageWith(MONUMENTS, undefined, undefined, { fetch: fakeWikidata(), pause: 0 });
+    await find(doc);
+    (Array.from(doc.querySelectorAll("#linkreview button")).find((b) => (b.textContent ?? "").startsWith("Mark the clear matches")) as HTMLButtonElement).click();
+    expect(doc.querySelectorAll("#linkreview td.seg button.on.seg-same")).toHaveLength(5);
+    await saveDecisions(doc)();
+    const stored = JSON.parse(texts.get("racelinks")!) as Record<string, { kind: string; url: string }[]>;
+    expect(Object.keys(stored)).toHaveLength(5);
+    expect(stored["parisroubaix|ME"]!.map((l) => l.kind)).toEqual(["website", "wikipedia", "instagram", "facebook", "x", "wikidata"]);
+    expect(doc.getElementById("linkmsg")!.textContent).toContain("5 races got their links");
+    // the card under Race names
+    const box = doc.getElementById("racefind") as HTMLInputElement;
+    box.value = "roubaix";
+    box.oninput!(new Event("input") as unknown as InputEvent);
+    const card = doc.querySelector("#racenamelist .card")!;
+    expect(Array.from(card.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Official site", "Wikipedia", "Instagram", "Facebook", "X", "Wikidata"]);
+    expect(card.querySelector('a[title^="https://www.paris-roubaix.fr/"]')).not.toBeNull();
+  });
+  it("a match marked Not the same is not offered again, and nothing is stored for it", async () => {
+    const { doc, texts } = pageWith(MONUMENTS.slice(0, 1), undefined, undefined, { fetch: fakeWikidata(), pause: 0 });
+    await find(doc);
+    (doc.querySelector("#linkreview td.seg .seg-diff") as HTMLButtonElement).click();
+    await saveDecisions(doc)();
+    expect(texts.get("racelinks")).toBe("{}");
+    expect(JSON.parse(texts.get("linkrejected")!)).toEqual({ "milanosanremo|ME": ["Q33951"] });
+    await find(doc);
+    expect(doc.getElementById("linkreview")!.textContent).not.toContain("Q33951"); // the next best, or none
+  });
+  it("Don't know leaves everything as it was", async () => {
+    const { doc, texts } = pageWith(MONUMENTS.slice(0, 2), undefined, undefined, { fetch: fakeWikidata(), pause: 0 });
+    await find(doc);
+    await saveDecisions(doc)();
+    expect(texts.get("racelinks")).toBe("{}");
+    expect(texts.get("linkrejected")).toBe("{}");
+    expect(doc.getElementById("linkmsg")!.textContent).toContain("2 left undecided");
+  });
+  it("only the races you name are looked up, and a race Wikidata does not have says so", async () => {
+    const asked: string[] = [];
+    const { doc } = pageWith([...MONUMENTS.slice(0, 3), ["Unknown Classic", 2025, "1.UWT"]], undefined, undefined, { fetch: fakeWikidata(asked), pause: 0 });
+    (doc.getElementById("linkonly") as HTMLInputElement).value = "roubaix, unknown classic";
+    await find(doc);
+    expect(asked.sort()).toEqual(["Paris-Roubaix", "Unknown", "Unknown Classic"]); // an unknown race is also tried without the word Classic
+    expect(doc.getElementById("linkreview")!.textContent).toContain("No match on Wikidata");
+  });
+  it("says so and keeps what it has when Wikidata does not answer", async () => {
+    let calls = 0;
+    const flaky = (async () => {
+      if (++calls > 2) throw new Error("network down");
+      return new Response(JSON.stringify({ search: [] }));
+    }) as unknown as typeof fetch;
+    const { doc } = pageWith(MONUMENTS.slice(0, 5), undefined, undefined, { fetch: flaky, pause: 0 });
+    await find(doc);
+    expect(doc.getElementById("linkmsg")!.textContent).toContain("Wikidata did not answer (network down)");
+    expect(doc.getElementById("linkfind")!.hasAttribute("disabled")).toBe(false); // can be pressed again
+  });
+  it("a link can be added by hand, shown, and removed again; registry links cannot be removed here", async () => {
+    const { doc, texts } = pageWith([["Paris-Roubaix", 2025, "1.UWT"]], undefined, (cube) => void cube, { fetch: fakeWikidata(), pause: 0 });
+    texts.set("registry", ["paris-roubaix-me:", "  name: Paris-Roubaix", "  category: ME", "  officialSite: https://www.paris-roubaix.fr/"].join(String.fromCharCode(10)));
+    const box = doc.getElementById("racefind") as HTMLInputElement;
+    const open = () => {
+      box.value = "roubaix";
+      box.oninput!(new Event("input") as unknown as InputEvent);
+    };
+    open();
+    let card = doc.querySelector("#racenamelist .card")!;
+    expect(card.textContent).toContain("Official site"); // from the registry
+    expect(card.querySelectorAll("button.twist")).toHaveLength(0); // not removable here
+    (card.querySelector("input[placeholder='https://...']") as HTMLInputElement).value = "https://www.instagram.com/parisroubaixcourse";
+    const kinds = Array.from((card.querySelector("select") as HTMLSelectElement).options);
+    for (const o of kinds) o.toggleAttribute("selected", o.value === "instagram");
+    const add = Array.from(card.querySelectorAll("button")).find((b) => b.textContent === "Add link") as HTMLButtonElement;
+    await (add.onclick as () => Promise<void>)();
+    card = doc.querySelector("#racenamelist .card")!;
+    const shown = () => Array.from(doc.querySelectorAll("#racenamelist .card a")).map((a) => a.textContent);
+    expect(shown()).toEqual(["Official site", "Instagram"]);
+    expect(JSON.parse(texts.get("racelinks")!)["parisroubaix|ME"][0]).toMatchObject({ url: "https://www.instagram.com/parisroubaixcourse", source: "manual" });
+    await ((card.querySelector("button.twist") as HTMLButtonElement).onclick as () => Promise<void>)();
+    expect(shown()).toEqual(["Official site"]);
   });
 });
 

@@ -179,7 +179,7 @@ export async function fetchSection(title: string, index: string, f: typeof fetch
 /** Look a race up on Wikidata: official website (P856) and the English Wikipedia page. */
 export async function lookupRace(name: string, f: typeof fetch = fetch): Promise<WikidataRace[]> {
   const s = await f(
-    WD + "?action=wbsearchentities&language=en&type=item&limit=6&format=json&origin=*&search=" + encodeURIComponent(name),
+    WD + "?action=wbsearchentities&language=en&type=item&limit=10&format=json&origin=*&search=" + encodeURIComponent(name),
     { headers: HEADERS },
   );
   const found = ((await s.json()) as { search?: { id: string; label?: string; description?: string }[] }).search ?? [];
