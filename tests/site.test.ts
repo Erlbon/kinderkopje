@@ -46,6 +46,8 @@ describe("the intro page", () => {
     const html = read("src/site/intro.html");
     expect(html).toContain("AI-assisted hub for collecting information from reddit/r/peloton, UCI.org and other sources");
     for (const task of ["Automatic Race Thread Generation", "Automatic Race Statistics", "Automatic Team Statistics"]) expect(html, task).toContain(task);
+    expect(html).toContain("a small database of current cycling results +/- five years");
+    expect(html).toContain("fully open source and can be downloaded by any user in a sql lite file");
     const doc = parseHTML(html).document as unknown as Document;
     const links = Array.from(doc.querySelectorAll("#sources + fieldset a"));
     expect(links.length).toBeGreaterThanOrEqual(8);
