@@ -3,54 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pelotonic: Race results</title>
+<title>Pelotonic: Races</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="app.css?v=__BUILD__">
 </head>
 <body>
 <main>
 <header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt=""><span class="name">Pelotonic - The R Peloton Database Project</span></a></header>
-<h1>Race results</h1>
-<nav><a href="index.html">Intro</a><a href="threads.html">Threads</a><a href="teams.html">Teams and points</a><a class="active" href="races.html">Race results</a><a href="data.html">Data</a></nav>
+<h1>Races</h1>
+<nav><a href="index.html">Intro</a><a href="threads.html">Threads</a><a href="teams.html">Teams and points</a><a class="active" href="races.html">Races</a><a href="collect.html">Collect</a><a href="data.html">Data</a></nav>
 <div id="appstatus" class="warn"></div>
-<fieldset>
-  <legend class="mut">Capture the point-scoring results of each race from DataRide (UCI's results site), one race at a time across the years. Every capture keeps only the rows that score points.</legend>
-  <p class="mut" style="margin:4px 0">
-    <b>1.</b> Drag this link to your bookmarks bar: <a id="bookmarkletrace" class="btn" href="__BOOKMARKLET_RACE_HREF__">Capture UCI race</a>
-    <b>2.</b> Open <a href="https://dataride.uci.ch/iframe/Results/10/" target="_blank" rel="noopener">the DataRide competition list</a>, pick a season and a category (Men Elite, Women Elite) with the page's own filters and press the bookmark. It pages through the whole list by itself and fills the queue with every race, its class and its dates; the editions of a race are lined up by name across the years.
-    <b>3.</b> Open a race from the queue (it opens the competition page) and press the bookmark: it opens every closed stage row and notes the race's events. Then open each event that gives points (the General Classification, each <em>Stage Classification</em>; not the points or youth rankings) and press the bookmark again: it reads the table and goes on to the next page of the table while every row scored.
-    <b>4.</b> Press <em>Download collection</em> in the bookmark's box, and open the file here. The bookmark clicks only the page's own buttons, one at a time with a pause, never leaves the page, and has a Stop button; it sends no requests of its own.
-  </p>
+<p class="mut">Look up a race: its names, links, the 5x5 and the age statistics, each ready to copy. This page only shows what has been collected; to add results, join races or find links, use <a href="collect.html">Collect</a>.</p>
+
+<fieldset id="rfilters">
+  <legend class="mut">Find a race</legend>
   <div class="row">
-    <label class="btn">Open captured files<input id="capturefile" type="file" accept=".json,application/json" multiple hidden></label>
-    <label>Category <select id="queuecat"><option value="ME">Men elite</option><option value="WE">Women elite</option><option value="all">Both</option></select></label>
-    <label>Search <input id="queuesearch" type="search" placeholder="race name" style="width:150px"></label>
-    <label>Sort <select id="queuesort"><option value="name">Name</option><option value="class">Class, then name</option><option value="todo">Most to do first</option></select></label>
-    <label><input id="queuemissing" type="checkbox" checked> Only races with events still to capture</label>
-    <label><input id="queuetop" type="checkbox" checked> Only WorldTour, ProSeries and championships</label>
+    <label>Category <select id="rcat"><option value="ME">Men elite</option><option value="WE">Women elite</option><option value="all">Both</option></select></label>
+    <label>Class <select id="rclass"><option value="wt">World Tour</option><option value="pro">World Tour and ProSeries</option><option value="all">All classes</option></select></label>
+    <label>Continent <select id="rcont"><option value="all">Everywhere</option></select></label>
+    <label>Search <input id="rsearch" type="search" placeholder="any of its names" style="width:170px"></label>
+    <label><input id="rresults" type="checkbox" checked> Only races with results</label>
   </div>
-  <details style="margin:6px 0">
-    <summary>Same race, different names</summary>
-    <p class="mut" style="margin:6px 0">A race that gained or dropped a sponsor in its name shows as two rows. <b>Find joins</b> lists the likely pairs (one name starts the other, and the years do not overlap) for you to decide, one by one: <b>Same race</b>, <b>Not the same</b> or <b>Don't know</b>. It lists the category chosen in the Category box above, so men's and women's are never mixed. Do it once after capturing a season. Same-race pairs are written as lines in the box below, not-the-same pairs are remembered and not suggested again, and Don't know leaves the pair for next time. You can also write a line yourself: <code>old name = name it continues as</code>. A race with more than two names takes one longer line, <code>first name = second name = third name = the name it continues as</code>: every name before the last is joined into the last. Lines starting with # are notes.</p>
-    <div class="row"><button id="joinfind">Find joins</button><span id="mergednote" class="mut"></span></div>
-    <div id="joinreview"></div>
-    <textarea id="racealiases" spellcheck="false" style="min-height:70px" placeholder="Boucles de la Mayenne = Boucles de la Mayenne - Crédit Mutuel"></textarea>
-    <div class="row" style="margin-top:6px"><button id="racealiasessave">Save and join</button></div>
-    <div id="aliasmsg" class="mut" style="margin-top:6px"></div>
-    <h4 style="margin:14px 0 4px">Race names</h4>
-    <p class="mut" style="margin:4px 0">Every race has an <b>internal name</b>, what the database calls it, and the <b>external names</b> UCI used for it in each year. By default the internal name is the shortest name without sponsors. Find a race by any of its names to change it.</p>
-    <div class="row"><input id="racefind" type="search" placeholder="find a race, by any of its names" style="width:280px"></div>
-    <div id="racenamelist"></div>
-    <h4 style="margin:14px 0 4px">Race links</h4>
-    <p class="mut" style="margin:4px 0">Official site, Wikipedia, social media and FirstCycling for each race. <b>Find links</b> asks Wikidata about the World Tour races of the category chosen above, one race at a time, and shows what it found for you to check: <b>Same race</b>, <b>Not the same</b> or <b>Don't know</b>. A race's links can also be added or removed by hand on its card under Race names.</p>
-    <div class="row"><input id="linkonly" type="text" placeholder="only these races (optional), separated by commas" style="width:340px"><button id="linkfind" type="button">Find links (World Tour)</button><button id="linkstop" type="button" style="display:none">Stop</button></div>
-    <div id="linkmsg" class="mut" style="margin:6px 0"></div>
-    <div id="linkreview"></div>
-  </details>
-  <div id="queuemsg" class="mut" style="margin:6px 0"></div>
-  <div id="queueout"></div>
+  <div id="rcount" class="mut" style="margin:6px 0"></div>
+  <div id="rlist"></div>
 </fieldset>
-<p class="mut">Everything is kept in the shared database (see the Data page). <span>__VERSION__</span></p>
+
+<div id="rdetail"></div>
+<p class="mut"><span>__VERSION__</span></p>
 </main>
 <script src="app.js?v=__BUILD__"></script>
 <script>RT.start("races")</script>

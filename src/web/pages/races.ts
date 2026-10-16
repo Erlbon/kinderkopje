@@ -1,386 +1,183 @@
-import { FinderOptions, currentRaces, initLinkFinder, linksBlock } from "./race-links";
-import { CATEGORY_NAMES, JoinSuggestion, QueueLine, buildRaces, chainLines, normRaceName, parseRaceAliases, queueByRace, suggestJoins } from "../../core";
-import { importCaptureFiles } from "../capture-import";
-import { $, el, tick } from "../dom";
+import { CONTINENTS, RaceRecord, ageTableMarkdown, continentOf, countryOf, displayName, fiveByFiveMarkdown, linksMarkdown, normRaceName, raceAgeByYear, topRiders, yearsWithResults, LINK_LABELS } from "../../core";
+import { $, copy, el } from "../dom";
 import type { Store } from "../store";
+import { currentRaces } from "./race-links";
 
-export function initRaces(store: Store, options: FinderOptions = {}): void {
-  const cube = () => store.cube;
+/**
+ * The Races page: reads what has been collected. A list of races with filters (category, class, continent, name), and
+ * one race opened at a time with its names, its links, the 5x5 and the age statistics, each ready to copy as Markdown.
+ * Nothing is changed here; gathering and cleaning are on the Collect page.
+ */
 
-  /** Choose a category in the box (through its options, which every DOM allows). */
-  const chooseCategory = (value: string) => {
-    const select = $<HTMLSelectElement>("queuecat");
-    const options = Array.from(select.options);
-    for (const o of options) o.toggleAttribute("selected", false); // clear first: choosing one may clear the others
-    const target = options.find((o) => o.value === value);
-    if (target) {
-      target.selected = true;
-      target.toggleAttribute("selected", true);
-    }
-    try {
-      select.value = value; // a browser's own selection (a test DOM cannot set it)
-    } catch {
-      /* the options above carry the choice */
-    }
-  };
-  /** The chosen value of a select. A browser knows it; a test DOM without select values falls back to the options. */
+const WORLD_TOUR = /UWT|WWT/;
+const WT_AND_PRO = /UWT|WWT|Pro/;
+const LIST_LIMIT = 300;
+
+export function initRaces(store: Store): void {
+  let open: string | undefined; // the slug of the race that is open
+
+  // the continents for the filter
+  const cont = $<HTMLSelectElement>("rcont");
+  for (const c of CONTINENTS) cont.append(el("option", { value: c, textContent: c }));
+
+  /** The chosen value of a select; a test DOM without select values falls back to the options. */
   const chosen = (id: string) => {
     const select = $<HTMLSelectElement>(id);
     if (typeof select.value === "string" && select.value !== "") return select.value;
     const options = Array.from(select.options);
     return (options.find((o) => o.selected || o.hasAttribute("selected")) ?? options[0])?.value ?? "";
   };
-  const chosenCategory = () => chosen("queuecat") || "ME";
-  /** WorldTour, ProSeries and championships: the classes the main interest is in. */
-  const isTop = (cls?: string) => /UWT|WWT|Pro|WC|CM/i.test(cls ?? "");
-  /** "Stage 14: Stage Classification" -> "Stage 14"; "Final Classification: General Classification" -> "General Classification". */
-  const shortEvent = (name: string) => name.replace(": Stage Classification", "").replace("Final Classification: ", "").replace("Final Result: ", "");
-  /** The lines under a race that say, per year, which events are missing or wait for their next page, each a link to that event. */
-  function missingRow(editions: QueueLine[], columns: number): HTMLElement {
-    const td = el("td");
-    td.setAttribute("colspan", String(columns));
-    for (const e of [...editions].sort((a, b) => b.year - a.year)) {
-      if (!e.missingEvents.length && !e.waitingEvents.length) continue;
-      const line = el("div");
-      line.append(el("b", { textContent: e.year + ": " }));
-      const list = (events: { id: number; name: string }[], title: string) =>
-        events.forEach((ev, i) => {
-          if (i) line.append(", ");
-          const href = "https://dataride.uci.ch/iframe/EventResults/" + ev.id + "?competitionId=" + e.uciId + "&disciplineId=10";
-          line.append(el("a", { href, target: "_blank", rel: "noopener", textContent: shortEvent(ev.name), title }));
-        });
-      if (e.missingEvents.length) {
-        line.append("not captured yet: ");
-        list(e.missingEvents, "Open this event, then press the bookmark");
-      }
-      if (e.waitingEvents.length) {
-        if (e.missingEvents.length) line.append(". ");
-        line.append("next page still to read: ");
-        list(e.waitingEvents, "Go to the next page of the table, then press the bookmark");
-      }
-      td.append(line);
-    }
-    return el("tr", { class: "detail" }, td);
-  }
-  /** How many joins wait for a decision; undefined = work it out again (it is the slow part, so only when the data changed). */
-  let pendingJoins: number | undefined;
-  /** How high a UCI class ranks: WorldTour first, then ProSeries, then the rest by level. */
-  const tier = (cls?: string) => (/UWT|WWT/.test(cls ?? "") ? 0 : /Pro/.test(cls ?? "") ? 1 : /[12]\.1/.test(cls ?? "") ? 2 : /[12]\.2/.test(cls ?? "") ? 3 : 4);
-  /** An edition is finished when every point-giving event on its competition page has a result read to the end. Without the event list nothing is known. */
-  const finished = (e: { eventsKnown: number; eventsComplete: number }) => e.eventsKnown > 0 && e.eventsComplete >= e.eventsKnown;
-  function status(e: { captured: boolean; rows: number; eventsKnown: number; eventsCaptured: number; eventsComplete: number }): [string, string] {
-    if (!e.eventsKnown) return e.captured ? ["no event list (" + e.rows + ")", "Results are captured, but not the list of events: press the bookmark on the competition page"] : ["open", "Nothing captured yet"];
-    const waiting = e.eventsCaptured - e.eventsComplete;
-    return [e.eventsComplete + "/" + e.eventsKnown + " events", waiting ? waiting + " captured event(s) filled a whole page of the table: capture the next page" : e.eventsCaptured < e.eventsKnown ? "events still to capture" : "all events captured"];
+
+  const hasResults = (r: RaceRecord) => yearsWithResults(store.cube, r).length > 0;
+
+  function filtered(): RaceRecord[] {
+    const cat = chosen("rcat");
+    const cls = chosen("rclass");
+    const continent = chosen("rcont");
+    const q = normRaceName($<HTMLInputElement>("rsearch").value);
+    const onlyResults = $<HTMLInputElement>("rresults").checked;
+    return currentRaces(store)
+      .filter((r) => (cat === "all" || r.category === cat) && (cls === "all" || (cls === "wt" ? WORLD_TOUR : WT_AND_PRO).test(r.class ?? "")) && (continent === "all" || continentOf(r.country) === continent))
+      .filter((r) => !q || normRaceName(r.name).includes(q) || r.names.some((n) => normRaceName(n.name).includes(q)))
+      .filter((r) => !onlyResults || hasResults(r))
+      .sort((a, b) => a.name.localeCompare(b.name) || a.category.localeCompare(b.category));
   }
 
-  function draw(): void {
-    const all = queueByRace(cube(), store.getText("racealiases") ?? "");
-    // each race with its internal name and its external names
-    const records = new Map(buildRaces(cube(), store.getText("racealiases") ?? "", store.getText("racenames") ?? "", all.races).map((x) => [x.key, x]));
-    const internal = (r: { key: string; name: string }) => records.get(r.key)?.name ?? r.name;
-    if (pendingJoins === undefined) pendingJoins = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "").length;
-    const pending = pendingJoins;
-    const refused = all.aliasReport.filter((r) => r.includes("not joined: one is a")).length; // saved lines that joined a time trial with a road race
-    $("mergednote").textContent = (all.merged.length ? all.merged.length + " joined. " : "") + (refused ? refused + " saved join line" + (refused === 1 ? " was" : "s were") + " ignored: they joined different kinds of race (a time trial and a road race). " : "") + (pending ? pending + " possible join" + (pending === 1 ? "" : "s") + " to review." : "No more joins to review.");
-    const years = all.years.filter((y) => y > 0);
-    const onlyTop = $<HTMLInputElement>("queuetop").checked;
-    // men's and women's races are kept apart: the page shows one category at a time
-    const cat = chosenCategory();
-    const inCategory = all.races.filter((r) => cat === "all" || r.category === cat);
-    const races = onlyTop ? inCategory.filter((r) => Object.values(r.editions).some((e) => isTop(e.class))) : inCategory;
-    const out = $("queueout");
-    out.replaceChildren();
-    const editions = races.flatMap((r) => Object.values(r.editions));
-    const done = editions.filter(finished).length;
-    const results = cube().raceResults?.length ?? 0;
-    $("queuemsg").textContent = editions.length
-      ? done + " of " + editions.length + " editions finished, " + races.length + " races, " + results + " races with results in the database."
-      : "No races in the queue yet: capture the DataRide competition list (step 2 above), one page at a time, for each year.";
-    const onlyMissing = $<HTMLInputElement>("queuemissing").checked;
-    const unfinished = (r: (typeof races)[number]) => Object.values(r.editions).filter((e) => !finished(e)).length;
-    let rows = onlyMissing ? races.filter((r) => unfinished(r) > 0) : races;
-    // search by name (accents, case and punctuation do not matter), then sort
-    const q = normRaceName($<HTMLInputElement>("queuesearch").value);
-    if (q) rows = rows.filter((r) => normRaceName(r.name).includes(q) || normRaceName(r.keyName).includes(q) || normRaceName(internal(r)).includes(q) || (records.get(r.key)?.names ?? []).some((n) => normRaceName(n.name).includes(q)));
-    const newestClass = (r: (typeof races)[number]) => Object.values(r.editions).reduce((a, b) => (b.year > a.year ? b : a)).class;
-    const sort = chosen("queuesort");
-    rows = [...rows].sort((a, b) =>
-      sort === "class" ? tier(newestClass(a)) - tier(newestClass(b)) || internal(a).localeCompare(internal(b)) : sort === "todo" ? unfinished(b) - unfinished(a) || internal(a).localeCompare(internal(b)) : internal(a).localeCompare(internal(b)),
-    );
-    // say what the two filters are hiding, with a way to show it
-    const hiddenDone = races.length - rows.length;
-    const hiddenClass = inCategory.length - races.length;
-    const hiddenCategory = all.races.length - inCategory.length;
-    if (hiddenDone > 0 || hiddenClass > 0 || hiddenCategory > 0) {
-      const note = el("div", { class: "mut" });
-      note.style.margin = "6px 0";
-      if (hiddenDone > 0) {
-        const show = el("button", { textContent: "Show them" });
-        show.onclick = () => {
-          $<HTMLInputElement>("queuemissing").checked = false;
-          draw();
-        };
-        note.append(hiddenDone + " finished race" + (hiddenDone === 1 ? "" : "s") + " hidden. ", show, " ");
-      }
-      if (hiddenClass > 0) {
-        const show = el("button", { textContent: "Show them" });
-        show.onclick = () => {
-          $<HTMLInputElement>("queuetop").checked = false;
-          draw();
-        };
-        note.append(hiddenClass + " race" + (hiddenClass === 1 ? "" : "s") + " in other classes hidden. ", show);
-      }
-      if (hiddenCategory > 0) {
-        const show = el("button", { textContent: "Show them" });
-        show.onclick = () => {
-          chooseCategory("all");
-          draw();
-        };
-        note.append(" " + hiddenCategory + " " + (cat === "ME" ? "women's" : "men's") + " race" + (hiddenCategory === 1 ? "" : "s") + " hidden. ", show);
-      }
-      out.append(note);
-    }
-    if (!rows.length) return;
+  const years = (ys: number[]) => (ys.length > 1 ? ys[ys.length - 1] + "-" + ys[0] : String(ys[0] ?? ""));
+  const sortedDesc = (ys: number[]) => [...ys].sort((a, b) => b - a);
 
-    const table = el("table", { class: "queue" });
-    const head = el("tr", {}, el("th", { textContent: "Race" }), el("th", { textContent: "Done" }));
-    for (const y of years) head.append(el("th", { textContent: String(y) }));
-    table.append(head);
-    for (const r of rows) {
-      const eds = Object.values(r.editions);
-      const nameCell = el("td");
-      // the UCI class in front of the name: the newest edition's, with the history in the tooltip when it changed
-      const newest = eds.reduce((a, b) => (b.year > a.year ? b : a));
-      if (newest.class) {
-        const changed = new Set(eds.map((e) => e.class).filter(Boolean)).size > 1;
-        const tag = el("span", { class: "tag", textContent: newest.class });
-        if (changed) tag.title = eds.sort((a, b) => b.year - a.year).map((e) => e.year + ": " + (e.class ?? "?")).join(", ");
-        nameCell.append(tag);
-      }
-      nameCell.append(internal(r) + (r.category === "ME" ? "" : " (" + CATEGORY_NAMES[r.category].toLowerCase() + ")"));
-      const rec = records.get(r.key);
-      if (rec && (rec.names.length > 1 || rec.names[0]?.name !== rec.name)) nameCell.title = "External names: " + rec.names.map((n) => n.name + " (" + (n.years.length > 1 ? n.years[0] + "-" + n.years[n.years.length - 1] : n.years[0]) + ")").join("; ");
-      const tr = el("tr", {}, nameCell, el("td", { textContent: eds.filter(finished).length + "/" + eds.length }));
-      if (eds.some((e) => e.missingEvents.length || e.waitingEvents.length)) {
-        // a twist in front of the name opens the list of what is missing under the row
-        const twist = el("button", { class: "twist", textContent: "▸", title: "Which events are missing", type: "button" });
-        twist.onclick = () => {
-          const open = tr.nextElementSibling?.classList.contains("detail");
-          if (open) tr.nextElementSibling!.remove();
-          else tr.after(missingRow(eds, 2 + years.length));
-          twist.textContent = open ? "▸" : "▾";
-        };
-        nameCell.prepend(twist);
-      }
-      for (const y of years) {
-        const e = r.editions[y];
-        const td = el("td");
-        if (!e) {
-          td.textContent = "-";
-        } else {
-          const a = el("a", {
-            href: "https://dataride.uci.ch/iframe/CompetitionResults/" + e.uciId + "?disciplineId=10",
-            target: "_blank",
-            rel: "noopener",
-            textContent: status(e)[0],
-            title: (e.class ? e.class + ", " : "") + e.name + ", " + e.start + (e.start === e.end ? "" : " to " + e.end) + ". " + status(e)[1],
-          });
-          if (finished(e)) a.style.opacity = "0.6";
-          td.append(a);
-        }
-        tr.append(td);
-      }
-      table.append(tr);
-    }
-    out.append(table);
+  function link(l: { url: string; kind: keyof typeof LINK_LABELS; label?: string; source: string }): HTMLElement {
+    return el("a", { href: l.url, target: "_blank", rel: "noopener", textContent: l.label ?? LINK_LABELS[l.kind], title: l.url });
   }
 
-  $<HTMLInputElement>("capturefile").onchange = async (e) => {
-    const lines = await importCaptureFiles(store, [...((e.target as HTMLInputElement).files ?? [])]);
-    pendingJoins = undefined;
-    draw();
-    $("queuemsg").textContent = lines.join(" | ") + " | " + $("queuemsg").textContent;
-  };
-  const NL = String.fromCharCode(10);
-  const years = (ys: number[]) => (ys.length === 1 ? String(ys[0]) : ys[0] + "-" + ys[ys.length - 1]);
-
-  /** Race names: find a race by any of its names, change its internal name, see its external names. */
-  function renderNames(message = ""): void {
-    const list = $("racenamelist");
+  function drawList(): void {
+    const list = $("rlist");
     list.replaceChildren();
-    const q = normRaceName($<HTMLInputElement>("racefind").value);
-    if (message) list.append(el("p", { class: "mut", textContent: message }));
-    if (q.length < 2) return;
-    const aliases = store.getText("racealiases") ?? "";
-    const renames = store.getText("racenames") ?? "";
-    const matches = currentRaces(store).filter((r) => normRaceName(r.name).includes(q) || r.names.some((n) => normRaceName(n.name).includes(q)));
-    if (!matches.length) {
-      list.append(el("p", { class: "mut", textContent: "No race with that name." }));
-      return;
+    const races = filtered();
+    $("rcount").textContent = races.length + " race" + (races.length === 1 ? "" : "s") + (races.length > LIST_LIMIT ? " (the first " + LIST_LIMIT + " are shown: narrow it down with the filters)" : "") + ".";
+    if (!races.length) return;
+    const table = el("table", { class: "queue" });
+    table.append(el("tr", {}, el("th", { textContent: "Race" }), el("th", { textContent: "Country" }), el("th", { textContent: "Results" }), el("th", { textContent: "Links" })));
+    for (const r of races.slice(0, LIST_LIMIT)) {
+      const open1 = el("button", { class: "twist", textContent: r.name + (r.category === "WE" ? " (women)" : ""), title: "Open this race", type: "button" });
+      open1.style.fontSize = "15px";
+      open1.onclick = () => select(r.slug);
+      const nameCell = el("td");
+      if (r.class) nameCell.append(el("span", { class: "tag", textContent: r.class }));
+      nameCell.append(open1);
+      const country = countryOf(r.country);
+      const linkCell = el("td");
+      r.links.forEach((l, i) => {
+        if (i) linkCell.append(", ");
+        linkCell.append(link(l));
+      });
+      const done = yearsWithResults(store.cube, r);
+      table.append(el("tr", {}, nameCell, el("td", { textContent: country ? country.name + " (" + country.continent + ")" : (r.country ?? "") }), el("td", { textContent: done.length ? years(done) + " (" + done.length + ")" : "-" }), linkCell));
     }
-    for (const race of matches.slice(0, 8)) {
-      const input = el("input", { type: "text", value: race.name, spellcheck: false });
-      input.style.width = "300px";
-      const save = el("button", { textContent: "Save name", type: "button" });
-      save.onclick = async () => {
-        const name = input.value.trim();
-        if (!name) return;
-        const external = new Set(race.names.map((n) => normRaceName(n.name)));
-        // the race's earlier rename line goes; a new one is written only when the name differs from the default
-        const kept = renames.split(NL).filter((line) => !parseRaceAliases(line).some(([ext]) => external.has(normRaceName(ext))));
-        const byDefault = buildRaces(cube(), aliases, kept.join(NL)).find((x) => x.key === race.key)?.name;
-        const next = (name === byDefault ? kept : [...kept, race.names[0]!.name + " = " + name]).filter((x) => x.trim() !== "").join(NL);
-        await store.setText("racenames", next);
-        draw();
-        renderNames('"' + name + '" saved.');
-      };
-      const years = (ys: number[]) => (ys.length > 1 ? ys[0] + "-" + ys[ys.length - 1] : String(ys[0]));
-      list.append(
-        el(
-          "div",
-          { class: "card" },
-          el("div", { class: "row" }, el("b", { textContent: "Internal name" }), input, save, el("span", { class: "mut", textContent: (race.category === "WE" ? "women's elite" : "men's elite") + ", " + years(race.years) })),
-          el("div", { class: "mut", textContent: "External names: " + race.names.map((n) => n.name + " (" + years(n.years) + ")").join("; ") }),
-          linksBlock(store, race, () => {
-            draw();
-            renderNames();
-          }),
-        ),
-      );
-    }
+    list.append(table);
   }
-  $("racefind").oninput = () => renderNames();
-  initLinkFinder(store, options, {
-    category: chosenCategory,
-    changed: () => {
-      draw();
-      renderNames();
-    },
-  });
 
-  /**
-   * The one-time review: every likely pair gets a decision. "Same race" is written as an alias line, "Not the same" is
-   * remembered as rejected, and "Don't know" does nothing, so the pair comes back next time. Men's and women's pairs are
-   * listed apart, for the category chosen at the top of the page (both, in two tables, when "Both" is chosen).
-   */
-  function review(): void {
-    const box = $("joinreview");
-    box.replaceChildren();
-    const isNational = (j: JoinSuggestion) => /national road/i.test(j.fromName);
-    const cat = chosenCategory();
-    const sections: ("ME" | "WE")[] = cat === "all" ? ["ME", "WE"] : [cat === "WE" ? "WE" : "ME"];
-    const every = suggestJoins(cube(), store.getText("racealiases") ?? "", store.getText("racenojoin") ?? "");
-    const mine = every.filter((j) => sections.includes(j.category));
-    if (!mine.length) {
-      const other = every.length - mine.length;
-      const where = cat === "all" ? "." : " for " + CATEGORY_NAMES[sections[0]!].toLowerCase() + (other ? " (" + other + " for the other category: choose it, or Both, in the Category box above)." : ".");
-      box.append(el("p", { class: "mut", textContent: "No likely joins found" + where }));
-      return;
+  function select(slug: string | undefined): void {
+    open = slug;
+    try {
+      location.hash = slug ? "race=" + slug : "";
+    } catch {
+      /* no address bar to update */
     }
-    type Decision = "same" | "diff" | "unknown";
-    type Row = { j: JoinSuggestion; state: Decision; tr: HTMLElement; buttons: Record<Decision, HTMLButtonElement> };
-    const rows: Row[] = [];
-    const decide = (r: Row, state: Decision) => {
-      r.state = state;
-      r.tr.classList.toggle("rejected", state === "diff");
-      for (const k of ["same", "diff", "unknown"] as const) {
-        r.buttons[k].classList.toggle("on", k === state);
-        r.buttons[k].setAttribute("aria-pressed", String(k === state));
-      }
-    };
-    box.append(el("p", { class: "mut", textContent: mine.length + " likely joins. Decide each pair; the ones you leave as Don't know come back next time. A joined race is shown under its newest name." }));
-    for (const section of sections) {
-      const list = mine.filter((j) => j.category === section).sort((x, y) => Number(isNational(x)) - Number(isNational(y))); // national championships go last
-      if (!list.length) continue;
-      box.append(el("h3", { textContent: (section === "WE" ? "Women's elite races" : "Men's elite races") + " (" + list.length + ")" }));
-      const table = el("table", { class: "queue" });
-      table.append(el("tr", {}, el("th", { textContent: "Your decision" }), el("th", { textContent: "One name" }), el("th", { textContent: "The other name" }), el("th", { textContent: "Years of each" })));
-      for (const j of list) {
-        const mk = (label: string, cls: string) => el("button", { textContent: label, class: "seg-" + cls, type: "button" });
-        const buttons = { same: mk("Same race", "same"), diff: mk("Not the same", "diff"), unknown: mk("Don't know", "unknown") };
-        const tr = el(
-          "tr",
-          {},
-          el("td", { class: "seg" }, buttons.same, buttons.diff, buttons.unknown),
-          el("td", { textContent: j.fromName }),
-          el("td", { textContent: (j.class ? j.class + " " : "") + j.intoName }),
-          el("td", { textContent: years(j.fromYears) + " and " + years(j.intoYears) }),
-        );
-        const row: Row = { j, state: "unknown", tr, buttons };
-        buttons.same.onclick = () => decide(row, "same");
-        buttons.diff.onclick = () => decide(row, "diff");
-        buttons.unknown.onclick = () => decide(row, "unknown");
-        decide(row, "unknown");
-        rows.push(row);
-        table.append(tr);
-      }
-      box.append(table);
+    drawDetail();
+  }
+
+  /** A box with a title, its content and a button that copies it as Markdown. */
+  function box(title: string, content: HTMLElement | string, markdown?: string): HTMLElement {
+    const b = el("div", { class: "card" });
+    const head = el("div", { class: "row" }, el("strong", { textContent: title }));
+    if (markdown) {
+      const button = el("button", { textContent: "Copy as Markdown", type: "button" });
+      button.onclick = () => copy(markdown, button);
+      head.append(button);
     }
-    const bulk = (label: string, state: Decision, only: (r: Row) => boolean = () => true) => {
-      const b = el("button", { textContent: label });
-      b.onclick = () => rows.filter(only).forEach((r) => decide(r, state));
-      return b;
-    };
-    const nationals = rows.filter((r) => isNational(r.j)).length;
-    const apply = el("button", { textContent: "Save my decisions" });
-    apply.onclick = async () => {
-      const yes = chainLines(rows.filter((r) => r.state === "same").map((r): [string, string] => [r.j.from, r.j.into]));
-      const no = rows.filter((r) => r.state === "diff").map((r) => r.j.from + " = " + r.j.into);
-      const left = rows.filter((r) => r.state === "unknown").length;
-      const keep = (key: string, add: string[]) => [store.getText(key) ?? "", ...add].filter((x) => x !== "").join(NL);
-      await store.setText("racealiases", keep("racealiases", yes));
-      await store.setText("racenojoin", keep("racenojoin", no));
-      $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
-      box.replaceChildren();
-      $("aliasmsg").textContent = rows.filter((r) => r.state === "same").length + " pairs joined, " + no.length + " marked as not the same (not suggested again), " + left + " left undecided.";
-      pendingJoins = undefined;
-      draw();
-    };
-    const cancel = el("button", { textContent: "Cancel" });
-    cancel.onclick = () => box.replaceChildren();
-    box.append(
+    b.append(head, typeof content === "string" ? el("div", { class: "mut", textContent: content }) : content);
+    return b;
+  }
+
+  function drawDetail(): void {
+    const out = $("rdetail");
+    out.replaceChildren();
+    const race = open ? currentRaces(store).find((r) => r.slug === open) : undefined;
+    $("rfilters").style.display = race ? "none" : ""; // the list is out of the way while a race is open
+    if (!race) return;
+    const cube = store.cube;
+    const done = yearsWithResults(cube, race);
+    const back = el("button", { textContent: "Back to the list", type: "button" });
+    back.onclick = () => select(undefined);
+    const country = countryOf(race.country);
+    out.append(
+      el("h2", { textContent: race.name }),
       el(
         "div",
-        { class: "row" },
-        bulk("Mark all as the same race", "same"),
-        bulk("Mark all as not the same", "diff"),
-        ...(nationals ? [bulk("Mark national championships as not the same (" + nationals + ")", "diff", (r) => isNational(r.j))] : []),
-        bulk("Clear all (don't know)", "unknown"),
-        apply,
-        cancel,
+        { class: "mut" },
+        (race.class ? race.class + ", " : "") + (race.category === "WE" ? "women's elite" : "men's elite") + (country ? ", " + country.name + " (" + country.continent + ")" : "") + ". Results for " + (done.length ? done.length + " edition" + (done.length === 1 ? "" : "s") + " (" + years(done) + ")" : "no edition yet") + " of " + race.years.length + ".",
       ),
+      el("div", { class: "row" }, back),
     );
-  }
-  $("joinfind").onclick = review;
 
-  $<HTMLTextAreaElement>("racealiases").value = store.getText("racealiases") ?? "";
-  $("racealiasessave").onclick = async () => {
-    const msg = $("aliasmsg");
-    msg.textContent = "Saving ...";
-    try {
-      await store.setText("racealiases", $<HTMLTextAreaElement>("racealiases").value);
-    } catch (e) {
-      msg.textContent = "Could not save: " + (e instanceof Error ? e.message : String(e));
+    // names
+    out.append(box("Names", "Internal name: " + race.name + ". External names (how UCI wrote it): " + race.names.map((n) => n.name + " (" + years(sortedDesc(n.years)) + ")").join("; ") + "."));
+
+    // links
+    const linkBox = el("div");
+    if (race.links.length) {
+      race.links.forEach((l, i) => {
+        if (i) linkBox.append(" / ");
+        linkBox.append(link(l));
+      });
+    } else {
+      linkBox.append(el("span", { class: "mut", textContent: "No links yet. They are added on the Collect page." }));
     }
-    pendingJoins = undefined;
-    draw(); // joins what it can even when the save failed
-    const report = queueByRace(cube(), $<HTMLTextAreaElement>("racealiases").value).aliasReport;
-    if (msg.textContent === "Saving ...") msg.textContent = report.length ? "Saved. " + report.join(" | ") : "Saved. No alias lines to apply (write one as: old name = new name).";
-  };
-  $("queuemissing").onchange = draw;
-  $("queuetop").onchange = draw;
-  $("queuesearch").oninput = draw;
-  $("queuesort").onchange = draw;
-  const catBox = $<HTMLSelectElement>("queuecat");
-  chooseCategory(tick("racecat") ?? "ME");
-  catBox.onchange = () => {
-    tick("racecat", chosenCategory());
-    draw();
-  };
+    out.append(box("Links", linkBox, race.links.length ? linksMarkdown(race.links) : undefined));
+
+    // the 5x5
+    const five = topRiders(cube, race);
+    if (five.length) {
+      const table = el("table", { class: "queue" });
+      table.append(el("tr", {}, el("th", { textContent: "Year" }), ...["1st", "2nd", "3rd", "4th", "5th"].map((h) => el("th", { textContent: h }))));
+      for (const row of five) {
+        table.append(el("tr", {}, el("td", { textContent: String(row.year) }), ...[1, 2, 3, 4, 5].map((p) => el("td", { textContent: row.riders.find((x) => x.rank === p) ? displayName(row.riders.find((x) => x.rank === p)!.rider) : "-" }))));
+      }
+      const missing = five.filter((r) => r.missing.length).length;
+      out.append(box("5x5: the top five of the last " + five.length + " edition" + (five.length === 1 ? "" : "s"), table, fiveByFiveMarkdown(five)));
+      if (missing) out.append(el("div", { class: "mut", textContent: missing + " edition" + (missing === 1 ? " lacks" : "s lack") + " some of the first five places in the data (shown as -)." }));
+    } else {
+      out.append(box("5x5", "No results collected for this race yet."));
+    }
+
+    // age
+    const ages = raceAgeByYear(cube, race);
+    if (ages.length) {
+      const table = el("table", { class: "queue" });
+      table.append(el("tr", {}, el("th", { textContent: "Year" }), el("th", { textContent: "Average age" }), el("th", { textContent: "Riders" })));
+      for (const a of ages) table.append(el("tr", {}, el("td", { textContent: a.label }), el("td", { textContent: a.average.toFixed(1) }), el("td", { textContent: String(a.riders) })));
+      out.append(box("Average age of the point-scoring riders", table, ageTableMarkdown(ages)));
+      out.append(el("div", { class: "mut", textContent: "Only the riders who scored points are in the data, so this is the age at the front of the race, not of the whole field." }));
+    }
+    out.scrollIntoView?.();
+  }
+
+  for (const id of ["rcat", "rclass", "rcont"]) $(id).onchange = drawList;
+  $("rsearch").oninput = drawList;
+  $("rresults").onchange = drawList;
   store.onChange(() => {
-    pendingJoins = undefined;
-    draw();
+    drawList();
+    drawDetail();
   });
-  draw();
+
+  // a race can be opened from an address: races.html#race=<slug>
+  try {
+    const m = /race=([^&]+)/.exec(location.hash);
+    if (m) open = decodeURIComponent(m[1]!);
+  } catch {
+    /* no address in a test DOM */
+  }
+  drawList();
+  drawDetail();
 }

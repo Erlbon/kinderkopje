@@ -23,7 +23,7 @@ describe("the site headline", () => {
   const brand = (inner: string) => '<header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt="">' + inner + "</a></header>";
   it("is the project name with the logo, as the title of the home page and a link back on every other page", () => {
     expect(read("src/site/index.html")).toContain(brand("<h1>Pelotonic - The R Peloton Database Project</h1>"));
-    for (const f of ["threads", "teams", "races", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Pelotonic - The R Peloton Database Project</span>'));
+    for (const f of ["threads", "teams", "collect", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Pelotonic - The R Peloton Database Project</span>'));
   });
 });
 
@@ -41,7 +41,7 @@ describe("the intro page", () => {
   const nav = (active: string) =>
     "<nav>" + [["index", "Intro"], ["threads", "Threads"]].map(([f, t]) => '<a ' + (f === active ? 'class="active" ' : "") + 'href="' + f + '.html">' + t + "</a>").join("") + "<a";
   it("is the front page and the first tab on every page", () => {
-    for (const f of ["index", "threads", "teams", "races", "data"]) {
+    for (const f of ["index", "threads", "teams", "collect", "data"]) {
       const html = read("src/site/" + f + ".html");
       expect(html, f).toContain(nav(f));
     }

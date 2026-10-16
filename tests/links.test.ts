@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import initSqlJs from "sql.js/dist/sql-wasm-inline.js";
-import { COUNTRIES, CONTINENTS, addCapture, addToLinkStore, buildRaces, continentOf, countryOf, emptyCube, linkKey, linksFor, linksFromRegistry, mergeLinks, parseLinkStore, removeFromLinkStore } from "../src/core";
+import { COUNTRIES, CONTINENTS, addCapture, linksMarkdown, addToLinkStore, buildRaces, continentOf, countryOf, emptyCube, linkKey, linksFor, linksFromRegistry, mergeLinks, parseLinkStore, removeFromLinkStore } from "../src/core";
 import { MIGRATIONS, openDatabase, saveCube, setKv, writeRaces } from "../src/db";
 import { searchNames } from "../src/web/pages/race-links";
 
@@ -103,6 +103,10 @@ describe("links of a race", () => {
     expect(searchNames(vuelta)).toEqual(["La Vuelta Ciclista a España", "Vuelta a España"]);
     const dash = { name: "Ronde van Vlaanderen - Tour des Flandres", names: [{ name: "Ronde van Vlaanderen - Tour des Flandres" }], category: "ME" as const } as never;
     expect(searchNames(dash)).toEqual(["Ronde van Vlaanderen - Tour des Flandres", "Ronde van Vlaanderen"]);
+  });
+  it("are written as one line of Markdown, in the way a thread writes its Information row", () => {
+    expect(linksMarkdown([{ kind: "website", url: "https://a.example/", source: "manual" }, { kind: "instagram", url: "https://instagram.com/a", source: "manual" }, { kind: "other", label: "Strava", url: "https://strava.com/a", source: "manual" }])).toBe("[Official site](https://a.example/) / [Instagram](https://instagram.com/a) / [Strava](https://strava.com/a)");
+    expect(linksMarkdown([])).toBe("");
   });
   it("can be removed again, from every name they were stored under", () => {
     const key = linkKey("Some Race", "ME");

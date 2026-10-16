@@ -3,7 +3,7 @@
 Season YAML in, Reddit-ready race threads out. Built for the r/peloton moderators; the
 layout lives in a profile file, so other communities can reuse it.
 
-It is a small static site that runs in your browser. Nothing is uploaded. It has five pages that share one
+It is a small static site that runs in your browser. Nothing is uploaded. It has six pages that share one
 database:
 
 | Page | What it does |
@@ -11,7 +11,8 @@ database:
 | Intro | The statement of intent, the three tasks the project is for, and the sources we have found useful. |
 | Threads | Season YAML to Reddit-ready threads: calendar import, Wikipedia helpers, learning from old threads, stage tables, table layout. |
 | Teams and points | UCI team ranking snapshots: seasons side by side, season to date against last year, points per month, WorldTeams/ProTeams. |
-| Race results | The capture queue and the point-scoring results of each race, one race at a time across the years. |
+| Races | Look up a race: names, links, the 5x5 and the age statistics, each ready to copy. Filters by category, class, continent and name. Read only. |
+| Collect | Gathering and cleaning: the capture queue and the results of each race, joining races that changed name, race names, race links. |
 | Data | Save and open the database (.sqlite), ask it questions in SQL (read only), delete everything. |
 
 ## Where the data lives
@@ -92,7 +93,7 @@ saved in the cube. With "Only WorldTeams and ProTeams" ticked the tables show ju
 lists every WT/PT team that a lower-level team finished above. Wikipedia is a secondary source: check the
 unmatched list.
 
-## Race results (UCI points) and the capture queue
+## Collecting race results (UCI points): the Collect page
 
 Per-race results come from DataRide, UCI's results site (`dataride.uci.ch`). One bookmark, *Capture UCI race*
 (source `tools/capture-uci-race.js`), reads three kinds of DataRide road pages that you open yourself:
@@ -114,7 +115,7 @@ The bookmark clicks only the page's own controls (a row's triangle, the next-pag
 pause, as you would. It never leaves the page you pressed it on, never follows a link, has a Stop button, and sends no
 requests of its own: the page loads its data itself. The clicking is in `src/core/autopilot.ts`.
 
-Then press *Download collection* in the bookmark's box and open the file on the Race results page. The queue shows
+Then press *Download collection* in the bookmark's box and open the file on the Collect page. The queue shows
 per race and year how many events are captured, and can be limited to WorldTour, ProSeries and championships.
 Every result row keeps the team the rider
 rode for at the time, which is what the monthly team comparison needs.

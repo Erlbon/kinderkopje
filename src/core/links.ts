@@ -207,3 +207,8 @@ export function linksFromCandidate(c: WikidataRace): RaceLink[] {
   out.push({ kind: "wikidata", url: "https://www.wikidata.org/wiki/" + c.id, source: "wikidata" });
   return mergeLinks(out);
 }
+
+/** The links of a race as one line of Markdown, "[Official site](...) / [Wikipedia](...)", ready to paste into a thread. */
+export function linksMarkdown(links: RaceLink[]): string {
+  return links.map((l) => "[" + (l.label ?? LINK_LABELS[l.kind]) + "](" + l.url + ")").join(" / ");
+}

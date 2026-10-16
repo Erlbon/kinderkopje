@@ -1,11 +1,12 @@
 import { initData } from "./pages/data";
+import { initCollect } from "./pages/collect";
 import { initRaces } from "./pages/races";
 import { initTeams } from "./pages/teams";
 import { initThreads } from "./pages/threads";
 import { openStore } from "./store";
 
 /** Entry of every page: open the shared database, then start the page. */
-export async function start(page: "threads" | "teams" | "races" | "data"): Promise<void> {
+export async function start(page: "threads" | "teams" | "races" | "collect" | "data"): Promise<void> {
   const status = document.getElementById("appstatus");
   try {
     const store = await openStore();
@@ -15,6 +16,7 @@ export async function start(page: "threads" | "teams" | "races" | "data"): Promi
     if (page === "threads") initThreads(store);
     else if (page === "teams") initTeams(store);
     else if (page === "races") initRaces(store);
+    else if (page === "collect") initCollect(store);
     else initData(store);
   } catch (e) {
     if (status) {

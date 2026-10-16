@@ -139,3 +139,32 @@ export function ageByTeam(cube: Cube, year: number, category: Category = "ME", m
     })
     .sort((a, b) => a.average - b.average);
 }
+
+/** The average age of the point-scoring riders of one race, edition by edition, oldest first. */
+export function raceAgeByYear(cube: Cube, race: RaceRecord): AgeLine[] {
+  const years = new Map<number, ResultRow[]>();
+  for (const r of cube.raceResults ?? []) {
+    if (!race.uciIds.includes(r.uciId)) continue;
+    const final = finalClassification(r.classifications);
+    if (final) years.set(r.year, [...(years.get(r.year) ?? []), ...final.rows]);
+  }
+  return [...years]
+    .sort((a, b) => a[0] - b[0])
+    .flatMap(([year, rows]) => {
+      const average = averageAge(rows);
+      return average === undefined ? [] : [{ label: String(year), riders: rows.filter((r) => r.age).length, races: 1, average }];
+    });
+}
+
+/** The editions of a race that have a final result in the data, newest first. */
+export function yearsWithResults(cube: Cube, race: RaceRecord): number[] {
+  const out = new Set<number>();
+  for (const r of cube.raceResults ?? []) if (race.uciIds.includes(r.uciId) && finalClassification(r.classifications)) out.add(r.year);
+  return [...out].sort((a, b) => b - a);
+}
+
+/** The ages as a Markdown table. */
+export function ageTableMarkdown(lines: AgeLine[]): string {
+  const NL = String.fromCharCode(10);
+  return ["| Year | Average age | Riders |", "|---|--:|--:|", ...lines.map((l) => "| " + l.label + " | " + l.average.toFixed(1) + " | " + l.riders + " |")].join(NL);
+}

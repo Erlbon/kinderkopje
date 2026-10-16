@@ -618,6 +618,7 @@ export interface RaceRecord {
   years: number[];
   uciIds: number[]; // DataRide competition ids of its editions
   class?: string; // the newest edition's UCI class
+  country?: string; // the newest edition's country code
   links: RaceLink[]; // official site, Wikipedia, social media, FirstCycling (see links.ts)
 }
 
@@ -650,7 +651,7 @@ export function buildRaces(cube: Cube, aliases = "", renames = "", grouped?: Rac
     let slug = slugify(name) + (r.category === "WE" ? "-women" : "");
     for (let n = 2; slugs.has(slug); n++) slug = slug.replace(/-[0-9]+$/, "") + "-" + n;
     slugs.add(slug);
-    out.push({ key: r.key, name, slug, category: r.category, names, years: eds.map((e) => e.year).sort((a, b) => a - b), uciIds: [...eds.map((e) => e.uciId), ...r.others], ...(newestEdition?.class ? { class: newestEdition.class } : {}), links: linksFor({ name, category: r.category, names }, ...linkStores) });
+    out.push({ key: r.key, name, slug, category: r.category, names, years: eds.map((e) => e.year).sort((a, b) => a - b), uciIds: [...eds.map((e) => e.uciId), ...r.others], ...(newestEdition?.class ? { class: newestEdition.class } : {}), ...(newestEdition?.country ? { country: newestEdition.country } : {}), links: linksFor({ name, category: r.category, names }, ...linkStores) });
   }
   return out;
 }
