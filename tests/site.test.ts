@@ -22,8 +22,8 @@ describe("the site icon", () => {
 describe("the site headline", () => {
   const brand = (inner: string) => '<header class="brand"><a href="index.html"><img src="favicon.svg" width="36" height="36" alt="">' + inner + "</a></header>";
   it("is the project name with the logo, as the title of the home page and a link back on every other page", () => {
-    expect(read("src/site/index.html")).toContain(brand("<h1>Kinderkopje - Data collection for pro cycling</h1>"));
-    for (const f of ["threads", "teams", "collect", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand('<span class="name">Kinderkopje - Data collection for pro cycling</span>'));
+    expect(read("src/site/index.html")).toContain(brand("<h1>Kinderkopje - /R/Peloton's Data Collection Project</h1>"));
+    for (const f of ["threads", "teams", "collect", "data"]) expect(read("src/site/" + f + ".html"), f).toContain(brand(`<span class="name">Kinderkopje - /R/Peloton's Data Collection Project</span>`));
   });
 });
 
