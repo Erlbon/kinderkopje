@@ -35,5 +35,5 @@ createServer(async (req, res) => {
     res.writeHead(404).end("Not found");
   }
 }).listen(port, "127.0.0.1", () => {
-  console.log("Pelotonic on http://localhost:" + port + "  (Ctrl+C to stop)");
+  console.log("Kinderkopje on http://localhost:" + port + "  (Ctrl+C to stop)");
 });

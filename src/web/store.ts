@@ -9,7 +9,7 @@ import { deleteKv, getKv, loadCube, openDatabase, saveCube, setKv, writeRaces } 
  * season YAML go through getText/setText.
  */
 
-const IDB_NAME = "pelotonic";
+const IDB_NAME = "pelotonic"; // old name kept on purpose: renaming it would orphan data already saved in the browser
 const IDB_STORE = "db";
 const IDB_KEY = "main";
 
@@ -65,7 +65,7 @@ export interface Store {
   setText(key: string, value: string): Promise<void>;
   deleteText(key: string): Promise<void>;
   exportBytes(): Uint8Array;
-  /** Replace everything with the contents of a .sqlite file. Throws if it is not a Pelotonic database. */
+  /** Replace everything with the contents of a .sqlite file. Throws if it is not a Kinderkopje database. */
   importBytes(bytes: Uint8Array): Promise<void>;
   /** Delete everything and start with an empty database. */
   reset(): Promise<void>;

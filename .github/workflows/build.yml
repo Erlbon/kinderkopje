@@ -23,7 +23,7 @@ jobs:
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
-          name: pelotonic-site
+          name: kinderkopje-site
           path: dist
 
   pages:
@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: pelotonic-site
+          name: kinderkopje-site
           path: site
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -54,9 +54,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: pelotonic-site
-          path: pelotonic
-      - run: zip -r pelotonic.zip pelotonic
+          name: kinderkopje-site
+          path: kinderkopje
+      - run: zip -r kinderkopje.zip kinderkopje
       - uses: softprops/action-gh-release@v2
         with:
-          files: pelotonic.zip
+          files: kinderkopje.zip

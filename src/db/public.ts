@@ -2,7 +2,7 @@ import type { Database } from "sql.js";
 import { openDatabase } from "./cube-db";
 
 /** Where people can ask for something to be removed from the public dataset. */
-export const TAKEDOWN_URL = "https://github.com/Erlbon/pelotonic/issues";
+export const TAKEDOWN_URL = "https://github.com/Erlbon/kinderkopje/issues";
 
 export const PUBLIC_CREDITS =
   "Rankings and race results are published by the Union Cycliste Internationale (UCI) on uci.org and dataride.uci.ch; team levels come from Wikipedia (CC BY-SA 4.0); the links of a race (official site, Wikipedia, social media) come from Wikidata (CC0) after a person checked the match, from the race registry, or were typed in. " +
@@ -15,7 +15,7 @@ export const BETA_NOTE =
 /**
  * A copy of the database that is safe to publish: only the ranking and result tables, with the private parts
  * (saved texts, the capture queue, who captured a race and when) emptied and the file rewritten so that
- * nothing of them stays in unused pages. It keeps the schema, so any copy opens like a normal Pelotonic file.
+ * nothing of them stays in unused pages. It keeps the schema, so any copy opens like a normal Kinderkopje file.
  */
 export function makePublicCopy(SQL: { Database: new (data?: ArrayLike<number>) => Database }, db: Database, note = ""): Uint8Array {
   const copy = openDatabase(SQL, db.export());
