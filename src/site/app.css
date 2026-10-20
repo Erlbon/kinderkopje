@@ -1,7 +1,9 @@
 :root{--bg:#f6f7f8;--card:#fff;--fg:#1c1c1c;--mut:#666;--line:#ddd;--acc:#d9480f;--acc-text:#c2410c;--acc-soft:#fff0e6;--on-acc:#fff;--ok:#2e7d32;--on-ok:#fff;--on-err:#fff;--on-mut:#fff;--warn:#a15c00;--err:#b3261e}
 @media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--fg:#eee;--mut:#9aa;--line:#33363d;--acc:#ff8a4c;--acc-text:#ff8a4c;--acc-soft:#ff8a4c22;--on-acc:#1c1c1c;--ok:#7bc47f;--on-ok:#1c1c1c;--on-err:#1c1c1c;--on-mut:#1c1c1c;--warn:#f0b35a;--err:#f2b8b5}}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;margin:0;padding:16px}
+:root{--cobbles:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%23000' fill-opacity='.025' stroke='%23000' stroke-opacity='.06' stroke-width='1.5'%3E%3Crect x='2' y='3' width='44' height='28' rx='13'/%3E%3Crect x='50' y='3' width='44' height='28' rx='13'/%3E%3Crect x='-22' y='35' width='44' height='28' rx='13'/%3E%3Crect x='26' y='35' width='44' height='28' rx='13'/%3E%3Crect x='74' y='35' width='44' height='28' rx='13'/%3E%3Crect x='2' y='67' width='44' height='28' rx='13'/%3E%3Crect x='50' y='67' width='44' height='28' rx='13'/%3E%3C/g%3E%3C/svg%3E")}
+@media (prefers-color-scheme:dark){:root{--cobbles:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%23fff' fill-opacity='.02' stroke='%23fff' stroke-opacity='.05' stroke-width='1.5'%3E%3Crect x='2' y='3' width='44' height='28' rx='13'/%3E%3Crect x='50' y='3' width='44' height='28' rx='13'/%3E%3Crect x='-22' y='35' width='44' height='28' rx='13'/%3E%3Crect x='26' y='35' width='44' height='28' rx='13'/%3E%3Crect x='74' y='35' width='44' height='28' rx='13'/%3E%3Crect x='2' y='67' width='44' height='28' rx='13'/%3E%3Crect x='50' y='67' width='44' height='28' rx='13'/%3E%3C/g%3E%3C/svg%3E")}}
+body{background:var(--cobbles) var(--bg);color:var(--fg);font:15px system-ui,sans-serif;margin:0;padding:16px}
 main{max-width:960px;margin:0 auto}
 h1{font-size:20px;margin:0 0 4px}
 .brand{margin:0 0 10px;padding-bottom:8px;border-bottom:3px solid #ff6a2b}
