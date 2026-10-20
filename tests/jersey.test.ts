@@ -24,6 +24,7 @@ describe("the jersey pages that pay points", () => {
 
   it("lists only the pages not captured yet, leaders in stage order", () => {
     const m = missingJerseyEvents(events, [2]);
+    expect(m.results.map((e) => e.id)).toEqual([1]);
     expect(m.leader.map((e) => e.id)).toEqual([3, 12]);
     expect(m.final.map((e) => e.id)).toEqual([10, 9]);
   });

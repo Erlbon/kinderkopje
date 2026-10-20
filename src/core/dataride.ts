@@ -227,12 +227,16 @@ export function jerseyKind(name: string): JerseyKind | undefined {
   return undefined;
 }
 
-/** A competition's jersey events that have not been captured yet, the leader pages in stage order. */
-export function missingJerseyEvents(events: DrEvent[], capturedIds: Iterable<number>): { leader: DrEvent[]; final: DrEvent[] } {
+/**
+ * A competition's events that have not been captured yet: the stage results and the general classification (`results`),
+ * and the jersey pages (`leader` in stage order, `final`).
+ */
+export function missingJerseyEvents(events: DrEvent[], capturedIds: Iterable<number>): { results: DrEvent[]; leader: DrEvent[]; final: DrEvent[] } {
   const have = new Set(capturedIds);
   const stage = (e: DrEvent) => Number(/^Stage (\d+)/i.exec(e.name)?.[1] ?? 0);
   const todo = events.filter((e) => !have.has(e.id));
   return {
+    results: todo.filter((e) => isScoringEvent(e.name)).sort((a, b) => stage(a) - stage(b) || a.name.localeCompare(b.name)),
     leader: todo.filter((e) => jerseyKind(e.name) === "leader").sort((a, b) => stage(a) - stage(b)),
     final: todo.filter((e) => jerseyKind(e.name) === "final").sort((a, b) => a.name.localeCompare(b.name)),
   };

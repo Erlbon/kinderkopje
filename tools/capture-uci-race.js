@@ -60,7 +60,7 @@ import { eventPagePath, isComplete, isOtherCategory, mergeEvents, missingJerseyE
     var m = missingFor(c, competitionId);
     var line = document.createElement("div");
     line.style.cssText = "margin-top:8px;font-weight:bold";
-    line.textContent = m.leader.length + " GC-leader pages and " + m.final.length + " final points / mountain pages are still missing for this race.";
+    line.textContent = m.results.length + " stage / general classification pages, " + m.leader.length + " GC-leader pages and " + m.final.length + " final points / mountain pages are still missing for this race.";
     box.appendChild(line);
     function group(title, list) {
       if (!list.length) return;
@@ -73,13 +73,14 @@ import { eventPagePath, isComplete, isOtherCategory, mergeEvents, missingJerseyE
       list.forEach(function (e) {
         var a = document.createElement("a");
         a.href = eventPagePath(competitionId, e.id);
-        a.textContent = e.name.replace(/: Stage General Classification$/, "").replace(/^Final Classification: /, "");
+        a.textContent = e.name.replace(/: Stage General Classification$/, "").replace(/: Stage Classification$/, "").replace(/^Final Classification: /, "");
         a.style.cssText = "display:inline-block;margin:0 8px 0 0;color:#c2410c";
         wrap.appendChild(a);
       });
       box.appendChild(wrap);
     }
-    group("Leader after each stage (open one, then press the bookmark):", m.leader);
+    group("Stage results and general classification (open one, then press the bookmark):", m.results);
+    group("Leader after each stage:", m.leader);
     group("End of the race (not every race pays these):", m.final);
   }
 
