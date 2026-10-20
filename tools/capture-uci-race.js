@@ -17,7 +17,7 @@
  * the build bundles them here.
  */
 import { expandAll, pageThrough, realEnv } from "../src/core/autopilot";
-import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
+import { eventPagePath, isComplete, isOtherCategory, mergeEvents, missingJerseyEvents, pageKind, readCompetitionEvents, readCompetitionList, readEventResults } from "../src/core/dataride";
 
 (function () {
   // The names below keep the tool's earlier name: collections already saved in your browser, and
@@ -47,8 +47,44 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
     return "Collection: " + c.competitions.length + " competitions, " + c.competitionEvents.length + " event lists, " + c.eventResults.length + " event results";
   }
 
-  // running = true shows a Stop button while the bookmark is clicking
-  function overlay(msg, c, running) {
+  // the jersey pages of one competition that are known (from its saved event list) but not captured yet
+  function missingFor(c, competitionId) {
+    var events = [];
+    for (var i = 0; i < c.competitionEvents.length; i++) if (c.competitionEvents[i].competitionId === competitionId) events = c.competitionEvents[i].events;
+    var have = c.eventResults.filter(function (r) { return r.competitionId === competitionId; }).map(function (r) { return r.eventId; });
+    return missingJerseyEvents(events, have);
+  }
+
+  // links to the missing pages: you click one (the bookmark never opens a page for you), then press the bookmark there
+  function todoList(box, c, competitionId) {
+    var m = missingFor(c, competitionId);
+    var line = document.createElement("div");
+    line.style.cssText = "margin-top:8px;font-weight:bold";
+    line.textContent = m.leader.length + " GC-leader pages and " + m.final.length + " final points / mountain pages are still missing for this race.";
+    box.appendChild(line);
+    function group(title, list) {
+      if (!list.length) return;
+      var t = document.createElement("div");
+      t.style.cssText = "margin-top:4px;color:#555";
+      t.textContent = title;
+      box.appendChild(t);
+      var wrap = document.createElement("div");
+      wrap.style.cssText = "max-height:90px;overflow:auto;line-height:1.6";
+      list.forEach(function (e) {
+        var a = document.createElement("a");
+        a.href = eventPagePath(competitionId, e.id);
+        a.textContent = e.name.replace(/: Stage General Classification$/, "").replace(/^Final Classification: /, "");
+        a.style.cssText = "display:inline-block;margin:0 8px 0 0;color:#c2410c";
+        wrap.appendChild(a);
+      });
+      box.appendChild(wrap);
+    }
+    group("Leader after each stage (open one, then press the bookmark):", m.leader);
+    group("End of the race (not every race pays these):", m.final);
+  }
+
+  // running = true shows a Stop button while the bookmark is clicking; opts.todo = a competition id to list the missing jersey pages for
+  function overlay(msg, c, running, opts) {
     var old = document.getElementById("kinderkopje-overlay");
     if (old) old.remove();
     var box = document.createElement("div");
@@ -63,6 +99,7 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
     infoEl.style.cssText = "margin-top:4px;color:#555";
     infoEl.textContent = counts(c);
     box.appendChild(infoEl);
+    if (opts && opts.todo) todoList(box, c, opts.todo);
     function btn(label, fn) {
       var b = document.createElement("button");
       b.textContent = label;
@@ -91,6 +128,11 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
           overlay("Collection cleared.", load(), false);
         }
       });
+      if (opts && opts.reread) {
+        btn("Open the rows again", function () {
+          run(true);
+        });
+      }
       btn("Close", function () {
         box.remove();
       });
@@ -143,7 +185,7 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
     return stopped;
   };
 
-  async function run() {
+  async function run(force) {
     var c = load();
     var kind = pageKind(location.pathname);
 
@@ -190,6 +232,15 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
     }
 
     if (kind === "competition") {
+      // a competition whose rows were opened in an earlier press is not opened again: its event list is already saved,
+      // so nothing is clicked and the missing jersey pages are listed straight away
+      var compId = Number(/CompetitionResults\/(\d+)/i.exec(location.pathname)[1]);
+      var saved = null;
+      for (var s = 0; s < c.competitionEvents.length; s++) if (c.competitionEvents[s].competitionId === compId) saved = c.competitionEvents[s];
+      if (!force && saved && saved.events.some(function (e) { return /^(Stage|Prologue|Final)/i.test(e.name); })) {
+        overlay("This race's event list is already saved, so no rows were opened.", c, false, { todo: compId, reread: true });
+        return;
+      }
       overlay("Opening the closed rows of this competition ...", c, true);
       var known = null;
       var opened = 0;
@@ -229,9 +280,10 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
       }
       overlay(
         (stopped ? "Stopped. " : "Done. ") + "Opened " + opened + " row" + (opened === 1 ? "" : "s") + "; " + known.events.length + " events known for this competition. " +
-          "NEXT: open the General Classification and the stage results (not the points or youth rankings) and press again on each.",
+          "NEXT: open the General Classification and the stage results and press again on each; the jersey pages still missing are listed below.",
         c,
         false,
+        { todo: compId },
       );
       return;
     }
@@ -271,10 +323,11 @@ import { isComplete, isOtherCategory, mergeEvents, pageKind, readCompetitionEven
       overlay(
         (stopped ? "Stopped. " : "") + "Captured " + (all ? all.rows.length : 0) + " point-scoring rows from " + read + " page" + (read === 1 ? "" : "s") + ". " +
           (complete
-            ? "This event is complete. NEXT: go back to the competition page, open the next event and press again, or download the collection."
+            ? "This event is complete. NEXT: pick the next missing page below, or go back to the competition page, or download the collection."
             : "The last page I read still had only scoring rows; press again to go on, or the points may end exactly there."),
         c,
         false,
+        { todo: last.competitionId },
       );
       return;
     }

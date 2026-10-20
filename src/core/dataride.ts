@@ -212,6 +212,37 @@ export function isScoringEvent(name: string): boolean {
   return !/points|youth|young|mountain|climber|sprint classif|combativ|teams? classif|best |kom|overall|stage general/i.test(name);
 }
 
+/**
+ * The extra events that pay points on top of the stages and the general classification:
+ *   leader: "Stage 5: Stage General Classification", the standings after a stage, one rider (the leader) scores
+ *   final:  "Final Classification: Points Classification" / "Mountain Classification", a few riders score
+ * Nothing else is asked for: the other jersey classifications (daily points and mountains, youth, teams) paid nothing where
+ * we looked. `final` is separate because it is not known to pay in every race.
+ */
+export type JerseyKind = "leader" | "final";
+
+export function jerseyKind(name: string): JerseyKind | undefined {
+  if (/^Stage \d+: Stage General Classification$/i.test(name.trim())) return "leader";
+  if (/^Final Classification: (Points|Mountains?) Classification$/i.test(name.trim())) return "final";
+  return undefined;
+}
+
+/** A competition's jersey events that have not been captured yet, the leader pages in stage order. */
+export function missingJerseyEvents(events: DrEvent[], capturedIds: Iterable<number>): { leader: DrEvent[]; final: DrEvent[] } {
+  const have = new Set(capturedIds);
+  const stage = (e: DrEvent) => Number(/^Stage (\d+)/i.exec(e.name)?.[1] ?? 0);
+  const todo = events.filter((e) => !have.has(e.id));
+  return {
+    leader: todo.filter((e) => jerseyKind(e.name) === "leader").sort((a, b) => stage(a) - stage(b)),
+    final: todo.filter((e) => jerseyKind(e.name) === "final").sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+/** The address of an event page, as the competition page links to it. */
+export function eventPagePath(competitionId: number, eventId: number): string {
+  return "/iframe/EventResults/" + eventId + "?competitionId=" + competitionId + "&disciplineId=10";
+}
+
 /** Rows in one page of a DataRide table. */
 export const PAGE_SIZE = 40;
 
